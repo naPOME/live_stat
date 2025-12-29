@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { startPcobLogWatcher, stopPcobLogWatcher, type PcobLogWatcherOptions } from "@/lib/pcobLogWatcher";
+import { startParser, stopParser, type ParserOptions } from "@/lib/parser";
 
 export const runtime = "nodejs";
 
-const activeWatchers = new Map<string, PcobLogWatcherOptions>();
+const activeWatchers = new Map<string, ParserOptions>();
 
 export async function POST(req: Request) {
   try {
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
     };
 
     if (action === "stop") {
-      stopPcobLogWatcher();
+      stopParser();
       activeWatchers.clear();
       return NextResponse.json({ ok: true, status: "stopped" });
     }
@@ -29,14 +29,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, status: "already-watching", filePath: key });
     }
 
-    startPcobLogWatcher({
+    startParser({
       filePath,
       pollIntervalMs: typeof pollIntervalMs === "number" && pollIntervalMs > 0 ? pollIntervalMs : 500,
-      onEvent: (raw) => {
-        console.log("[PCOB watcher] processed event", typeof raw);
+      onEvent: (raw: any) => {
+        console.log("[Parser] processed event", typeof raw);
       },
-      onError: (err) => {
-        console.error("[PCOB watcher] error", err);
+      onError: (err: any) => {
+        console.error("[Parser] error", err);
       },
     });
 
