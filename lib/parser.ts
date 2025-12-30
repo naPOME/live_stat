@@ -41,6 +41,11 @@ export class LogParser {
         result.TeamInfoList = this.parseTeamObjects(teamListMatch[1]);
       }
 
+      const playerListMatch = text.match(/TotalPlayerList:\s*\[([\s\S]*?)\]\s*,\s*TeamInfoList:/);
+      if (playerListMatch) {
+        result.TotalPlayerList = this.parsePlayerObjects(playerListMatch[1]);
+      }
+
       if (result.GameID && (result.TeamInfoList?.length > 0)) {
         console.log(`[Parser] Parsed GameID: ${result.GameID}, Teams: ${result.TeamInfoList?.length || 0}`);
         return result;
@@ -79,6 +84,31 @@ export class LogParser {
     }
 
     return teams;
+  }
+
+  private parsePlayerObjects(text: string): any[] {
+    const players: any[] = [];
+    const playerMatches = text.match(/\{[^{}]*\}/g);
+    if (!playerMatches) return players;
+
+    for (const playerText of playerMatches) {
+      const player: any = {};
+
+      const playerNameMatch = playerText.match(/playerName:\s*['"]([^'"]+)['"]/);
+      if (playerNameMatch) player.playerName = playerNameMatch[1];
+
+      const teamNameMatch = playerText.match(/teamName:\s*['"]([^'"]+)['"]/);
+      if (teamNameMatch) player.teamName = teamNameMatch[1];
+
+      const killNumMatch = playerText.match(/killNum:\s*(\d+)/);
+      if (killNumMatch) player.killNum = parseInt(killNumMatch[1]);
+
+      if (player.playerName && player.teamName && Number.isFinite(player.killNum)) {
+        players.push(player);
+      }
+    }
+
+    return players;
   }
 
   private readTail(): void {

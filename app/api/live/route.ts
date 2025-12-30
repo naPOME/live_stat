@@ -1,100 +1,35 @@
 import { NextResponse } from "next/server";
-import { readFileSync } from "fs";
+import { startParser } from "@/lib/parser";
 import type { LeaderboardResponse } from "@/lib/types";
-
-// Auto-start the log parser when the API is first accessed
-let parserStarted = false;
-
-function ensureParserRunning() {
-  if (!parserStarted) {
-    try {
-      const { startParser } = require("../../dist/parser");
-      const logFilePath = 'C:\\Users\\natnaelb\\Downloads\\Telegram Desktop\\log-20251220 (3).txt';
-      
-      startParser({
-        filePath: logFilePath,
-        pollIntervalMs: 500,
-        onEvent: (data: any) => {
-          console.log("[Auto-Parser] Processed event:", data.GameID);
-        },
-        onError: (error: any) => {
-          console.error("[Auto-Parser] Error:", error.message);
-        }
-      });
-      
-      parserStarted = true;
-      console.log("[Auto-Parser] Log parser started automatically");
-    } catch (error) {
-      console.error("[Auto-Parser] Failed to start:", error);
-    }
-  }
-}
 
 export const runtime = "nodejs";
 
-function parseLogEntry(text: string): any | null {
-  try {
-    // Look for the specific pattern: POST /totalmessage
-    if (!text.includes("POST /totalmessage")) {
-      return null;
-    }
+let inMemoryStarted = false;
+let latestParsedEvent: any | null = null;
 
-    const result: any = {};
-
-    // Extract GameID
-    const gameIdMatch = text.match(/GameID:\s*['"]?(\d+)['"]?/);
-    if (gameIdMatch) result.GameID = gameIdMatch[1];
-
-    // Extract CurrentTime
-    const currentTimeMatch = text.match(/CurrentTime:\s*['"]?(\d+)['"]?/);
-    if (currentTimeMatch) result.CurrentTime = currentTimeMatch[1];
-
-    // Extract TeamInfoList
-    const teamListMatch = text.match(/TeamInfoList:\s*\[([\s\S]*?)\]/);
-    if (teamListMatch) {
-      result.TeamInfoList = parseTeamObjects(teamListMatch[1]);
-    }
-
-    // Only return if we have meaningful data
-    if (result.GameID && (result.TeamInfoList?.length > 0)) {
-      return result;
-    }
-
-    return null;
-  } catch (error) {
-    console.error("[Live API] Error parsing log entry:", error);
-    return null;
-  }
+function getLogFilePath(): string {
+  return (
+    process.env.LIVE_LOG_PATH ||
+    'C:\\Users\\natnaelb\\Downloads\\Telegram Desktop\\log-20251220 (3).txt'
+  );
 }
 
-function parseTeamObjects(text: string): any[] {
-  const teams: any[] = [];
-  
-  // Extract individual team objects using regex
-  const teamMatches = text.match(/\{[^{}]*\}/g);
-  if (!teamMatches) return teams;
+function ensureInMemoryParserRunning(): void {
+  if (inMemoryStarted) return;
 
-  for (const teamText of teamMatches) {
-    const team: any = {};
+  const filePath = getLogFilePath();
+  startParser({
+    filePath,
+    pollIntervalMs: 500,
+    onEvent: (data: any) => {
+      latestParsedEvent = data;
+    },
+    onError: () => {
+      // ignore
+    },
+  });
 
-    const teamIdMatch = teamText.match(/teamId:\s*(\d+)/);
-    if (teamIdMatch) team.teamId = parseInt(teamIdMatch[1]);
-
-    const teamNameMatch = teamText.match(/teamName:\s*['"]([^'"]+)['"]/);
-    if (teamNameMatch) team.teamName = teamNameMatch[1];
-
-    const killNumMatch = teamText.match(/killNum:\s*(\d+)/);
-    if (killNumMatch) team.killNum = parseInt(killNumMatch[1]);
-
-    const liveMemberNumMatch = teamText.match(/liveMemberNum:\s*(\d+)/);
-    if (liveMemberNumMatch) team.liveMemberNum = parseInt(liveMemberNumMatch[1]);
-
-    if (team.teamName && (team.killNum !== undefined || team.liveMemberNum !== undefined)) {
-      teams.push(team);
-    }
-  }
-
-  return teams;
+  inMemoryStarted = true;
 }
 
 function placementToPoints(placement?: number): number {
@@ -109,54 +44,37 @@ function placementToPoints(placement?: number): number {
 
 export async function GET() {
   try {
-    // Auto-start the log parser if not already running
-    ensureParserRunning();
-    
-    const logFilePath = 'C:\\Users\\natnaelb\\Downloads\\Telegram Desktop\\log-20251220 (3).txt';
-    
-    // Read the log file
-    const content = readFileSync(logFilePath, "utf8");
-    const lines = content.split("\n");
-    
-    let currentEvent = "";
-    let inEvent = false;
-    let latestEvent: any = null;
-    
-    // Process the log file to find the latest event
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
+    ensureInMemoryParserRunning();
 
-      if (trimmed.includes("POST /totalmessage")) {
-        inEvent = true;
-        currentEvent = "";
-      }
-
-      if (inEvent) {
-        currentEvent += (currentEvent ? "\n" : "") + trimmed;
-
-        if (currentEvent.includes("}") && 
-            currentEvent.includes("GameID:") && 
-            currentEvent.includes("TeamInfoList:")) {
-          
-          const parsed = parseLogEntry(currentEvent);
-          if (parsed) {
-            latestEvent = parsed; // Keep the latest event
-          }
-          
-          inEvent = false;
-          currentEvent = "";
-        }
-      }
-    }
-
+    const latestEvent = latestParsedEvent;
     if (!latestEvent || !latestEvent.TeamInfoList) {
       return NextResponse.json({
         matchId: "default",
         serverTime: Date.now(),
+        spotlight: undefined,
         teams: []
       });
     }
+
+    const spotlight = (() => {
+      const players: Array<{ playerName: string; teamName: string; killNum: number }> =
+        (latestEvent.TotalPlayerList as any[]) ?? [];
+
+      if (!players.length) return undefined;
+
+      let best = players[0];
+      for (const p of players) {
+        if ((p.killNum ?? 0) > (best.killNum ?? 0)) best = p;
+      }
+
+      const kills = best.killNum ?? 0;
+      if (!best.playerName || !best.teamName) return undefined;
+      return {
+        playerName: best.playerName,
+        teamName: best.teamName,
+        kills,
+      };
+    })();
 
     // Convert to leaderboard format
     const teams = latestEvent.TeamInfoList.map((team: any) => {
@@ -187,6 +105,7 @@ export async function GET() {
     return NextResponse.json({
       matchId: latestEvent.GameID || "default",
       serverTime: Date.now(),
+      spotlight,
       teams,
     });
 

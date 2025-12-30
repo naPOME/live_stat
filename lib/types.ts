@@ -1,4 +1,4 @@
-// Type definitions for the live ranking system
+
 
 export type LeaderboardTeam = {
   teamName: string;
@@ -14,5 +14,10 @@ export type LeaderboardTeam = {
 export type LeaderboardResponse = {
   matchId: string;
   serverTime: number;
+  spotlight?: {
+    playerName: string;
+    teamName: string;
+    kills: number;
+  };
   teams: LeaderboardTeam[];
 };

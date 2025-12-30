@@ -45,9 +45,18 @@ const StatusBars = ({ status }: { status: number[] }) => {
   );
 };
 
-const TeamRow = ({ team }: { team: TeamData }) => {
+const TeamRow = ({ team, flash }: { team: TeamData; flash?: 'kills' | 'points' | 'alive' }) => {
+  const flashClass = (() => {
+    if (!flash) return '';
+    if (flash === 'kills') return 'bg-[#4a1f2a] ring-2 ring-[#ff4e4e] animate-pulse';
+    if (flash === 'points') return 'bg-[#1f3f3a] ring-2 ring-[#00ffc3] animate-pulse';
+    return 'bg-[#3a3b55] ring-2 ring-[#8b8da6] animate-pulse';
+  })();
+
   return (
-    <div className="group relative flex items-center justify-between bg-[#2a2b45] hover:bg-[#323352] border border-[#4a4c68] rounded-xl px-3 py-2 mb-2 transition-colors h-7">
+    <div
+      className={`group relative flex items-center justify-between bg-[#2a2b45] hover:bg-[#323352] border border-[#4a4c68] rounded-xl px-3 py-2 mb-2 transition-colors h-7 ${flashClass}`}
+    >
       <div className="flex items-center gap-4 flex-1">
         <div className="w-8 text-center font-bold text-lg text-white italic">{team.rank}</div>
         <div className="w-5 h-5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-[5px] font-bold text-white/50 border border-white/10">IMG</div>
@@ -65,9 +74,10 @@ const TeamRow = ({ team }: { team: TeamData }) => {
 // --- Main Component ---
 interface LeaderboardProps {
   teams?: TeamData[];
+  flashByTeam?: Record<string, 'kills' | 'points' | 'alive'>;
 }
 
-const LiveLeaderboard: React.FC<LeaderboardProps> = ({ teams = leaderboardData }) => {
+const LiveLeaderboard: React.FC<LeaderboardProps> = ({ teams = leaderboardData, flashByTeam }) => {
   const displayTeams: TeamData[] = (() => {
     const normalized = (teams ?? []).slice(0, 16);
     const padded: TeamData[] = [...normalized];
@@ -99,7 +109,7 @@ const LiveLeaderboard: React.FC<LeaderboardProps> = ({ teams = leaderboardData }
       </div>
       <div className="flex flex-col">
         {displayTeams.map((team) => (
-          <TeamRow key={team.rank} team={team} />
+          <TeamRow key={team.rank} team={team} flash={flashByTeam?.[team.teamName]} />
         ))}
       </div>
     </div>
