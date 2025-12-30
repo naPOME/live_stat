@@ -5,6 +5,7 @@ export type LeaderboardTeam = {
   kills: number;
   placement?: number;
   alive?: boolean;
+  liveMemberNum?: number;
   placementPoints: number;
   totalPoints: number;
   updatedAt: number;

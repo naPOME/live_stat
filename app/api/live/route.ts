@@ -2,6 +2,34 @@ import { NextResponse } from "next/server";
 import { readFileSync } from "fs";
 import type { LeaderboardResponse } from "@/lib/types";
 
+// Auto-start the log parser when the API is first accessed
+let parserStarted = false;
+
+function ensureParserRunning() {
+  if (!parserStarted) {
+    try {
+      const { startParser } = require("../../dist/parser");
+      const logFilePath = 'C:\\Users\\natnaelb\\Downloads\\Telegram Desktop\\log-20251220 (3).txt';
+      
+      startParser({
+        filePath: logFilePath,
+        pollIntervalMs: 500,
+        onEvent: (data: any) => {
+          console.log("[Auto-Parser] Processed event:", data.GameID);
+        },
+        onError: (error: any) => {
+          console.error("[Auto-Parser] Error:", error.message);
+        }
+      });
+      
+      parserStarted = true;
+      console.log("[Auto-Parser] Log parser started automatically");
+    } catch (error) {
+      console.error("[Auto-Parser] Failed to start:", error);
+    }
+  }
+}
+
 export const runtime = "nodejs";
 
 function parseLogEntry(text: string): any | null {
@@ -81,6 +109,9 @@ function placementToPoints(placement?: number): number {
 
 export async function GET() {
   try {
+    // Auto-start the log parser if not already running
+    ensureParserRunning();
+    
     const logFilePath = 'C:\\Users\\natnaelb\\Downloads\\Telegram Desktop\\log-20251220 (3).txt';
     
     // Read the log file
@@ -129,15 +160,17 @@ export async function GET() {
 
     // Convert to leaderboard format
     const teams = latestEvent.TeamInfoList.map((team: any) => {
-      const placementPoints = placementToPoints(team.rank);
+      const liveMemberNum = team.liveMemberNum || 0;
+      const placementPoints = 0;
       const totalPoints = (team.killNum || 0) + placementPoints;
-      const alive = (team.liveMemberNum || 0) > 0;
+      const alive = liveMemberNum > 0;
       
       return {
         teamName: team.teamName,
         kills: team.killNum || 0,
-        placement: team.rank,
+        placement: undefined,
         alive: alive,
+        liveMemberNum,
         placementPoints,
         totalPoints,
         updatedAt: Date.now(),
