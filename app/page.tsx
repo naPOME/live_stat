@@ -26,8 +26,6 @@ export default function Home() {
   const flashTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    let cancelled = false;
-
     const fetchLive = async () => {
       try {
         const res = await fetch('/api/live', { cache: 'no-store' });
@@ -96,7 +94,7 @@ export default function Home() {
           flashTimeoutRef.current = window.setTimeout(() => setFlashByTeam({}), 650);
         }
 
-        if (!cancelled) setTeams(mapped);
+        setTeams(mapped);
       } catch {
         // ignore
       }
@@ -105,8 +103,8 @@ export default function Home() {
     fetchLive();
     const id = window.setInterval(fetchLive, 1000);
     return () => {
-      cancelled = true;
       window.clearInterval(id);
+
       if (flashTimeoutRef.current !== null) {
         window.clearTimeout(flashTimeoutRef.current);
         flashTimeoutRef.current = null;

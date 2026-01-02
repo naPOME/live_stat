@@ -52,7 +52,8 @@ export async function GET() {
         matchId: "default",
         serverTime: Date.now(),
         spotlight: undefined,
-        teams: []
+        teams: [],
+        players: [],
       });
     }
 
@@ -102,11 +103,20 @@ export async function GET() {
       return (a.placement ?? Number.POSITIVE_INFINITY) - (b.placement ?? Number.POSITIVE_INFINITY);
     });
 
+    const players = (((latestEvent.TotalPlayerList as any[]) ?? []) as any[])
+      .map((p) => ({
+        playerName: p.playerName,
+        teamName: p.teamName,
+        kills: p.killNum ?? 0,
+      }))
+      .filter((p) => p.playerName && p.teamName);
+
     return NextResponse.json({
       matchId: latestEvent.GameID || "default",
       serverTime: Date.now(),
       spotlight,
       teams,
+      players,
     });
 
   } catch (err) {

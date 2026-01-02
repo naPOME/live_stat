@@ -2,7 +2,6 @@
 
 import React from 'react';
 
-// --- Types & Interfaces ---
 interface TeamData {
   rank: number;
   teamName: string;
@@ -13,7 +12,6 @@ interface TeamData {
   elims: number;
 }
 
-// --- Mock Data ---
 const leaderboardData: TeamData[] = [
   { rank: 1, teamName: 'IBx', countryCode: 'sa', playerStatus: [2, 2, 2, 0], points: 3, elims: 3 },
   { rank: 2, teamName: 'GNF', countryCode: 'tr', playerStatus: [2, 2, 2, 2], points: 3, elims: 3 },
@@ -31,7 +29,6 @@ const leaderboardData: TeamData[] = [
   { rank: 14, teamName: 'TBD', countryCode: 'tr', playerStatus: [2, 2, 2, 1], points: 0, elims: 0 },
 ];
 
-// --- Sub-Components ---
 const StatusBars = ({ status }: { status: number[] }) => {
   return (
     <div className="flex gap-[3px]">
@@ -53,25 +50,45 @@ const TeamRow = ({ team, flash }: { team: TeamData; flash?: 'kills' | 'points' |
     return 'bg-[#3a3b55] ring-2 ring-[#8b8da6] animate-pulse';
   })();
 
+  const rankAccentClass = (() => {
+    if (team.rank === 1) return 'from-[#00ffc3] to-[#6d5efc]';
+    if (team.rank === 2) return 'from-[#ff4e4e] to-[#6d5efc]';
+    if (team.rank === 3) return 'from-[#ffd166] to-[#6d5efc]';
+    return 'from-white/20 to-white/0';
+  })();
+
   return (
     <div
-      className={`group relative flex items-center justify-between bg-[#2a2b45] hover:bg-[#323352] border border-[#4a4c68] rounded-xl px-3 py-2 mb-2 transition-colors h-7 ${flashClass}`}
+      className={`group relative flex items-center justify-between bg-[#1f2038]/80 hover:bg-[#2a2b45] border border-white/10 rounded-xl px-3 py-2 mb-2 transition-colors h-8 shadow-[0_0_0_1px_rgba(255,255,255,0.03)_inset] ${flashClass}`}
     >
       <div className="flex items-center gap-4 flex-1">
-        <div className="w-8 text-center font-bold text-lg text-white italic">{team.rank}</div>
-        <div className="w-5 h-5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-[5px] font-bold text-white/50 border border-white/10">IMG</div>
-        <div className="text-md font-semibold text-white tracking-wide uppercase">{team.teamName}</div>
+        <div className="w-8 flex justify-center">
+          <div
+            className={`w-7 h-7 rounded-lg bg-gradient-to-br ${rankAccentClass} flex items-center justify-center shadow-[0_0_16px_rgba(109,94,252,0.18)]`}
+          >
+            <div className="text-center font-extrabold text-[13px] text-white italic">{team.rank}</div>
+          </div>
+        </div>
+        <div className="w-5 h-5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-[5px] font-bold text-white/50 border border-white/10">
+          IMG
+        </div>
+        <div className="text-md font-semibold text-white tracking-wide uppercase drop-shadow-[0_0_10px_rgba(0,0,0,0.35)]">
+          {team.teamName}
+        </div>
       </div>
       <div className="flex items-center gap-6">
-        <div className="w-[30px] flex justify-center"><StatusBars status={team.playerStatus} /></div>
-        <div className="w-7 text-center font-bold text-xl text-white">{team.points}</div>
-        <div className="w-7 text-center font-bold text-xl text-white">{team.elims}</div>
+        <div className="w-[30px] flex justify-center">
+          <StatusBars status={team.playerStatus} />
+        </div>
+        <div className="w-7 text-center font-extrabold text-xl text-white tabular-nums">{team.points}</div>
+        <div className="w-7 text-center font-extrabold text-xl text-[#00ffc3] tabular-nums drop-shadow-[0_0_10px_rgba(0,255,195,0.15)]">
+          {team.elims}
+        </div>
       </div>
     </div>
   );
 };
 
-// --- Main Component ---
 interface LeaderboardProps {
   teams?: TeamData[];
   flashByTeam?: Record<string, 'kills' | 'points' | 'alive'>;
@@ -95,8 +112,9 @@ const LiveLeaderboard: React.FC<LeaderboardProps> = ({ teams = leaderboardData, 
   })();
 
   return (
-    <div className="w-full max-w-md bg-gradient-to-b from-[#1e1f35] to-[#151628] p-4 rounded-2xl shadow-2xl border border-[#2e2f4f]">
-      <div className="flex justify-between px-3 mb-2 text-[#8b8da6] text-xs font-bold tracking-widest uppercase">
+    <div className="relative w-full max-w-md rounded-2xl p-[1px] bg-gradient-to-br from-[#00ffc3]/35 via-[#6d5efc]/30 to-[#ff4e4e]/30 shadow-[0_18px_60px_rgba(0,0,0,0.55)]">
+      <div className="w-full bg-gradient-to-b from-[#1e1f35] to-[#151628] p-4 rounded-2xl border border-white/10">
+      <div className="flex justify-between px-3 mb-2 text-white/60 text-xs font-extrabold tracking-widest uppercase">
         <div className="flex gap-14">
           <span className="w-8 text-center">Rank</span>
           <span>Team</span>
@@ -111,6 +129,7 @@ const LiveLeaderboard: React.FC<LeaderboardProps> = ({ teams = leaderboardData, 
         {displayTeams.map((team) => (
           <TeamRow key={team.rank} team={team} flash={flashByTeam?.[team.teamName]} />
         ))}
+      </div>
       </div>
     </div>
   );

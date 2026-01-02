@@ -11,6 +11,12 @@ export type LeaderboardTeam = {
   updatedAt: number;
 };
 
+ export type LeaderboardPlayer = {
+  playerName: string;
+  teamName: string;
+  kills: number;
+ };
+
 export type LeaderboardResponse = {
   matchId: string;
   serverTime: number;
@@ -20,4 +26,5 @@ export type LeaderboardResponse = {
     kills: number;
   };
   teams: LeaderboardTeam[];
+  players?: LeaderboardPlayer[];
 };
