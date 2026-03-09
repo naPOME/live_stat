@@ -87,3 +87,17 @@ export type MatchResult = {
   total_pts: number;
   created_at: string;
 };
+
+export type TeamApplication = {
+  id: string;
+  tournament_id: string;
+  team_name: string;
+  short_name: string | null;
+  brand_color: string;
+  logo_url: string | null;
+  contact_email: string | null;
+  players: { display_name: string; player_open_id: string }[];
+  status: 'pending' | 'accepted' | 'rejected';
+  notes: string | null;
+  created_at: string;
+};
