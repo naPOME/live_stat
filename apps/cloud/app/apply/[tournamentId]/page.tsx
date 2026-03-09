@@ -1,15 +1,6 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
-import { createClient } from '@supabase/supabase-js';
-
-// Lightweight public client — no auth needed
-function getPublicClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
-}
 
 type PlayerRow = { display_name: string; player_open_id: string };
 
@@ -39,18 +30,16 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
 
   useEffect(() => {
     async function load() {
-      const supabase = getPublicClient();
-      const { data: t } = await supabase
-        .from('tournaments')
-        .select('name, status, org_id')
-        .eq('id', tournamentId)
-        .single();
+      const res = await fetch(`/api/apply?tournament_id=${encodeURIComponent(tournamentId)}`);
+      const data = await res.json();
 
-      if (!t) {
-        setLoadError('Tournament not found');
+      if (!res.ok) {
+        setLoadError(data.error ?? 'Tournament not found');
         setLoading(false);
         return;
       }
+
+      const t = data.tournament;
       if (t.status !== 'active') {
         setLoadError('This tournament is no longer accepting applications');
         setLoading(false);
@@ -59,13 +48,7 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
 
       setTournament({ name: t.name, status: t.status });
 
-      // Get org name for branding
-      const { data: org } = await supabase
-        .from('organizations')
-        .select('name')
-        .eq('id', t.org_id)
-        .single();
-      setOrgName(org?.name ?? '');
+      setOrgName(data.organization?.name ?? '');
       setLoading(false);
     }
     load();
