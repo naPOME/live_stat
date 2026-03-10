@@ -94,7 +94,7 @@ const WIDGETS = [
 export default function GalleryPage() {
   const [copied, setCopied] = useState<string | null>(null);
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
 
   function copyUrl(path: string, params?: string) {
     const url = `${baseUrl}${path}${params || ''}`;
@@ -107,9 +107,46 @@ export default function GalleryPage() {
     <div style={{ fontFamily: 'Inter, sans-serif', background: '#0e1621', minHeight: '100vh', color: '#fff' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
         <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>OBS Overlay Widgets</h1>
-        <p style={{ color: '#8b8da6', fontSize: 14, marginBottom: 32 }}>
-          Add these as Browser Sources in OBS Studio. Set width/height to 1920×1080 with transparent background.
+        <p style={{ color: '#8b8da6', fontSize: 14, marginBottom: 16 }}>
+          Add these as Browser Sources in OBS Studio. Set width/height to 1920x1080 with transparent background.
         </p>
+
+        {/* Master overlay + Controller banner */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24,
+        }}>
+          <div style={{
+            background: 'linear-gradient(135deg, #00ffc322, #0e1621)',
+            border: '1px solid #00ffc333', borderRadius: 14, padding: 20,
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#00ffc3', letterSpacing: '0.1em', marginBottom: 6 }}>RECOMMENDED</div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 4px', color: '#fff' }}>Master Overlay</h3>
+            <p style={{ fontSize: 12, color: '#8b8da6', margin: '0 0 12px' }}>
+              Single OBS source that composites ALL widgets. Toggle them from the Controller page.
+            </p>
+            <code style={{
+              display: 'block', fontSize: 11, background: 'rgba(0,0,0,0.4)',
+              border: '1px solid rgba(0,255,195,0.2)', borderRadius: 8, padding: '8px 12px',
+              color: '#00ffc3', fontFamily: 'monospace',
+            }}>
+              {baseUrl}/overlay/master
+            </code>
+          </div>
+          <a
+            href="/controller"
+            style={{
+              background: '#1a2a3a', border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 14, padding: 20, textDecoration: 'none',
+              display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800, color: '#ff4e4e', letterSpacing: '0.1em', marginBottom: 6 }}>OBSERVER TOOL</div>
+            <h3 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 4px', color: '#fff' }}>Widget Controller</h3>
+            <p style={{ fontSize: 12, color: '#8b8da6', margin: 0 }}>
+              Toggle widgets with hotkeys (F1-F12) during broadcast. Quick presets for match phases.
+            </p>
+          </a>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 16 }}>
           {WIDGETS.map((w) => (

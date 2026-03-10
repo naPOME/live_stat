@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'LiveStat Cloud',
+  title: 'Tournyx',
   description: 'Tournament management platform for esports organizers',
 };
 

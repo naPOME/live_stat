@@ -155,7 +155,9 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
                 <path d="M2 8L5 5L8 8L11 5L14 8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <span className="text-sm font-bold text-white">LiveStat</span>
+            <span className="text-sm font-black tracking-[0.2em] uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#00ffc3] via-[#6d5efc] to-[#ff4e4e]">
+              Tournyx
+            </span>
           </div>
           {orgName && <p className="text-[#8b8da6] text-xs mb-2">Hosted by {orgName}</p>}
           <h1 className="text-xl font-bold text-white">Team Registration</h1>
@@ -285,7 +287,7 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
           </button>
 
           <p className="text-center text-[#8b8da6] text-[10px]">
-            Powered by LiveStat Cloud
+            Powered by Tournyx
           </p>
         </form>
       </div>

@@ -108,7 +108,7 @@ export default function WidgetsPage() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeTab, setActiveTab] = useState<'widgets' | 'api'>('widgets');
 
-  const localUrl = 'http://localhost:3001';
+  const localUrl = 'http://localhost:3000';
 
   function copyUrl(path: string, params?: string) {
     const url = `${localUrl}${path}${params || ''}`;
@@ -148,6 +148,26 @@ export default function WidgetsPage() {
       {/* WIDGETS TAB */}
       {activeTab === 'widgets' && (
         <>
+          {/* Master Overlay + Controller Banner */}
+          <div className="grid grid-cols-2 gap-3 mb-5">
+            <div className="bg-gradient-to-br from-[#00ffc3]/10 to-transparent border border-[#00ffc3]/20 rounded-xl p-4">
+              <div className="text-[10px] font-bold text-[#00ffc3] uppercase tracking-wider mb-1">Recommended</div>
+              <div className="text-white font-semibold text-sm">Master Overlay</div>
+              <p className="text-[#8b8da6] text-xs mt-1 mb-2">Single OBS source — composites all widgets. Toggle from Controller.</p>
+              <code className="text-[10px] bg-black/30 border border-[#00ffc3]/20 rounded-lg px-2.5 py-1.5 text-[#00ffc3] font-mono block">
+                {localUrl}/overlay/master
+              </code>
+            </div>
+            <div className="bg-[#1a2a3a] border border-white/10 rounded-xl p-4">
+              <div className="text-[10px] font-bold text-[#ff4e4e] uppercase tracking-wider mb-1">Observer Tool</div>
+              <div className="text-white font-semibold text-sm">Widget Controller</div>
+              <p className="text-[#8b8da6] text-xs mt-1 mb-2">Toggle widgets with hotkeys (F1-F12). Quick presets for match phases.</p>
+              <code className="text-[10px] bg-black/30 border border-white/5 rounded-lg px-2.5 py-1.5 text-[#00ffc3] font-mono block">
+                {localUrl}/controller
+              </code>
+            </div>
+          </div>
+
           {/* Category filter */}
           <div className="flex gap-2 mb-5">
             {CATEGORIES.map(cat => (
@@ -220,7 +240,7 @@ export default function WidgetsPage() {
           <div className="mt-8 bg-[#1a2a3a] border border-white/10 rounded-xl p-5">
             <h3 className="text-white font-semibold text-sm mb-3">OBS Setup Instructions</h3>
             <ol className="text-[#8b8da6] text-xs space-y-2 list-decimal list-inside leading-relaxed">
-              <li>Make sure the local engine is running at <code className="text-[#00ffc3] bg-black/30 px-1.5 py-0.5 rounded">http://localhost:3001</code></li>
+              <li>Make sure the local engine is running at <code className="text-[#00ffc3] bg-black/30 px-1.5 py-0.5 rounded">http://localhost:3000</code></li>
               <li>In OBS, add a <strong className="text-white">Browser Source</strong></li>
               <li>Paste the widget URL, set size to <strong className="text-white">1920 x 1080</strong></li>
               <li>Check <strong className="text-white">"Shutdown source when not visible"</strong> for performance</li>
@@ -234,7 +254,7 @@ export default function WidgetsPage() {
       {activeTab === 'api' && (
         <div className="space-y-3">
           <p className="text-[#8b8da6] text-xs mb-4">
-            These endpoints run on the local engine at <code className="text-[#00ffc3]">http://localhost:3001</code>.
+            These endpoints run on the local engine at <code className="text-[#00ffc3]">http://localhost:3000</code>.
             SSE streams auto-reconnect and include ping keepalives every 10 seconds.
           </p>
 

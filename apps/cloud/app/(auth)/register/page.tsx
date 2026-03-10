@@ -60,7 +60,9 @@ export default function RegisterPage() {
               <path d="M2 9L5.5 5.5L9 9L12.5 5.5L16 9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </div>
-          <span className="text-xl font-bold tracking-tight">LiveStat Cloud</span>
+          <span className="text-xl font-black tracking-[0.2em] uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#00ffc3] via-[#6d5efc] to-[#ff4e4e]">
+            Tournyx
+          </span>
         </div>
         <p className="text-[#8b8da6] text-sm">Create your organization account</p>
       </div>

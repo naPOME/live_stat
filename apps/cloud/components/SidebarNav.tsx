@@ -120,7 +120,9 @@ export default function SidebarNav({ orgName, isAdmin = false }: { orgName: stri
             </svg>
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-black text-white truncate leading-tight tracking-tight">LiveStat</div>
+            <div className="text-sm font-black truncate leading-tight tracking-[0.2em] uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#00ffc3] via-[#6d5efc] to-[#ff4e4e]">
+              Tournyx
+            </div>
             <div className="text-[10px] text-[#8b8da6] truncate leading-tight">{orgName}</div>
           </div>
         </div>
