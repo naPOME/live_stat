@@ -49,6 +49,10 @@ create table stages (
   tournament_id uuid not null references tournaments(id) on delete cascade,
   name          text not null,
   stage_order   int not null default 1,
+  status        text not null default 'pending' check (status in ('pending','active','completed')),
+  auto_advance  boolean not null default true,
+  teams_expected int,
+  map_rotation  jsonb,
   created_at    timestamptz not null default now()
 );
 
@@ -101,6 +105,50 @@ create table match_results (
   total_pts   int default 0,
   created_at  timestamptz not null default now(),
   unique (match_id, team_id)
+);
+
+create table match_disputes (
+  id              uuid primary key default gen_random_uuid(),
+  match_id        uuid not null references matches(id) on delete cascade,
+  team_id         uuid references teams(id) on delete set null,
+  status          text not null default 'open' check (status in ('open','under_review','resolved','rejected')),
+  reason          text not null,
+  evidence_url    text,
+  evidence_note   text,
+  created_by      uuid not null default auth.uid() references auth.users(id) on delete set null,
+  resolved_by     uuid references auth.users(id) on delete set null,
+  resolution_note text,
+  created_at      timestamptz not null default now(),
+  resolved_at     timestamptz
+);
+
+create table match_result_flags (
+  id         uuid primary key default gen_random_uuid(),
+  match_id   uuid not null references matches(id) on delete cascade,
+  team_id    uuid references teams(id) on delete set null,
+  code       text not null,
+  message    text not null,
+  created_at timestamptz not null default now()
+);
+
+create table tournament_templates (
+  id                uuid primary key default gen_random_uuid(),
+  tournament_id     uuid not null references tournaments(id) on delete cascade,
+  name              text not null,
+  map_rotation      jsonb not null default '[]',
+  matches_per_stage int not null default 0,
+  teams_per_stage   int,
+  auto_assign       boolean not null default true,
+  created_at        timestamptz not null default now()
+);
+
+create table tournament_teams (
+  id             uuid primary key default gen_random_uuid(),
+  tournament_id  uuid not null references tournaments(id) on delete cascade,
+  team_id        uuid not null references teams(id) on delete cascade,
+  seed           int,
+  created_at     timestamptz not null default now(),
+  unique (tournament_id, team_id)
 );
 
 -- ─── Storage ────────────────────────────────────────────────────────────────────
@@ -160,6 +208,10 @@ alter table teams          enable row level security;
 alter table players        enable row level security;
 alter table match_slots    enable row level security;
 alter table match_results  enable row level security;
+alter table match_disputes enable row level security;
+alter table match_result_flags enable row level security;
+alter table tournament_templates enable row level security;
+alter table tournament_teams enable row level security;
 
 -- NOTE: All policies use an inlined (SELECT org_id FROM profiles WHERE id = auth.uid())
 -- instead of calling get_my_org_id(). PostgreSQL optimises this as a single-execution
@@ -226,5 +278,53 @@ create policy "Own match_results read" on match_results for select
     join stages s on s.id = m.stage_id
     join tournaments t on t.id = s.tournament_id
     where t.org_id = (select org_id from profiles where id = auth.uid())
+  ));
+
+create policy "Own match_disputes" on match_disputes for all
+  using (match_id in (
+    select m.id from matches m
+    join stages s on s.id = m.stage_id
+    join tournaments t on t.id = s.tournament_id
+    where t.org_id = (select org_id from profiles where id = auth.uid())
+  ))
+  with check (match_id in (
+    select m.id from matches m
+    join stages s on s.id = m.stage_id
+    join tournaments t on t.id = s.tournament_id
+    where t.org_id = (select org_id from profiles where id = auth.uid())
+  ));
+
+create policy "Own match_result_flags" on match_result_flags for all
+  using (match_id in (
+    select m.id from matches m
+    join stages s on s.id = m.stage_id
+    join tournaments t on t.id = s.tournament_id
+    where t.org_id = (select org_id from profiles where id = auth.uid())
+  ))
+  with check (match_id in (
+    select m.id from matches m
+    join stages s on s.id = m.stage_id
+    join tournaments t on t.id = s.tournament_id
+    where t.org_id = (select org_id from profiles where id = auth.uid())
+  ));
+
+create policy "Own tournament_templates" on tournament_templates for all
+  using (tournament_id in (
+    select id from tournaments
+    where org_id = (select org_id from profiles where id = auth.uid())
+  ))
+  with check (tournament_id in (
+    select id from tournaments
+    where org_id = (select org_id from profiles where id = auth.uid())
+  ));
+
+create policy "Own tournament_teams" on tournament_teams for all
+  using (tournament_id in (
+    select id from tournaments
+    where org_id = (select org_id from profiles where id = auth.uid())
+  ))
+  with check (tournament_id in (
+    select id from tournaments
+    where org_id = (select org_id from profiles where id = auth.uid())
   ));
 

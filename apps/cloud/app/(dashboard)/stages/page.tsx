@@ -57,6 +57,11 @@ export default async function StagesPage() {
           {stages.map((stage: any) => {
             const tournament = tournamentMap.get(stage.tournament_id);
             const matchCount = stage.matches?.length ?? 0;
+            const stageStatusClass = stage.status === 'active'
+              ? 'bg-[#00ffc3]/10 text-[#00ffc3]'
+              : stage.status === 'completed'
+                ? 'bg-white/10 text-[#8b8da6]'
+                : 'bg-amber-500/15 text-amber-400';
             return (
               <Link
                 key={stage.id}
@@ -75,6 +80,16 @@ export default async function StagesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${stageStatusClass}`}>
+                    {stage.status ?? 'pending'}
+                  </span>
+                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                    stage.auto_advance
+                      ? 'border-[#00ffc3]/40 text-[#00ffc3] bg-[#00ffc3]/10'
+                      : 'border-white/10 text-[#8b8da6] bg-white/5'
+                  }`}>
+                    Auto-advance {stage.auto_advance ? 'On' : 'Off'}
+                  </span>
                   {tournament && (
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       tournament.status === 'active' ? 'bg-[#00ffc3]/10 text-[#00ffc3]' : 'bg-white/5 text-[#8b8da6]'

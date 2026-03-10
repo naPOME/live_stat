@@ -4,7 +4,7 @@ import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { Team } from '@/lib/types';
+import type { MatchDispute, Team } from '@/lib/types';
 
 const SLOT_COUNT = 22;
 
@@ -22,6 +22,7 @@ export default function MatchPage({
   const [match, setMatch] = useState<{ id: string; name: string; map_name: string | null; status: string } | null>(null);
   const [stage, setStage] = useState<{ name: string } | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [disputes, setDisputes] = useState<MatchDispute[]>([]);
   const [slots, setSlots] = useState<SlotAssignment[]>(
     Array.from({ length: SLOT_COUNT }, () => ({ teamId: null })),
   );
@@ -29,6 +30,11 @@ export default function MatchPage({
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [disputeTeamId, setDisputeTeamId] = useState('');
+  const [disputeReason, setDisputeReason] = useState('');
+  const [disputeEvidenceUrl, setDisputeEvidenceUrl] = useState('');
+  const [disputeEvidenceNote, setDisputeEvidenceNote] = useState('');
+  const [disputeSaving, setDisputeSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -54,10 +60,20 @@ export default function MatchPage({
         }
       }
       setSlots(initial);
+      await refreshDisputes();
       setLoading(false);
     }
     load();
   }, [matchId]);
+
+  async function refreshDisputes() {
+    const { data } = await supabase
+      .from('match_disputes')
+      .select('*')
+      .eq('match_id', matchId)
+      .order('created_at', { ascending: false });
+    setDisputes((data as MatchDispute[]) ?? []);
+  }
 
   function setSlotTeam(slotIdx: number, teamId: string | null) {
     // Prevent same team in two slots
@@ -130,6 +146,50 @@ export default function MatchPage({
 
   const assignedCount = slots.filter((s) => s.teamId).length;
   const usedTeamIds = new Set(slots.map((s) => s.teamId).filter(Boolean));
+  const assignedTeams = teams.filter((t) => usedTeamIds.has(t.id));
+
+  async function createDispute() {
+    if (!disputeReason.trim()) return;
+    setDisputeSaving(true);
+    const { error } = await supabase.from('match_disputes').insert({
+      match_id: matchId,
+      team_id: disputeTeamId || null,
+      reason: disputeReason.trim(),
+      evidence_url: disputeEvidenceUrl.trim() || null,
+      evidence_note: disputeEvidenceNote.trim() || null,
+    });
+    if (error) {
+      alert('Failed to create dispute: ' + error.message);
+      setDisputeSaving(false);
+      return;
+    }
+    setDisputeTeamId('');
+    setDisputeReason('');
+    setDisputeEvidenceUrl('');
+    setDisputeEvidenceNote('');
+    await refreshDisputes();
+    setDisputeSaving(false);
+  }
+
+  async function updateDisputeStatus(dispute: MatchDispute, status: MatchDispute['status']) {
+    const { data: { user } } = await supabase.auth.getUser();
+    const updates: Partial<MatchDispute> = { status };
+    if (status === 'resolved' || status === 'rejected') {
+      const note = prompt('Resolution note (optional)') ?? '';
+      updates.resolution_note = note.trim() || null;
+      updates.resolved_by = user?.id ?? null;
+      updates.resolved_at = new Date().toISOString();
+    } else {
+      updates.resolved_by = null;
+      updates.resolved_at = null;
+    }
+    const { error } = await supabase.from('match_disputes').update(updates).eq('id', dispute.id);
+    if (error) {
+      alert('Failed to update dispute: ' + error.message);
+      return;
+    }
+    await refreshDisputes();
+  }
 
   if (loading) {
     return (
@@ -279,6 +339,166 @@ export default function MatchPage({
       <p className="text-xs text-[#8b8da6] mt-3">
         Tip: Slot number maps to the in-game lobby slot. Teams marked with ✓ are already assigned to another slot.
       </p>
+
+      {/* Disputes */}
+      <div className="mt-8 bg-[#213448] border border-white/10 rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold text-white">Disputes</div>
+            <div className="text-xs text-[#8b8da6] mt-0.5">Track contested results and decisions</div>
+          </div>
+          <span className="text-[10px] font-semibold text-[#8b8da6]">
+            {disputes.length} total
+          </span>
+        </div>
+
+        <div className="px-5 py-4 border-b border-white/5 bg-black/10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+                Team (optional)
+              </label>
+              <select
+                value={disputeTeamId}
+                onChange={(e) => setDisputeTeamId(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+              >
+                <option value="">â€” None â€”</option>
+                {assignedTeams.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+                Evidence URL (optional)
+              </label>
+              <input
+                type="url"
+                value={disputeEvidenceUrl}
+                onChange={(e) => setDisputeEvidenceUrl(e.target.value)}
+                placeholder="https://..."
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            <div>
+              <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+                Reason *
+              </label>
+              <textarea
+                value={disputeReason}
+                onChange={(e) => setDisputeReason(e.target.value)}
+                rows={3}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors resize-none"
+                placeholder="Explain the issue with the match result"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+                Evidence note (optional)
+              </label>
+              <textarea
+                value={disputeEvidenceNote}
+                onChange={(e) => setDisputeEvidenceNote(e.target.value)}
+                rows={3}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors resize-none"
+                placeholder="Short note about the evidence"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end mt-3">
+            <button
+              onClick={createDispute}
+              disabled={disputeSaving || !disputeReason.trim()}
+              className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 disabled:opacity-50 disabled:cursor-not-allowed text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+            >
+              {disputeSaving ? 'Creatingâ€¦' : 'Open Dispute'}
+            </button>
+          </div>
+        </div>
+
+        {disputes.length === 0 ? (
+          <div className="px-5 py-6 text-center text-[#8b8da6] text-sm">
+            No disputes yet.
+          </div>
+        ) : (
+          <div>
+            {disputes.map((d, i) => {
+              const team = teams.find((t) => t.id === d.team_id);
+              const statusClass = d.status === 'resolved'
+                ? 'bg-[#00ffc3]/10 text-[#00ffc3]'
+                : d.status === 'rejected'
+                  ? 'bg-[#ff4e4e]/10 text-[#ff4e4e]'
+                  : d.status === 'under_review'
+                    ? 'bg-amber-500/15 text-amber-400'
+                    : 'bg-white/10 text-[#8b8da6]';
+              return (
+                <div key={d.id} className={`px-5 py-4 ${i > 0 ? 'border-t border-white/5' : ''}`}>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-white truncate">
+                          {team?.name ?? 'General dispute'}
+                        </span>
+                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusClass}`}>
+                          {d.status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-[#8b8da6] mt-1">
+                        {new Date(d.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {d.status === 'open' && (
+                        <button
+                          onClick={() => updateDisputeStatus(d, 'under_review')}
+                          className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] transition-colors"
+                        >
+                          Mark under review
+                        </button>
+                      )}
+                      {d.status !== 'resolved' && d.status !== 'rejected' && (
+                        <>
+                          <button
+                            onClick={() => updateDisputeStatus(d, 'resolved')}
+                            className="text-xs text-[#00ffc3] hover:text-white transition-colors"
+                          >
+                            Resolve
+                          </button>
+                          <button
+                            onClick={() => updateDisputeStatus(d, 'rejected')}
+                            className="text-xs text-[#ff4e4e] hover:text-white transition-colors"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-sm text-white/90 mt-2">{d.reason}</p>
+                  {(d.evidence_url || d.evidence_note) && (
+                    <div className="text-xs text-[#8b8da6] mt-2">
+                      {d.evidence_url && (
+                        <div>Evidence: {d.evidence_url}</div>
+                      )}
+                      {d.evidence_note && (
+                        <div>Note: {d.evidence_note}</div>
+                      )}
+                    </div>
+                  )}
+                  {d.resolution_note && (
+                    <div className="text-xs text-[#8b8da6] mt-2">
+                      Resolution: {d.resolution_note}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -48,6 +48,10 @@ export type Stage = {
   tournament_id: string;
   name: string;
   stage_order: number;
+  status: 'pending' | 'active' | 'completed';
+  auto_advance: boolean;
+  teams_expected: number | null;
+  map_rotation: string[] | null;
   created_at: string;
 };
 
@@ -94,6 +98,49 @@ export type MatchResult = {
   placement: number;
   kill_count: number;
   total_pts: number;
+  created_at: string;
+};
+
+export type MatchDispute = {
+  id: string;
+  match_id: string;
+  team_id: string | null;
+  status: 'open' | 'under_review' | 'resolved' | 'rejected';
+  reason: string;
+  evidence_url: string | null;
+  evidence_note: string | null;
+  created_by: string;
+  resolved_by: string | null;
+  resolution_note: string | null;
+  created_at: string;
+  resolved_at: string | null;
+};
+
+export type MatchResultFlag = {
+  id: string;
+  match_id: string;
+  team_id: string | null;
+  code: string;
+  message: string;
+  created_at: string;
+};
+
+export type TournamentTemplate = {
+  id: string;
+  tournament_id: string;
+  name: string;
+  map_rotation: string[];
+  matches_per_stage: number;
+  teams_per_stage: number | null;
+  auto_assign: boolean;
+  created_at: string;
+};
+
+export type TournamentTeam = {
+  id: string;
+  tournament_id: string;
+  team_id: string;
+  seed: number | null;
   created_at: string;
 };
 

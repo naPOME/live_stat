@@ -4,10 +4,11 @@ import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import type { Stage, Match, PointSystem, TeamApplication } from '@/lib/types';
+import type { MatchResultFlag, MatchDispute, Stage, Match, PointSystem, TeamApplication, TournamentTemplate } from '@/lib/types';
 
 type StageWithMatches = Stage & { matches: Match[] };
 type Tab = 'stages' | 'applications';
+type OpsTab = 'ops';
 
 const MAPS = ['Erangel', 'Miramar', 'Vikendi', 'Sanhok', 'Rondo', 'Deston', 'Nusa', 'Taego'];
 const STAGE_NAMES = ['Groups', 'Semi-Finals', 'Grand Finals', 'Qualifier', 'Playoffs'];
@@ -23,12 +24,32 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   const [loading, setLoading] = useState(true);
 
   // Tab
-  const [activeTab, setActiveTab] = useState<Tab>('stages');
+  const [activeTab, setActiveTab] = useState<Tab | OpsTab>('stages');
 
   // Applications
   const [applications, setApplications] = useState<TeamApplication[]>([]);
   const [accepting, setAccepting] = useState<string | null>(null);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [flags, setFlags] = useState<MatchResultFlag[]>([]);
+  const [disputes, setDisputes] = useState<MatchDispute[]>([]);
+
+  // Templates
+  const [templates, setTemplates] = useState<TournamentTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [templateName, setTemplateName] = useState('');
+  const [templateMaps, setTemplateMaps] = useState('Erangel, Rondo, Miramar');
+  const [templateMatchesPerStage, setTemplateMatchesPerStage] = useState(4);
+  const [templateTeamsPerStage, setTemplateTeamsPerStage] = useState<number | ''>('');
+  const [templateAutoAssign, setTemplateAutoAssign] = useState(true);
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [exportInclude, setExportInclude] = useState({
+    tournament: true,
+    stages: true,
+    matches: true,
+    results: true,
+    teams: true,
+    players: true,
+  });
 
   // Add stage form
   const [addingStage, setAddingStage] = useState(false);
@@ -49,11 +70,17 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
         .from('point_systems').select('*').eq('tournament_id', id).limit(1).single();
       setPointSystem(ps);
 
-      await Promise.all([refreshStages(), refreshApplications()]);
+      await Promise.all([refreshStages(), refreshApplications(), refreshTemplates(), refreshOps()]);
       setLoading(false);
     }
     load();
   }, [id]);
+
+  useEffect(() => {
+    if (activeTab === 'ops') {
+      refreshOps();
+    }
+  }, [activeTab]);
 
   async function refreshStages() {
     const { data: stagesData } = await supabase
@@ -71,6 +98,38 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       .eq('tournament_id', id)
       .order('created_at', { ascending: false });
     setApplications((data as TeamApplication[]) ?? []);
+  }
+
+  async function refreshTemplates() {
+    const { data } = await supabase
+      .from('tournament_templates')
+      .select('*')
+      .eq('tournament_id', id)
+      .order('created_at', { ascending: false });
+    setTemplates((data as TournamentTemplate[]) ?? []);
+  }
+
+  async function refreshOps() {
+    const { data: stageRows } = await supabase
+      .from('stages')
+      .select('id')
+      .eq('tournament_id', id);
+    const stageIds = (stageRows ?? []).map((s) => s.id);
+
+    const { data: matchRows } = stageIds.length > 0
+      ? await supabase.from('matches').select('id').in('stage_id', stageIds)
+      : { data: [] };
+    const matchIds = (matchRows ?? []).map((m) => m.id);
+
+    const { data: flagRows } = matchIds.length > 0
+      ? await supabase.from('match_result_flags').select('*').in('match_id', matchIds)
+      : { data: [] };
+    setFlags((flagRows as MatchResultFlag[]) ?? []);
+
+    const { data: disputeRows } = matchIds.length > 0
+      ? await supabase.from('match_disputes').select('*').in('match_id', matchIds)
+      : { data: [] };
+    setDisputes((disputeRows as MatchDispute[]) ?? []);
   }
 
   async function acceptApplication(app: TeamApplication) {
@@ -95,6 +154,11 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       .single();
 
     if (teamError || !team) { setAccepting(null); return; }
+
+    await supabase.from('tournament_teams').upsert(
+      { tournament_id: id, team_id: team.id },
+      { onConflict: 'tournament_id,team_id' },
+    );
 
     // Create players
     if (app.players.length > 0) {
@@ -134,13 +198,130 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
   async function addStage() {
     if (!stageName.trim()) return;
-    await supabase.from('stages').insert({
+    const hasActiveStage = stages.some((stage) => stage.status === 'active');
+
+    const template = templates.find((t) => t.id === selectedTemplateId);
+    const mapRotation = template?.map_rotation?.length ? template.map_rotation : null;
+    const teamsExpected = template?.teams_per_stage ?? null;
+
+    const { data: createdStage } = await supabase.from('stages').insert({
       tournament_id: id,
       name: stageName.trim(),
       stage_order: stages.length + 1,
-    });
+      status: hasActiveStage ? 'pending' : 'active',
+      map_rotation: mapRotation,
+      teams_expected: teamsExpected,
+    }).select('id').single();
+
+    if (template && template.matches_per_stage > 0 && createdStage) {
+      const mapList = mapRotation && mapRotation.length > 0 ? mapRotation : ['Erangel', 'Rondo', 'Miramar'];
+      const matchRows = Array.from({ length: template.matches_per_stage }).map((_, idx) => ({
+        stage_id: createdStage.id,
+        name: `Match ${idx + 1}`,
+        map_name: mapList[idx % mapList.length] ?? null,
+        point_system_id: pointSystem?.id ?? null,
+      }));
+      const { data: createdMatches } = await supabase
+        .from('matches')
+        .insert(matchRows)
+        .select('id')
+        .order('created_at');
+
+      const shouldAutoAssign = template.auto_assign && (teamsExpected ?? 0) > 0 && (createdMatches?.length ?? 0) > 0;
+      if (shouldAutoAssign) {
+        const { data: tournamentTeams } = await supabase
+          .from('tournament_teams')
+          .select('team_id, seed, created_at')
+          .eq('tournament_id', id)
+          .order('seed', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: true });
+
+        const teamIds = (tournamentTeams ?? []).map((t) => t.team_id);
+        const maxTeams = Math.min(teamsExpected ?? 0, teamIds.length);
+        const matchCount = createdMatches?.length ?? 0;
+        const maxSlots = matchCount * 22;
+        const assignCount = Math.min(maxTeams, maxSlots);
+
+        const slotRows = [];
+        for (let i = 0; i < assignCount; i += 1) {
+          const matchIndex = i % matchCount;
+          const slotNumber = Math.floor(i / matchCount) + 1;
+          if (slotNumber > 22) break;
+          slotRows.push({
+            match_id: createdMatches[matchIndex].id,
+            team_id: teamIds[i],
+            slot_number: slotNumber,
+          });
+        }
+
+        if (slotRows.length > 0) {
+          await supabase.from('match_slots').insert(slotRows);
+        }
+      }
+    }
+
     setStageName('');
     setAddingStage(false);
+    await refreshStages();
+  }
+
+  async function createTemplate() {
+    if (!templateName.trim()) return;
+    setTemplateSaving(true);
+    const maps = templateMaps
+      .split(',')
+      .map((m) => m.trim())
+      .filter(Boolean);
+    const matchesPerStage = Math.max(0, Number(templateMatchesPerStage) || 0);
+    const teamsPerStage = templateTeamsPerStage === '' ? null : Number(templateTeamsPerStage);
+
+    const { error } = await supabase.from('tournament_templates').insert({
+      tournament_id: id,
+      name: templateName.trim(),
+      map_rotation: maps,
+      matches_per_stage: matchesPerStage,
+      teams_per_stage: Number.isFinite(teamsPerStage) ? teamsPerStage : null,
+      auto_assign: templateAutoAssign,
+    });
+
+    if (!error) {
+      setTemplateName('');
+      setTemplateMaps('Erangel, Rondo, Miramar');
+      setTemplateMatchesPerStage(4);
+      setTemplateTeamsPerStage('');
+      setTemplateAutoAssign(true);
+      await refreshTemplates();
+    }
+    setTemplateSaving(false);
+  }
+
+  async function exportTournament() {
+    const include = Object.entries(exportInclude)
+      .filter(([, enabled]) => enabled)
+      .map(([key]) => key)
+      .join(',');
+    const res = await fetch(`/api/export-tournament/${id}?include=${encodeURIComponent(include)}`);
+    if (!res.ok) {
+      const err = await res.json();
+      alert('Export failed: ' + (err.error ?? res.statusText));
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${tournament?.name ?? 'tournament'}_export.zip`.replace(/[^a-zA-Z0-9._-]/g, '_');
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function updateStageStatus(stageId: string, status: 'pending' | 'active' | 'completed') {
+    await supabase.from('stages').update({ status }).eq('id', stageId);
+    await refreshStages();
+  }
+
+  async function toggleStageAutoAdvance(stageId: string, nextValue: boolean) {
+    await supabase.from('stages').update({ auto_advance: nextValue }).eq('id', stageId);
     await refreshStages();
   }
 
@@ -185,6 +366,8 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   }
 
   if (!tournament) return null;
+
+  const activeStageId = stages.find((stage) => stage.status === 'active')?.id;
 
   return (
     <div className="p-8 max-w-5xl">
@@ -260,7 +443,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
       {/* Tabs */}
       <div className="flex gap-1 mb-5 bg-[#213448] border border-white/10 rounded-xl p-1 w-fit">
-        {(['stages', 'applications'] as Tab[]).map((tab) => {
+        {(['stages', 'applications', 'ops'] as Array<Tab | OpsTab>).map((tab) => {
           const pendingCount = applications.filter((a) => a.status === 'pending').length;
           return (
             <button
@@ -272,7 +455,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                   : 'text-[#8b8da6] hover:text-white'
               }`}
             >
-              {tab === 'stages' ? 'Stages & Matches' : 'Applications'}
+              {tab === 'stages' ? 'Stages & Matches' : tab === 'applications' ? 'Applications' : 'Ops'}
               {tab === 'applications' && pendingCount > 0 && (
                 <span className="bg-[#00ffc3] text-[#0e1621] text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                   {pendingCount}
@@ -286,16 +469,129 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       {/* ─── STAGES TAB ─── */}
       {activeTab === 'stages' && (
         <>
+          {/* Templates */}
+          <div className="bg-[#213448] border border-white/10 rounded-2xl p-5 mb-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-sm font-semibold text-white">Stage Template</div>
+                <div className="text-xs text-[#8b8da6] mt-0.5">Applied automatically when you click “Add Stage”</div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+                  Use template
+                </label>
+                <select
+                  value={selectedTemplateId}
+                  onChange={(e) => setSelectedTemplateId(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                >
+                  <option value="">— None —</option>
+                  {templates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.matches_per_stage} matches)
+                    </option>
+                  ))}
+                </select>
+                {selectedTemplateId && (
+                  <div className="text-[10px] text-[#8b8da6] mt-2">
+                    Stage creation will auto-generate matches and maps.
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+                  Create new template
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Template name"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Map rotation (comma-separated)"
+                    value={templateMaps}
+                    onChange={(e) => setTemplateMaps(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Matches per stage"
+                      value={templateMatchesPerStage}
+                      onChange={(e) => setTemplateMatchesPerStage(Number(e.target.value))}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Teams per stage"
+                      value={templateTeamsPerStage}
+                      onChange={(e) => setTemplateTeamsPerStage(e.target.value === '' ? '' : Number(e.target.value))}
+                      className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                    />
+                  </div>
+                  <button
+                    onClick={createTemplate}
+                    disabled={templateSaving || !templateName.trim()}
+                    className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 disabled:opacity-50 disabled:cursor-not-allowed text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+                  >
+                    {templateSaving ? 'Saving…' : 'Save Template'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4 mb-4">
-            {stages.map((stage) => (
+            {stages.map((stage) => {
+              const stageStatusClass = stage.status === 'active'
+                ? 'bg-[#00ffc3]/10 text-[#00ffc3]'
+                : stage.status === 'completed'
+                  ? 'bg-white/10 text-[#8b8da6]'
+                  : 'bg-amber-500/15 text-amber-400';
+              const canStartStage = stage.status === 'pending' && !activeStageId;
+              return (
               <div key={stage.id} className="bg-[#213448] border border-white/10 rounded-2xl overflow-hidden">
                 <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-[#00ffc3]" />
                     <span className="font-semibold text-white">{stage.name}</span>
                     <span className="text-xs text-[#8b8da6]">{stage.matches?.length ?? 0} match{stage.matches?.length !== 1 ? 'es' : ''}</span>
+                    {stage.teams_expected ? (
+                      <span className="text-[10px] text-[#8b8da6]">Teams: {stage.teams_expected}</span>
+                    ) : null}
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${stageStatusClass}`}>
+                      {stage.status}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleStageAutoAdvance(stage.id, !stage.auto_advance)}
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors ${
+                        stage.auto_advance
+                          ? 'border-[#00ffc3]/40 text-[#00ffc3] bg-[#00ffc3]/10'
+                          : 'border-white/10 text-[#8b8da6] bg-white/5'
+                      }`}
+                    >
+                      Auto-advance {stage.auto_advance ? 'On' : 'Off'}
+                    </button>
+                    {canStartStage && (
+                      <button
+                        onClick={() => updateStageStatus(stage.id, 'active')}
+                        className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors"
+                      >
+                        Start Stage
+                      </button>
+                    )}
                     <button
                       onClick={() => { setAddingMatchTo(stage.id); setMatchName(''); setMatchMap(''); }}
                       className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors"
@@ -398,7 +694,8 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {addingStage ? (
@@ -541,6 +838,97 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
               );
             })
           )}
+        </div>
+      )}
+
+      {/* ─── OPS TAB ─── */}
+      {activeTab === 'ops' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {[
+              { label: 'Stages', value: stages.length, color: '#00ffc3' },
+              { label: 'Matches', value: stages.flatMap((s) => s.matches ?? []).length, color: '#8b8da6' },
+              { label: 'Flags', value: flags.length, color: '#ff4e4e' },
+              { label: 'Open Disputes', value: disputes.filter((d) => d.status === 'open' || d.status === 'under_review').length, color: '#ffd166' },
+            ].map((stat) => (
+              <div key={stat.label} className="bg-[#213448] border border-white/10 rounded-xl p-4">
+                <div className="text-xs text-[#8b8da6] uppercase tracking-wider">{stat.label}</div>
+                <div className="text-2xl font-black" style={{ color: stat.color }}>{stat.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <div className="text-sm font-semibold text-white">Backup & Export</div>
+                <div className="text-xs text-[#8b8da6] mt-0.5">Export tournament data as a ZIP of JSON files</div>
+              </div>
+              <button
+                onClick={exportTournament}
+                className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+              >
+                Export ZIP
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+              {Object.entries(exportInclude).map(([key, enabled]) => (
+                <label key={key} className="flex items-center gap-2 text-xs text-[#8b8da6]">
+                  <input
+                    type="checkbox"
+                    checked={enabled}
+                    onChange={(e) => setExportInclude((prev) => ({ ...prev, [key]: e.target.checked }))}
+                    className="accent-[#00ffc3]"
+                  />
+                  {key}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-[#213448] border border-white/10 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/5">
+              <div className="text-sm font-semibold text-white">Recent Flags</div>
+              <div className="text-xs text-[#8b8da6] mt-0.5">Validation issues logged from the local engine</div>
+            </div>
+            {flags.length === 0 ? (
+              <div className="px-5 py-6 text-center text-[#8b8da6] text-sm">No flags found.</div>
+            ) : (
+              <div>
+                {flags.slice(0, 8).map((f, i) => (
+                  <div key={f.id} className={`px-5 py-3 ${i > 0 ? 'border-t border-white/5' : ''}`}>
+                    <div className="text-xs text-[#ff4e4e] font-semibold">{f.code}</div>
+                    <div className="text-sm text-white/90">{f.message}</div>
+                    <div className="text-[10px] text-[#8b8da6] mt-1">{new Date(f.created_at).toLocaleString()}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-[#213448] border border-white/10 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-white/5">
+              <div className="text-sm font-semibold text-white">Open Disputes</div>
+              <div className="text-xs text-[#8b8da6] mt-0.5">Items requiring admin action</div>
+            </div>
+            {disputes.filter((d) => d.status === 'open' || d.status === 'under_review').length === 0 ? (
+              <div className="px-5 py-6 text-center text-[#8b8da6] text-sm">No open disputes.</div>
+            ) : (
+              <div>
+                {disputes
+                  .filter((d) => d.status === 'open' || d.status === 'under_review')
+                  .slice(0, 8)
+                  .map((d, i) => (
+                    <div key={d.id} className={`px-5 py-3 ${i > 0 ? 'border-t border-white/5' : ''}`}>
+                      <div className="text-xs text-amber-400 font-semibold">{d.status}</div>
+                      <div className="text-sm text-white/90">{d.reason}</div>
+                      <div className="text-[10px] text-[#8b8da6] mt-1">{new Date(d.created_at).toLocaleString()}</div>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
