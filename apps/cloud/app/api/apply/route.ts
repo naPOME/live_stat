@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
   const { data: tournament } = await supabase
     .from('tournaments')
-    .select('name, status, org_id')
+    .select('name, status, org_id, registration_open, registration_mode, registration_limit')
     .eq('id', tournamentId)
     .single();
 
@@ -35,6 +35,9 @@ export async function GET(request: NextRequest) {
     tournament: {
       name: tournament.name,
       status: tournament.status,
+      registration_open: tournament.registration_open,
+      registration_mode: tournament.registration_mode,
+      registration_limit: tournament.registration_limit,
     },
     organization: {
       name: org?.name ?? '',
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
   // Verify tournament exists and is active
   const { data: tournament } = await supabase
     .from('tournaments')
-    .select('id, name, status')
+    .select('id, name, status, registration_open, registration_mode, registration_limit')
     .eq('id', tournament_id)
     .single();
 
@@ -84,6 +87,20 @@ export async function POST(request: NextRequest) {
   }
   if (tournament.status !== 'active') {
     return NextResponse.json({ error: 'This tournament is no longer accepting applications' }, { status: 400 });
+  }
+  if (tournament.registration_open === false) {
+    return NextResponse.json({ error: 'Registration is currently closed' }, { status: 400 });
+  }
+  if (tournament.registration_mode === 'cap' && tournament.registration_limit) {
+    const { count } = await supabase
+      .from('team_applications')
+      .select('id', { count: 'exact', head: true })
+      .eq('tournament_id', tournament_id)
+      .neq('status', 'rejected');
+    if ((count ?? 0) >= tournament.registration_limit) {
+      await supabase.from('tournaments').update({ registration_open: false }).eq('id', tournament_id);
+      return NextResponse.json({ error: 'Registration cap reached' }, { status: 400 });
+    }
   }
 
   // Check for duplicate team name in same tournament

@@ -28,6 +28,11 @@ create table tournaments (
   name       text not null,
   status     text not null default 'active' check (status in ('active', 'archived')),
   api_key    uuid not null default gen_random_uuid(),
+  registration_open boolean not null default true,
+  registration_mode text not null default 'open' check (registration_mode in ('open','cap','pick_first')),
+  registration_limit int,
+  target_team_count int,
+  allow_overflow boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -53,12 +58,17 @@ create table stages (
   auto_advance  boolean not null default true,
   teams_expected int,
   map_rotation  jsonb,
+  stage_type    text not null default 'group' check (stage_type in ('group','elimination','finals')),
+  advancing_count int,
+  invitational_count int not null default 0,
+  match_count   int,
   created_at    timestamptz not null default now()
 );
 
 create table matches (
   id               uuid primary key default gen_random_uuid(),
   stage_id         uuid not null references stages(id) on delete cascade,
+  group_id         uuid references stage_groups(id) on delete set null,
   name             text not null,
   map_name         text,
   status           text not null default 'pending' check (status in ('pending','live','finished')),
@@ -142,6 +152,22 @@ create table tournament_templates (
   created_at        timestamptz not null default now()
 );
 
+create table stage_groups (
+  id          uuid primary key default gen_random_uuid(),
+  stage_id    uuid not null references stages(id) on delete cascade,
+  name        text not null,
+  group_order int not null default 1,
+  team_count  int,
+  created_at  timestamptz not null default now()
+);
+
+create table group_teams (
+  group_id  uuid not null references stage_groups(id) on delete cascade,
+  team_id   uuid not null references teams(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (group_id, team_id)
+);
+
 create table tournament_teams (
   id             uuid primary key default gen_random_uuid(),
   tournament_id  uuid not null references tournaments(id) on delete cascade,
@@ -212,6 +238,8 @@ alter table match_disputes enable row level security;
 alter table match_result_flags enable row level security;
 alter table tournament_templates enable row level security;
 alter table tournament_teams enable row level security;
+alter table stage_groups enable row level security;
+alter table group_teams enable row level security;
 
 -- NOTE: All policies use an inlined (SELECT org_id FROM profiles WHERE id = auth.uid())
 -- instead of calling get_my_org_id(). PostgreSQL optimises this as a single-execution
@@ -326,5 +354,31 @@ create policy "Own tournament_teams" on tournament_teams for all
   with check (tournament_id in (
     select id from tournaments
     where org_id = (select org_id from profiles where id = auth.uid())
+  ));
+
+create policy "Own stage_groups" on stage_groups for all
+  using (stage_id in (
+    select s.id from stages s
+    join tournaments t on t.id = s.tournament_id
+    where t.org_id = (select org_id from profiles where id = auth.uid())
+  ))
+  with check (stage_id in (
+    select s.id from stages s
+    join tournaments t on t.id = s.tournament_id
+    where t.org_id = (select org_id from profiles where id = auth.uid())
+  ));
+
+create policy "Own group_teams" on group_teams for all
+  using (group_id in (
+    select g.id from stage_groups g
+    join stages s on s.id = g.stage_id
+    join tournaments t on t.id = s.tournament_id
+    where t.org_id = (select org_id from profiles where id = auth.uid())
+  ))
+  with check (group_id in (
+    select g.id from stage_groups g
+    join stages s on s.id = g.stage_id
+    join tournaments t on t.id = s.tournament_id
+    where t.org_id = (select org_id from profiles where id = auth.uid())
   ));
 

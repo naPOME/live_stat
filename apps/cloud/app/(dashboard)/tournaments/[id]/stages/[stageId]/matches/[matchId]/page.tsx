@@ -28,7 +28,6 @@ export default function MatchPage({
   );
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
   const [disputeTeamId, setDisputeTeamId] = useState('');
   const [disputeReason, setDisputeReason] = useState('');
@@ -119,29 +118,6 @@ export default function MatchPage({
     setSaveMsg('Roster saved!');
     setSaving(false);
     setTimeout(() => setSaveMsg(''), 3000);
-  }
-
-  async function exportMatch() {
-    setExporting(true);
-    try {
-      const res = await fetch(`/api/export/${matchId}`);
-      if (!res.ok) {
-        const err = await res.json();
-        alert('Export failed: ' + (err.error ?? res.statusText));
-        setExporting(false);
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${match?.name ?? 'match'}_export.zip`.replace(/[^a-zA-Z0-9._-]/g, '_');
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (e) {
-      alert('Export error: ' + String(e));
-    }
-    setExporting(false);
   }
 
   const assignedCount = slots.filter((s) => s.teamId).length;
@@ -250,16 +226,6 @@ export default function MatchPage({
             className="bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save Roster'}
-          </button>
-          <button
-            onClick={exportMatch}
-            disabled={exporting || assignedCount === 0}
-            className="flex items-center gap-2 bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 disabled:opacity-50 disabled:cursor-not-allowed text-[#00ffc3] text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors"
-          >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1v8M4 6l3 3 3-3M2 10v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            {exporting ? 'Exporting…' : 'Export ZIP'}
           </button>
         </div>
       </div>

@@ -31,6 +31,11 @@ export type Tournament = {
   name: string;
   status: 'active' | 'archived';
   api_key: string;
+  registration_open: boolean;
+  registration_mode: 'open' | 'cap' | 'pick_first';
+  registration_limit: number | null;
+  target_team_count: number | null;
+  allow_overflow: boolean;
   created_at: string;
 };
 
@@ -52,12 +57,17 @@ export type Stage = {
   auto_advance: boolean;
   teams_expected: number | null;
   map_rotation: string[] | null;
+  stage_type: 'group' | 'elimination' | 'finals';
+  advancing_count: number | null;
+  invitational_count: number;
+  match_count: number | null;
   created_at: string;
 };
 
 export type Match = {
   id: string;
   stage_id: string;
+  group_id: string | null;
   name: string;
   map_name: string | null;
   status: 'pending' | 'live' | 'finished';
@@ -141,6 +151,21 @@ export type TournamentTeam = {
   tournament_id: string;
   team_id: string;
   seed: number | null;
+  created_at: string;
+};
+
+export type StageGroup = {
+  id: string;
+  stage_id: string;
+  name: string;
+  group_order: number;
+  team_count: number | null;
+  created_at: string;
+};
+
+export type GroupTeam = {
+  group_id: string;
+  team_id: string;
   created_at: string;
 };
 

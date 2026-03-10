@@ -16,6 +16,8 @@ const PUBGM_KILL_POINTS = 1;
 export default function NewTournamentPage() {
   const router = useRouter();
   const [name, setName] = useState('');
+  const [targetTeams, setTargetTeams] = useState<number | ''>('');
+  const [allowOverflow, setAllowOverflow] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -33,10 +35,23 @@ export default function NewTournamentPage() {
       .from('profiles').select('org_id').eq('id', user.id).single();
     if (!profile?.org_id) { setError('No organization found'); setLoading(false); return; }
 
+    const targetTeamCount = targetTeams === '' ? null : Number(targetTeams);
+    const registrationMode = targetTeamCount
+      ? (allowOverflow ? 'pick_first' : 'cap')
+      : 'open';
+
     // Create tournament
     const { data: tournament, error: tErr } = await supabase
       .from('tournaments')
-      .insert({ org_id: profile.org_id, name: name.trim() })
+      .insert({
+        org_id: profile.org_id,
+        name: name.trim(),
+        target_team_count: targetTeamCount,
+        allow_overflow: allowOverflow,
+        registration_mode: registrationMode,
+        registration_limit: targetTeamCount,
+        registration_open: true,
+      })
       .select()
       .single();
 
@@ -86,6 +101,43 @@ export default function NewTournamentPage() {
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 focus:ring-1 focus:ring-[#00ffc3]/30 transition-colors"
             placeholder="e.g. PMPL Africa Season 4 — Grand Finals"
           />
+        </div>
+
+        {/* Team count */}
+        <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
+          <div className="mb-3">
+            <div className="text-sm font-semibold text-white">Teams</div>
+            <div className="text-xs text-[#8b8da6] mt-0.5">Set how many teams you want to accept</div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+                Target team count
+              </label>
+              <input
+                type="number"
+                min={0}
+                value={targetTeams}
+                onChange={(e) => setTargetTeams(e.target.value === '' ? '' : Number(e.target.value))}
+                placeholder="e.g. 60"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 focus:ring-1 focus:ring-[#00ffc3]/30 transition-colors"
+              />
+            </div>
+            <div className="flex items-end">
+              <label className="flex items-center gap-2 text-xs text-[#8b8da6]">
+                <input
+                  type="checkbox"
+                  checked={allowOverflow}
+                  onChange={(e) => setAllowOverflow(e.target.checked)}
+                  className="accent-[#00ffc3]"
+                />
+                Allow overflow and pick first N later
+              </label>
+            </div>
+          </div>
+          <div className="text-[10px] text-[#8b8da6] mt-3">
+            If target count is set, registration will be capped unless overflow is enabled.
+          </div>
         </div>
 
         {/* Point system info (read-only) */}
