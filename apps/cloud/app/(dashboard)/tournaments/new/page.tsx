@@ -5,47 +5,19 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
-const DEFAULT_PLACEMENT_POINTS: Record<string, number> = {
-  '1': 15, '2': 12, '3': 10, '4': 8, '5': 6, '6': 5, '7': 4, '8': 3,
-  '9': 2, '10': 1, '11': 1, '12': 1, '13': 0, '14': 0, '15': 0, '16': 0,
+// PUBG Mobile standard point system — hardcoded
+const PUBGM_PLACEMENT_POINTS: Record<string, number> = {
+  '1': 10, '2': 6, '3': 5, '4': 4, '5': 3, '6': 2, '7': 1, '8': 1,
+  '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0,
   '17': 0, '18': 0, '19': 0, '20': 0, '21': 0, '22': 0,
 };
-
-const POINT_PRESETS = [
-  {
-    label: 'PUBG Esports (15/12/10…)',
-    points: { '1':15,'2':12,'3':10,'4':8,'5':6,'6':5,'7':4,'8':3,'9':2,'10':1,'11':1,'12':1 },
-    killPts: 1,
-  },
-  {
-    label: 'Standard (10/6/5…)',
-    points: { '1':10,'2':6,'3':5,'4':4,'5':3,'6':2,'7':1,'8':1 },
-    killPts: 1,
-  },
-  {
-    label: 'Kill-focused (5/3/2…)',
-    points: { '1':5,'2':3,'3':2,'4':1,'5':1 },
-    killPts: 2,
-  },
-];
+const PUBGM_KILL_POINTS = 1;
 
 export default function NewTournamentPage() {
   const router = useRouter();
   const [name, setName] = useState('');
-  const [killPoints, setKillPoints] = useState(1);
-  const [placementPoints, setPlacementPoints] = useState<Record<string, number>>(DEFAULT_PLACEMENT_POINTS);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  function applyPreset(idx: number) {
-    const p = POINT_PRESETS[idx];
-    setKillPoints(p.killPts);
-    setPlacementPoints({ ...DEFAULT_PLACEMENT_POINTS, ...p.points });
-  }
-
-  function setPlacement(rank: number, val: string) {
-    setPlacementPoints((prev) => ({ ...prev, [String(rank)]: Number(val) || 0 }));
-  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -70,12 +42,12 @@ export default function NewTournamentPage() {
 
     if (tErr || !tournament) { setError(tErr?.message ?? 'Failed to create'); setLoading(false); return; }
 
-    // Create default point system
+    // Auto-create PUBG Mobile standard point system
     await supabase.from('point_systems').insert({
       tournament_id: tournament.id,
-      name: 'Default',
-      kill_points: killPoints,
-      placement_points: placementPoints,
+      name: 'PUBG Mobile Standard',
+      kill_points: PUBGM_KILL_POINTS,
+      placement_points: PUBGM_PLACEMENT_POINTS,
     });
 
     router.push(`/tournaments/${tournament.id}`);
@@ -112,60 +84,44 @@ export default function NewTournamentPage() {
             required
             autoFocus
             className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 focus:ring-1 focus:ring-[#00ffc3]/30 transition-colors"
-            placeholder="e.g. PGIS Season 4 — Grand Finals"
+            placeholder="e.g. PMPL Africa Season 4 — Grand Finals"
           />
         </div>
 
-        {/* Point system */}
+        {/* Point system info (read-only) */}
         <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <div className="text-sm font-semibold text-white">Point System</div>
-              <div className="text-xs text-[#8b8da6] mt-0.5">Applied to all matches by default</div>
-            </div>
-            <div className="flex gap-2">
-              {POINT_PRESETS.map((p, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => applyPreset(i)}
-                  className="text-xs px-2.5 py-1 rounded-md bg-white/5 hover:bg-[#00ffc3]/20 text-[#8b8da6] hover:text-[#00ffc3] transition-colors border border-white/10"
-                >
-                  {p.label.split(' ')[0]}
-                </button>
-              ))}
-            </div>
+          <div className="mb-3">
+            <div className="text-sm font-semibold text-white">Point System</div>
+            <div className="text-xs text-[#8b8da6] mt-0.5">PUBG Mobile Standard — applied to all matches</div>
           </div>
 
-          <div className="mb-4">
-            <label className="block text-xs font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
-              Kill Points
-            </label>
-            <input
-              type="number"
-              min={0}
-              step={0.5}
-              value={killPoints}
-              onChange={(e) => setKillPoints(Number(e.target.value))}
-              className="w-28 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
-            />
+          <div className="flex items-center gap-6 mb-3">
+            <div>
+              <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Kill Points</span>
+              <div className="text-sm text-[#00ffc3] font-mono mt-0.5">1 pt / kill</div>
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#8b8da6] uppercase tracking-wider mb-2">
-              Placement Points (positions 1–22)
-            </label>
-            <div className="grid grid-cols-11 gap-1.5">
-              {Array.from({ length: 22 }, (_, i) => i + 1).map((rank) => (
-                <div key={rank} className="text-center">
-                  <div className="text-[9px] text-[#8b8da6] mb-0.5">#{rank}</div>
-                  <input
-                    type="number"
-                    min={0}
-                    value={placementPoints[String(rank)] ?? 0}
-                    onChange={(e) => setPlacement(rank, e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded px-1 py-1 text-white text-xs text-center focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
-                  />
+            <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Placement Points</span>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {[
+                { rank: '1st', pts: 10 },
+                { rank: '2nd', pts: 6 },
+                { rank: '3rd', pts: 5 },
+                { rank: '4th', pts: 4 },
+                { rank: '5th', pts: 3 },
+                { rank: '6th', pts: 2 },
+                { rank: '7th', pts: 1 },
+                { rank: '8th', pts: 1 },
+                { rank: '9th+', pts: 0 },
+              ].map(({ rank, pts }) => (
+                <div
+                  key={rank}
+                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-center min-w-[52px]"
+                >
+                  <div className="text-[10px] text-[#8b8da6]">{rank}</div>
+                  <div className={`text-sm font-mono ${pts > 0 ? 'text-[#00ffc3]' : 'text-[#8b8da6]'}`}>{pts}</div>
                 </div>
               ))}
             </div>

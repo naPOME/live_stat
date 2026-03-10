@@ -6,6 +6,15 @@ export type Organization = {
   accent_color: string;
   bg_color: string;
   font: string;
+  table_style: string;
+  sponsor1_url: string | null;
+  sponsor2_url: string | null;
+  sponsor3_url: string | null;
+  banner_url: string | null;
+  banner_title: string | null;
+  banner_subtitle: string | null;
+  favicon_url: string | null;
+  visibility: Record<string, boolean>;
   created_at: string;
 };
 

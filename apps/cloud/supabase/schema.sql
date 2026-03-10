@@ -37,8 +37,8 @@ create table point_systems (
   name              text not null default 'Default',
   kill_points       numeric not null default 1,
   placement_points  jsonb not null default '{
-    "1":15,"2":12,"3":10,"4":8,"5":6,"6":5,"7":4,"8":3,
-    "9":2,"10":1,"11":1,"12":1,"13":0,"14":0,"15":0,"16":0,
+    "1":10,"2":6,"3":5,"4":4,"5":3,"6":2,"7":1,"8":1,
+    "9":0,"10":0,"11":0,"12":0,"13":0,"14":0,"15":0,"16":0,
     "17":0,"18":0,"19":0,"20":0,"21":0,"22":0
   }',
   created_at        timestamptz not null default now()
