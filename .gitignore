@@ -53,3 +53,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 apps/cloud/node_modules/.bin/semver.cmd
+.env*.local
