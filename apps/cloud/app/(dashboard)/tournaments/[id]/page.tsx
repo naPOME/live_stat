@@ -73,7 +73,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   // Stage creation
   const [stagePreset, setStagePreset] = useState<'groups_semis_finals' | 'groups_finals' | 'swiss_playoffs' | 'custom'>('groups_semis_finals');
   const [customStageNames, setCustomStageNames] = useState('');
-  const [matchesPerStageInput, setMatchesPerStageInput] = useState('');
+  const [matchesPerStageInput, setMatchesPerStageInput] = useState('6,4,6');
   const [addingStage, setAddingStage] = useState(false);
   const [stageName, setStageName] = useState('');
   const [templateSaving, setTemplateSaving] = useState(false);
@@ -258,10 +258,11 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       } else if (parsed.length === stageConfigs.length) {
         matchCounts = parsed;
       } else {
-        alert('Matches input should be one number (finals only) or match the number of stages.');
+        alert('Matches per stage must match the number of stages, or be a single finals value.');
         return;
       }
     }
+
     const existingCount = stages.length;
     const hasActiveStage = stages.some((s) => s.status === 'active');
 
@@ -293,10 +294,11 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
         const perStage = matchCounts[i] ?? 0;
         if (perStage <= 0) continue;
+        const rotation = ['Erangel', 'Erangel', 'Erangel', 'Rondo', 'Miramar', 'Miramar'];
         const matchRows = Array.from({ length: perStage }).map((_, idx) => ({
           stage_id: created.id,
           name: `Match ${idx + 1}`,
-          map_name: null,
+          map_name: rotation[idx % rotation.length],
           point_system_id: pointSystem?.id ?? null,
         }));
         await supabase.from('matches').insert(matchRows);
@@ -364,6 +366,23 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
   async function updateMatchMap(matchId: string, mapName: string | null) {
     await supabase.from('matches').update({ map_name: mapName }).eq('id', matchId);
+    await refreshStages();
+  }
+
+  async function generateFinalsRotation(stage: StageWithDetails, sets: number) {
+    if (sets <= 0) return;
+    const rotation = ['Erangel', 'Erangel', 'Erangel', 'Rondo', 'Miramar', 'Miramar'];
+    const startIndex = stage.matches.length;
+    const count = rotation.length * sets;
+
+    const rows = Array.from({ length: count }).map((_, idx) => ({
+      stage_id: stage.id,
+      name: `Match ${startIndex + idx + 1}`,
+      map_name: rotation[(startIndex + idx) % rotation.length],
+      point_system_id: pointSystem?.id ?? null,
+    }));
+
+    await supabase.from('matches').insert(rows);
     await refreshStages();
   }
 
@@ -894,16 +913,6 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                   placeholder="Stage names (comma-separated)"
                   className="w-64 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors" />
               )}
-              <div className="flex items-center gap-1.5">
-                <label className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold whitespace-nowrap">Matches (finals only)</label>
-                <input
-                  type="text"
-                  value={matchesPerStageInput}
-                  onChange={(e) => setMatchesPerStageInput(e.target.value)}
-                  placeholder="e.g. 6"
-                  className="w-28 bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-xs text-white placeholder-white/20 text-center focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
-                />
-              </div>
               <button onClick={createStagesFromPreset}
                 className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
                 + Add Stages
@@ -1276,6 +1285,27 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                           <div className="flex items-center justify-between px-5 py-2.5 bg-black/10 border-b border-white/5">
                             <span className="text-xs font-semibold text-[#8b8da6] uppercase tracking-wider">Matches</span>
                             <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Rotation set</span>
+                                <button
+                                  onClick={() => generateFinalsRotation(stage, 1)}
+                                  className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors"
+                                >
+                                  +6
+                                </button>
+                                <button
+                                  onClick={() => generateFinalsRotation(stage, 2)}
+                                  className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors"
+                                >
+                                  +12
+                                </button>
+                                <button
+                                  onClick={() => generateFinalsRotation(stage, 3)}
+                                  className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors"
+                                >
+                                  +18
+                                </button>
+                              </div>
                               <button
                                 onClick={() => exportStage(stage.id, stage.name)}
                                 className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors">
