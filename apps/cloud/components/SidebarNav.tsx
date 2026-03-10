@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from './AuthProvider';
 
 const links = [
   {
@@ -92,7 +93,8 @@ const links = [
   },
 ];
 
-export default function SidebarNav({ orgName, isAdmin = false }: { orgName: string; isAdmin?: boolean }) {
+export default function SidebarNav() {
+  const { orgName, isAdmin } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
 

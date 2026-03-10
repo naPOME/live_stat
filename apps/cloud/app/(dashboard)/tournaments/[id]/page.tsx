@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, useRef, useCallback, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -30,7 +30,8 @@ const STAGE_PRESETS: Record<string, { name: string; type: Stage['stage_type'] }[
 export default function TournamentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   const [tournament, setTournament] = useState<{
     id: string;
@@ -129,26 +130,14 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
     if (!stagesData) { setStages([]); return; }
 
-    // Load matches and groups for each stage
     const stageIds = stagesData.map((s) => s.id);
+    if (stageIds.length === 0) { setStages([]); return; }
 
+    // Parallel: matches, groups (with nested group_teams→teams join)
     const [{ data: matchesData }, { data: groupsData }] = await Promise.all([
       supabase.from('matches').select('*').in('stage_id', stageIds),
-      supabase.from('stage_groups').select('*').in('stage_id', stageIds).order('group_order'),
+      supabase.from('stage_groups').select('*, group_teams(team_id, teams(*))').in('stage_id', stageIds).order('group_order'),
     ]);
-
-    // Load group_teams with team details
-    const groupIds = (groupsData ?? []).map((g) => g.id);
-    const { data: groupTeamsData } = groupIds.length > 0
-      ? await supabase.from('group_teams').select('group_id, team_id').in('group_id', groupIds)
-      : { data: [] };
-
-    // Load team details for group teams
-    const groupTeamIds = [...new Set((groupTeamsData ?? []).map((gt) => gt.team_id))];
-    const { data: teamsData } = groupTeamIds.length > 0
-      ? await supabase.from('teams').select('*').in('id', groupTeamIds)
-      : { data: [] };
-    const teamsMap = new Map((teamsData ?? []).map((t) => [t.id, t]));
 
     const allMatches = matchesData ?? [];
 
@@ -156,25 +145,27 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       const stageMatches = allMatches.filter((m) => m.stage_id === s.id);
       return {
         ...s,
-        // Stage-level matches = all matches for this stage (includes group ones)
         matches: stageMatches,
         groups: (groupsData ?? [])
-          .filter((g) => g.stage_id === s.id)
-          .map((g) => ({
-            ...g,
-            teams: (groupTeamsData ?? [])
-              .filter((gt) => gt.group_id === g.id)
-              .map((gt) => teamsMap.get(gt.team_id))
-              .filter(Boolean) as Team[],
-            // Matches assigned to this group
+          .filter((g: any) => g.stage_id === s.id)
+          .map((g: any) => ({
+            id: g.id,
+            stage_id: g.stage_id,
+            name: g.name,
+            group_order: g.group_order,
+            team_count: g.team_count,
+            created_at: g.created_at,
+            teams: (g.group_teams ?? [])
+              .map((gt: any) => gt.teams as Team)
+              .filter(Boolean),
             matches: stageMatches.filter((m) => m.group_id === g.id),
           })),
       };
     });
 
     setStages(enriched);
-    // Auto-expand all stages
-    setExpandedStages(new Set(enriched.map((s) => s.id)));
+    // Only auto-expand on first load (when nothing is expanded yet)
+    setExpandedStages((prev) => prev.size === 0 ? new Set(enriched.map((s) => s.id)) : prev);
   }
 
   async function refreshTournamentTeams(): Promise<(Team & { seed: number | null })[]> {
@@ -208,19 +199,15 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   }
 
   async function refreshOps() {
-    const { data: stageRows } = await supabase.from('stages').select('id').eq('tournament_id', id);
-    const stageIds = (stageRows ?? []).map((s) => s.id);
-    const { data: matchRows } = stageIds.length > 0
-      ? await supabase.from('matches').select('id').in('stage_id', stageIds)
-      : { data: [] };
-    const matchIds = (matchRows ?? []).map((m) => m.id);
-    const { data: flagRows } = matchIds.length > 0
-      ? await supabase.from('match_result_flags').select('*').in('match_id', matchIds)
-      : { data: [] };
+    // Use cached stages to avoid extra query
+    const matchIds = stages.flatMap((s) => s.matches.map((m) => m.id));
+    if (matchIds.length === 0) { setFlags([]); setDisputes([]); return; }
+
+    const [{ data: flagRows }, { data: disputeRows }] = await Promise.all([
+      supabase.from('match_result_flags').select('*').in('match_id', matchIds),
+      supabase.from('match_disputes').select('*').in('match_id', matchIds),
+    ]);
     setFlags((flagRows as MatchResultFlag[]) ?? []);
-    const { data: disputeRows } = matchIds.length > 0
-      ? await supabase.from('match_disputes').select('*').in('match_id', matchIds)
-      : { data: [] };
     setDisputes((disputeRows as MatchDispute[]) ?? []);
   }
 
@@ -285,24 +272,22 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       return;
     }
 
-    // Auto-create matches only for finals (group + elimination use divisions)
-    if (matchCounts.some((c) => c > 0)) {
-      for (let i = 0; i < createdStages.length; i++) {
-        const created = createdStages[i];
-        const cfg = stageConfigs[i];
-        if (cfg.type !== 'finals') continue; // divisions handle groups + elimination
-
-        const perStage = matchCounts[i] ?? 0;
-        if (perStage <= 0) continue;
-        const rotation = ['Erangel', 'Erangel', 'Erangel', 'Rondo', 'Miramar', 'Miramar'];
-        const matchRows = Array.from({ length: perStage }).map((_, idx) => ({
-          stage_id: created.id,
-          name: `Match ${idx + 1}`,
-          map_name: rotation[idx % rotation.length],
-          point_system_id: pointSystem?.id ?? null,
-        }));
-        await supabase.from('matches').insert(matchRows);
-      }
+    // Auto-create matches only for finals (group + elimination use divisions) — batched
+    const allMatchRows = createdStages.flatMap((created, i) => {
+      const cfg = stageConfigs[i];
+      if (cfg.type !== 'finals') return [];
+      const perStage = matchCounts[i] ?? 0;
+      if (perStage <= 0) return [];
+      const rotation = ['Erangel', 'Erangel', 'Erangel', 'Rondo', 'Miramar', 'Miramar'];
+      return Array.from({ length: perStage }).map((_, idx) => ({
+        stage_id: created.id,
+        name: `Match ${idx + 1}`,
+        map_name: rotation[idx % rotation.length],
+        point_system_id: pointSystem?.id ?? null,
+      }));
+    });
+    if (allMatchRows.length > 0) {
+      await supabase.from('matches').insert(allMatchRows);
     }
 
     await refreshStages();
@@ -333,18 +318,18 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   }
 
   async function updateStageStatus(stageId: string, status: 'pending' | 'active' | 'completed') {
+    setStages((prev) => prev.map((s) => s.id === stageId ? { ...s, status } : s));
     await supabase.from('stages').update({ status }).eq('id', stageId);
-    await refreshStages();
   }
 
   async function toggleStageAutoAdvance(stageId: string, nextValue: boolean) {
+    setStages((prev) => prev.map((s) => s.id === stageId ? { ...s, auto_advance: nextValue } : s));
     await supabase.from('stages').update({ auto_advance: nextValue }).eq('id', stageId);
-    await refreshStages();
   }
 
   async function updateStageAdvancing(stageId: string, advancingCount: number | null, invitationalCount: number) {
+    setStages((prev) => prev.map((s) => s.id === stageId ? { ...s, advancing_count: advancingCount, invitational_count: invitationalCount } : s));
     await supabase.from('stages').update({ advancing_count: advancingCount, invitational_count: invitationalCount }).eq('id', stageId);
-    await refreshStages();
   }
 
   // ─── Match CRUD ───
@@ -365,8 +350,16 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   }
 
   async function updateMatchMap(matchId: string, mapName: string | null) {
+    // Optimistic update — no full refresh needed
+    setStages((prev) => prev.map((s) => ({
+      ...s,
+      matches: s.matches.map((m) => m.id === matchId ? { ...m, map_name: mapName } : m),
+      groups: s.groups.map((g) => ({
+        ...g,
+        matches: g.matches.map((m) => m.id === matchId ? { ...m, map_name: mapName } : m),
+      })),
+    })));
     await supabase.from('matches').update({ map_name: mapName }).eq('id', matchId);
-    await refreshStages();
   }
 
   async function generateFinalsRotation(stage: StageWithDetails, sets: number) {
@@ -404,18 +397,18 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       })),
     ).select('id, name');
 
-    // Auto-create matches for each group
+    // Auto-create matches for all groups in one batch insert
     if (createdGroups && numMatches > 0) {
-      for (const group of createdGroups) {
-        const matchRows = Array.from({ length: numMatches }).map((_, idx) => ({
+      const allMatchRows = createdGroups.flatMap((group) =>
+        Array.from({ length: numMatches }).map((_, idx) => ({
           stage_id: stageId,
           group_id: group.id,
           name: `${group.name} - Match ${idx + 1}`,
           map_name: null,
           point_system_id: pointSystem?.id ?? null,
-        }));
-        await supabase.from('matches').insert(matchRows);
-      }
+        }))
+      );
+      await supabase.from('matches').insert(allMatchRows);
     }
 
     setCreatingGroupFor(null);

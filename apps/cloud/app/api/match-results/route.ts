@@ -48,7 +48,8 @@ export async function POST(req: NextRequest) {
     .eq('id', body.match_id)
     .single();
 
-  if (!match || match.stage_id !== body.stage_id || match.stage?.tournament_id !== body.tournament_id) {
+  const matchStage = Array.isArray(match?.stage) ? match.stage[0] : match?.stage;
+  if (!match || match.stage_id !== body.stage_id || matchStage?.tournament_id !== body.tournament_id) {
     return NextResponse.json({ error: 'Match does not belong to provided stage/tournament' }, { status: 400 });
   }
 

@@ -138,7 +138,7 @@ export async function GET(
   const logosFolder = zip.folder('logos')!;
 
   for (const t of teams) {
-    const team = (groupTeams ?? []).find((row: any) => row.team?.id === t.team_id)?.team;
+    const team = ((groupTeams ?? []) as any[]).find((row: any) => row.team?.id === t.team_id)?.team as any;
     if (!team?.logo_url) continue;
     try {
       const res = await fetch(team.logo_url);
