@@ -169,46 +169,48 @@ export default function MatchPage({
 
   if (loading) {
     return (
-      <div className="p-8 flex items-center justify-center">
-        <div className="text-[#8b8da6]">Loading…</div>
+      <div className="p-10 flex items-center justify-center min-h-[50vh]">
+        <span className="loader" aria-label="Loading" />
       </div>
     );
   }
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-10 max-w-[1100px] page-enter">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6 text-sm flex-wrap">
-        <Link href="/tournaments" className="text-[#8b8da6] hover:text-white transition-colors">Tournaments</Link>
-        <span className="text-[#8b8da6]/40">/</span>
-        <Link href={`/tournaments/${tournamentId}`} className="text-[#8b8da6] hover:text-white transition-colors">
+        <Link href="/tournaments" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Tournaments</Link>
+        <span className="text-[var(--text-muted)]/50">/</span>
+        <Link href={`/tournaments/${tournamentId}`} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
           Tournament
         </Link>
-        <span className="text-[#8b8da6]/40">/</span>
-        <span className="text-[#8b8da6]">{stage?.name}</span>
-        <span className="text-[#8b8da6]/40">/</span>
-        <span className="text-white">{match?.name}</span>
+        <span className="text-[var(--text-muted)]/50">/</span>
+        <span className="text-[var(--text-secondary)]">{stage?.name}</span>
+        <span className="text-[var(--text-muted)]/50">/</span>
+        <span className="text-[var(--text-primary)]">{match?.name}</span>
       </div>
 
       {/* Header */}
       <div className="flex items-start justify-between mb-8">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-white">{match?.name}</h1>
+            <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)]">{match?.name}</h1>
             {match?.map_name && (
-              <span className="text-sm bg-white/5 border border-white/10 text-[#8b8da6] px-2.5 py-0.5 rounded-lg">
+              <span className="badge badge-muted">
                 {match.map_name}
               </span>
             )}
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-              match?.status === 'finished' ? 'bg-[#00ffc3]/10 text-[#00ffc3]'
-              : match?.status === 'live' ? 'bg-[#ff4e4e]/10 text-[#ff4e4e] animate-pulse'
-              : 'bg-white/5 text-[#8b8da6]'
+            <span className={`badge ${
+              match?.status === 'finished'
+                ? 'badge-accent'
+                : match?.status === 'live'
+                  ? 'badge-danger'
+                  : 'badge-muted'
             }`}>
               {match?.status}
             </span>
           </div>
-          <p className="text-[#8b8da6] text-sm">
+          <p className="text-[var(--text-secondary)] text-sm">
             {assignedCount}/{SLOT_COUNT} slots assigned
           </p>
         </div>
@@ -216,14 +218,14 @@ export default function MatchPage({
         {/* Actions */}
         <div className="flex items-center gap-3">
           {saveMsg && (
-            <span className={`text-xs font-medium ${saveMsg.startsWith('Error') ? 'text-[#ff4e4e]' : 'text-[#00ffc3]'}`}>
+            <span className={`text-xs font-medium ${saveMsg.startsWith('Error') ? 'text-[var(--red)]' : 'text-[var(--accent)]'}`}>
               {saveMsg}
             </span>
           )}
           <button
             onClick={saveRoster}
             disabled={saving}
-            className="bg-white/5 hover:bg-white/10 border border-white/10 text-white text-sm font-semibold px-4 py-2.5 rounded-lg transition-colors disabled:opacity-50"
+            className="btn-primary disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save Roster'}
           </button>
@@ -231,12 +233,12 @@ export default function MatchPage({
       </div>
 
       {/* Slot grid */}
-      <div className="bg-[#213448] border border-white/10 rounded-2xl overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-white/5 flex items-center justify-between">
-          <span className="text-sm font-semibold text-white">Lobby Slot Assignment</span>
+      <div className="surface overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
+          <span className="text-sm font-semibold text-[var(--text-primary)]">Lobby Slot Assignment</span>
           <button
             onClick={() => setSlots(Array.from({ length: SLOT_COUNT }, () => ({ teamId: null })))}
-            className="text-xs text-[#8b8da6] hover:text-[#ff4e4e] transition-colors"
+            className="btn-ghost btn-sm text-[var(--red)] hover:text-[var(--red)]"
           >
             Clear all
           </button>
@@ -250,11 +252,11 @@ export default function MatchPage({
             return (
               <div
                 key={idx}
-                className="flex items-center gap-3 bg-black/20 border border-white/5 rounded-xl px-3 py-2.5 hover:border-white/10 transition-colors"
+                className="flex items-center gap-3 bg-[var(--bg-base)] border border-[var(--border)] rounded-xl px-3 py-2.5 hover:border-[var(--border-hover)] transition-colors"
               >
                 {/* Slot number */}
-                <div className="w-7 h-7 flex-shrink-0 rounded-md bg-[#213448] border border-white/10 flex items-center justify-center">
-                  <span className="text-[11px] font-bold text-[#8b8da6] tabular-nums">
+                <div className="w-7 h-7 flex-shrink-0 rounded-md bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center">
+                  <span className="text-[11px] font-bold text-[var(--text-muted)] tabular-nums">
                     {String(slotNum).padStart(2, '0')}
                   </span>
                 </div>
@@ -271,15 +273,14 @@ export default function MatchPage({
                 <select
                   value={slot.teamId ?? ''}
                   onChange={(e) => setSlotTeam(idx, e.target.value || null)}
-                  className="flex-1 bg-transparent text-sm text-white focus:outline-none cursor-pointer min-w-0"
+                  className="select-premium flex-1 min-w-0"
                 >
-                  <option value="" className="bg-[#213448] text-[#8b8da6]">— Empty —</option>
+                  <option value="">— Empty —</option>
                   {teams.map((t) => (
                     <option
                       key={t.id}
                       value={t.id}
                       disabled={usedTeamIds.has(t.id) && slot.teamId !== t.id}
-                      className={`bg-[#213448] ${usedTeamIds.has(t.id) && slot.teamId !== t.id ? 'text-[#8b8da6]' : 'text-white'}`}
                     >
                       {t.name}{t.short_name ? ` (${t.short_name})` : ''}
                       {usedTeamIds.has(t.id) && slot.teamId !== t.id ? ' ✓' : ''}
@@ -292,9 +293,9 @@ export default function MatchPage({
         </div>
 
         {teams.length === 0 && (
-          <div className="px-5 pb-5 text-center text-[#8b8da6] text-sm">
+          <div className="px-5 pb-5 text-center text-[var(--text-muted)] text-sm">
             No teams yet.{' '}
-            <Link href="/teams" className="text-[#00ffc3] hover:text-[#8b7ffe] transition-colors">
+            <Link href="/teams" className="text-[var(--accent)] hover:text-[var(--purple)] transition-colors">
               Add teams first →
             </Link>
           </div>
@@ -302,32 +303,32 @@ export default function MatchPage({
       </div>
 
       {/* Legend */}
-      <p className="text-xs text-[#8b8da6] mt-3">
+      <p className="text-xs text-[var(--text-muted)] mt-3">
         Tip: Slot number maps to the in-game lobby slot. Teams marked with ✓ are already assigned to another slot.
       </p>
 
       {/* Disputes */}
-      <div className="mt-8 bg-[#213448] border border-white/10 rounded-2xl overflow-hidden">
-        <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+      <div className="mt-8 surface overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
           <div>
-            <div className="text-sm font-semibold text-white">Disputes</div>
-            <div className="text-xs text-[#8b8da6] mt-0.5">Track contested results and decisions</div>
+            <div className="text-sm font-semibold text-[var(--text-primary)]">Disputes</div>
+            <div className="text-xs text-[var(--text-secondary)] mt-0.5">Track contested results and decisions</div>
           </div>
-          <span className="text-[10px] font-semibold text-[#8b8da6]">
+          <span className="text-[10px] font-semibold text-[var(--text-muted)]">
             {disputes.length} total
           </span>
         </div>
 
-        <div className="px-5 py-4 border-b border-white/5 bg-black/10">
+        <div className="px-5 py-4 border-b border-[var(--border)] bg-[var(--bg-base)]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+              <label className="block text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                 Team (optional)
               </label>
               <select
                 value={disputeTeamId}
                 onChange={(e) => setDisputeTeamId(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                className="select-premium w-full"
               >
                 <option value="">â€” None â€”</option>
                 {assignedTeams.map((t) => (
@@ -336,7 +337,7 @@ export default function MatchPage({
               </select>
             </div>
             <div>
-              <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+              <label className="block text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                 Evidence URL (optional)
               </label>
               <input
@@ -344,32 +345,32 @@ export default function MatchPage({
                 value={disputeEvidenceUrl}
                 onChange={(e) => setDisputeEvidenceUrl(e.target.value)}
                 placeholder="https://..."
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                className="input-premium"
               />
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
             <div>
-              <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+              <label className="block text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                 Reason *
               </label>
               <textarea
                 value={disputeReason}
                 onChange={(e) => setDisputeReason(e.target.value)}
                 rows={3}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors resize-none"
+                className="input-premium resize-none"
                 placeholder="Explain the issue with the match result"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
+              <label className="block text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-1.5">
                 Evidence note (optional)
               </label>
               <textarea
                 value={disputeEvidenceNote}
                 onChange={(e) => setDisputeEvidenceNote(e.target.value)}
                 rows={3}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors resize-none"
+                className="input-premium resize-none"
                 placeholder="Short note about the evidence"
               />
             </div>
@@ -378,7 +379,7 @@ export default function MatchPage({
             <button
               onClick={createDispute}
               disabled={disputeSaving || !disputeReason.trim()}
-              className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 disabled:opacity-50 disabled:cursor-not-allowed text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {disputeSaving ? 'Creatingâ€¦' : 'Open Dispute'}
             </button>
@@ -386,7 +387,7 @@ export default function MatchPage({
         </div>
 
         {disputes.length === 0 ? (
-          <div className="px-5 py-6 text-center text-[#8b8da6] text-sm">
+          <div className="px-5 py-6 text-center text-[var(--text-muted)] text-sm">
             No disputes yet.
           </div>
         ) : (
@@ -394,25 +395,25 @@ export default function MatchPage({
             {disputes.map((d, i) => {
               const team = teams.find((t) => t.id === d.team_id);
               const statusClass = d.status === 'resolved'
-                ? 'bg-[#00ffc3]/10 text-[#00ffc3]'
+                ? 'badge-accent'
                 : d.status === 'rejected'
-                  ? 'bg-[#ff4e4e]/10 text-[#ff4e4e]'
+                  ? 'badge-danger'
                   : d.status === 'under_review'
-                    ? 'bg-amber-500/15 text-amber-400'
-                    : 'bg-white/10 text-[#8b8da6]';
+                    ? 'badge-warning'
+                    : 'badge-muted';
               return (
-                <div key={d.id} className={`px-5 py-4 ${i > 0 ? 'border-t border-white/5' : ''}`}>
+                <div key={d.id} className={`px-5 py-4 ${i > 0 ? 'border-t border-[var(--border)]' : ''}`}>
                   <div className="flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-white truncate">
+                        <span className="text-sm font-semibold text-[var(--text-primary)] truncate">
                           {team?.name ?? 'General dispute'}
                         </span>
-                        <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${statusClass}`}>
+                        <span className={`badge ${statusClass}`}>
                           {d.status}
                         </span>
                       </div>
-                      <div className="text-xs text-[#8b8da6] mt-1">
+                      <div className="text-xs text-[var(--text-muted)] mt-1">
                         {new Date(d.created_at).toLocaleString()}
                       </div>
                     </div>
@@ -420,7 +421,7 @@ export default function MatchPage({
                       {d.status === 'open' && (
                         <button
                           onClick={() => updateDisputeStatus(d, 'under_review')}
-                          className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] transition-colors"
+                          className="text-xs text-[var(--accent)] hover:text-[var(--purple)] transition-colors"
                         >
                           Mark under review
                         </button>
@@ -429,13 +430,13 @@ export default function MatchPage({
                         <>
                           <button
                             onClick={() => updateDisputeStatus(d, 'resolved')}
-                            className="text-xs text-[#00ffc3] hover:text-white transition-colors"
+                            className="text-xs text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors"
                           >
                             Resolve
                           </button>
                           <button
                             onClick={() => updateDisputeStatus(d, 'rejected')}
-                            className="text-xs text-[#ff4e4e] hover:text-white transition-colors"
+                            className="text-xs text-[var(--red)] hover:text-[var(--text-primary)] transition-colors"
                           >
                             Reject
                           </button>
@@ -443,9 +444,9 @@ export default function MatchPage({
                       )}
                     </div>
                   </div>
-                  <p className="text-sm text-white/90 mt-2">{d.reason}</p>
+                  <p className="text-sm text-[var(--text-primary)] mt-2">{d.reason}</p>
                   {(d.evidence_url || d.evidence_note) && (
-                    <div className="text-xs text-[#8b8da6] mt-2">
+                    <div className="text-xs text-[var(--text-muted)] mt-2">
                       {d.evidence_url && (
                         <div>Evidence: {d.evidence_url}</div>
                       )}
@@ -455,7 +456,7 @@ export default function MatchPage({
                     </div>
                   )}
                   {d.resolution_note && (
-                    <div className="text-xs text-[#8b8da6] mt-2">
+                    <div className="text-xs text-[var(--text-muted)] mt-2">
                       Resolution: {d.resolution_note}
                     </div>
                   )}

@@ -5,22 +5,15 @@ import SetupOrgPrompt from '@/components/SetupOrgPrompt';
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('org_id')
-    .eq('id', user.id)
-    .single();
+    .from('profiles').select('org_id').eq('id', user.id).single();
 
-  if (!profile?.org_id) {
-    return <SetupOrgPrompt />;
-  }
+  if (!profile?.org_id) return <SetupOrgPrompt />;
 
   const orgId = profile.org_id;
-
   const [
     { data: org },
     { count: tournamentCount },
@@ -35,115 +28,126 @@ export default async function DashboardPage() {
     supabase.from('team_applications').select('id, tournament_id').eq('status', 'pending'),
   ]);
 
-  // Filter pending apps to only our tournaments
   const allTournamentIds = await supabase.from('tournaments').select('id').eq('org_id', orgId);
   const ourIds = new Set((allTournamentIds.data || []).map((t: any) => t.id));
   const pendingCount = (pendingApps || []).filter(a => ourIds.has(a.tournament_id)).length;
 
   const stats = [
-    { label: 'Active Tournaments', value: tournamentCount ?? 0, color: '#00ffc3', href: '/tournaments' },
-    { label: 'Registered Teams', value: teamCount ?? 0, color: '#00ffc3', href: '/teams' },
-    { label: 'Pending Applications', value: pendingCount, color: pendingCount > 0 ? '#ffb800' : '#8b8da6', href: '/tournaments' },
+    { label: 'Active Tournaments', value: tournamentCount ?? 0, accent: '#00ffc3', href: '/tournaments' },
+    { label: 'Registered Teams', value: teamCount ?? 0, accent: '#00b4ff', href: '/teams' },
+    { label: 'Pending Apps', value: pendingCount, accent: pendingCount > 0 ? '#ffb800' : '#4a5a74', href: '/tournaments' },
+  ];
+
+  const quickActions = [
+    { label: 'New Tournament', href: '/tournaments/new', desc: 'Create & configure',
+      icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
+    { label: 'Manage Teams', href: '/teams', desc: 'Teams & player IDs',
+      icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="13" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.5" opacity="0.4"/><path d="M2 17c0-3 2.5-5 5-5s5 2 5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label: 'Widgets', href: '/widgets', desc: 'OBS overlay setup',
+      icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><rect x="12" y="2" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><rect x="2" y="12" width="6" height="6" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><path d="M14 13l2.5 2.5L14 18" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg> },
+    { label: 'Settings', href: '/settings', desc: 'Branding & theme',
+      icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.4"/><path d="M10 3v2m0 10v2m7-7h-2M5 10H3m11.6-4.6l-1.4 1.4M5.8 14.2l-1.4 1.4m11.2 0l-1.4-1.4M5.8 5.8L4.4 4.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg> },
   ];
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-10 max-w-[1100px] page-enter">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">
+        <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">
           {org?.name ?? 'Dashboard'}
         </h1>
-        <p className="text-[#8b8da6] text-sm mt-1">Overview of your tournament activity</p>
+        <p className="text-[var(--text-secondary)] text-sm font-body">
+          Overview of your tournaments and teams
+        </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 stagger">
         {stats.map((s) => (
-          <Link
-            key={s.label}
-            href={s.href}
-            className="bg-[#1a2a3a] border border-white/10 rounded-xl p-4 hover:border-white/20 transition-colors group"
-          >
-            <div className="text-3xl font-black tabular-nums" style={{ color: s.color }}>
-              {s.value}
+          <Link key={s.label} href={s.href}
+            className="surface p-6 card-hover flex flex-col justify-between min-h-[120px] group">
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-[var(--text-secondary)] text-[13px] font-medium">{s.label}</div>
+              <div className="w-2 h-2 rounded-full transition-all group-hover:scale-125" style={{ backgroundColor: s.accent }} />
             </div>
-            <div className="text-[#8b8da6] text-xs mt-1 group-hover:text-white/70 transition-colors">
-              {s.label}
-            </div>
+            <div className="stat-number text-4xl text-[var(--text-primary)]">{s.value}</div>
           </Link>
         ))}
       </div>
 
-      {/* Quick actions */}
-      <div className="grid grid-cols-4 gap-3 mb-8">
-        {[
-          { label: 'New Tournament', href: '/tournaments/new', icon: '+', desc: 'Create a tournament' },
-          { label: 'Manage Teams', href: '/teams', icon: '⬡', desc: 'Teams & player IDs' },
-          { label: 'Widgets & API', href: '/widgets', icon: '◈', desc: 'OBS overlay widgets' },
-          { label: 'Settings', href: '/settings', icon: '⚙', desc: 'Branding & theme' },
-        ].map((a) => (
-          <Link
-            key={a.label}
-            href={a.href}
-            className="bg-[#1a2a3a] border border-white/10 rounded-xl p-4 hover:border-[#00ffc3]/40 transition-all group"
-          >
-            <div className="text-[#00ffc3] text-xl mb-2 font-black">{a.icon}</div>
-            <div className="text-white font-semibold text-sm">{a.label}</div>
-            <div className="text-[#8b8da6] text-xs mt-0.5">{a.desc}</div>
-          </Link>
-        ))}
+      {/* Quick Actions */}
+      <div className="mb-10 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
+        <h2 className="font-body text-[13px] font-medium text-[var(--text-secondary)] mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {quickActions.map((a) => (
+            <Link key={a.label} href={a.href} className="surface p-5 card-hover group flex flex-col items-start gap-4">
+              <div className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors">
+                {a.icon}
+              </div>
+              <div>
+                <div className="font-body text-[14px] font-medium text-[var(--text-primary)] mb-1">{a.label}</div>
+                <div className="text-[var(--text-secondary)] text-[12px]">{a.desc}</div>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
 
-      {/* Recent tournaments */}
+      {/* Recent Tournaments */}
       {recentTournaments && recentTournaments.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-[#8b8da6] uppercase tracking-wider">Recent Tournaments</h2>
-            <Link href="/tournaments" className="text-xs text-[#00ffc3] hover:text-[#00d9a6] transition-colors">
-              View all →
+        <div className="animate-slide-up" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-body text-[13px] font-medium text-[var(--text-secondary)]">Recent Tournaments</h2>
+            <Link href="/tournaments" className="text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium">
+              View all
             </Link>
           </div>
-          <div className="bg-[#1a2a3a] border border-white/10 rounded-2xl overflow-hidden">
-            {recentTournaments.map((t, i) => (
-              <Link
-                key={t.id}
-                href={`/tournaments/${t.id}`}
-                className={`flex items-center justify-between px-5 py-3.5 hover:bg-white/5 transition-colors ${
-                  i > 0 ? 'border-t border-white/5' : ''
-                }`}
-              >
-                <span className="text-sm font-medium text-white">{t.name}</span>
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                      t.status === 'active'
-                        ? 'bg-[#00ffc3]/10 text-[#00ffc3]'
-                        : 'bg-white/5 text-[#8b8da6]'
-                    }`}
-                  >
-                    {t.status}
-                  </span>
-                  <span className="text-[#8b8da6] text-xs">
-                    {new Date(t.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-              </Link>
-            ))}
+          <div className="surface overflow-hidden">
+            <div className="grid grid-cols-[1fr_100px_100px] gap-4 px-6 py-3 border-b border-[var(--border)] bg-[var(--bg-surface)]">
+              {['Name', 'Status', 'Date'].map((h) => (
+                <span key={h} className="text-[12px] font-medium text-[var(--text-muted)]">{h}</span>
+              ))}
+            </div>
+            <div className="divide-y divide-[var(--border)]">
+              {recentTournaments.map((t) => (
+                <Link key={t.id} href={`/tournaments/${t.id}`}
+                  className="grid grid-cols-[1fr_100px_100px] gap-4 px-6 py-4 items-center group hover:bg-[var(--bg-hover)] transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 border border-[var(--border)] bg-[var(--bg-surface)] group-hover:border-[var(--border-hover)] transition-colors">
+                      <svg width="14" height="14" viewBox="0 0 18 18" fill="none" className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors">
+                        <path d="M9 2L11 6.5H16L12 9.5L13.5 14L9 11L4.5 14L6 9.5L2 6.5H7L9 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+                      </svg>
+                    </div>
+                    <span className="text-[14px] font-medium text-[var(--text-primary)] truncate">{t.name}</span>
+                  </div>
+                  <div>
+                    <span className="badge badge-muted">
+                      {t.status}
+                    </span>
+                  </div>
+                  <span className="text-[var(--text-secondary)] text-[13px]">{new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </Link>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {!recentTournaments?.length && (
-        <div className="bg-[#1a2a3a] border border-dashed border-white/10 rounded-2xl p-10 text-center">
-          <div className="text-4xl mb-3">🏆</div>
-          <h3 className="text-white font-semibold mb-1">No tournaments yet</h3>
-          <p className="text-[#8b8da6] text-sm mb-4">Create your first tournament to get started</p>
-          <Link
-            href="/tournaments/new"
-            className="inline-flex items-center gap-2 bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
-          >
-            + New Tournament
-          </Link>
+        <div className="surface animate-slide-up mt-8">
+          <div className="p-16 text-center relative overflow-hidden flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl mb-6 flex items-center justify-center border border-[var(--border)] bg-[var(--bg-surface)]">
+              <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
+                <path d="M14 3L17 10H24L18.5 14.5L20.5 22L14 17.5L7.5 22L9.5 14.5L4 10H11L14 3Z" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-muted)]" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <h3 className="font-display text-lg font-semibold mb-2 text-[var(--text-primary)]">No Tournaments Yet</h3>
+            <p className="text-[var(--text-secondary)] text-[14px] mb-8 max-w-sm">Create your first tournament to start managing teams, matches, and leaderboards.</p>
+            <Link href="/tournaments/new" className="btn-primary inline-flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              <span>Create Tournament</span>
+            </Link>
+          </div>
         </div>
       )}
     </div>

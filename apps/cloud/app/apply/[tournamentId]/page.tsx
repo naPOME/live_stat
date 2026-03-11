@@ -105,7 +105,9 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0e1621] flex items-center justify-center">
-        <div className="text-[#8b8da6] text-sm">Loading...</div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <span className="loader" aria-label="Loading" />
+      </div>
       </div>
     );
   }

@@ -3,232 +3,139 @@
 import { useState } from 'react';
 
 const WIDGETS = [
-  {
-    name: 'Match Ranking',
-    path: '/overlay/leaderboard',
-    description: 'Live leaderboard with teams, player alive/dead status bars, points and eliminations. Updates every second during match.',
-    size: '420 x 1080',
-    category: 'Live',
-  },
-  {
-    name: 'Kill Feed',
-    path: '/overlay/killfeed',
-    description: 'Real-time kill events showing killer → victim with team colors and distance. Auto-fades after 5 seconds.',
-    size: '1920 x 1080',
-    category: 'Live',
-  },
-  {
-    name: 'Player Card',
-    path: '/overlay/playercard',
-    description: 'Stats overlay for the currently observed player: health bar, kills, team info, alive count.',
-    size: '1920 x 1080',
-    category: 'Live',
-  },
-  {
-    name: 'Elimination Notification',
-    path: '/overlay/elimination',
-    description: 'Animated popup when a team is fully eliminated. Shows rank badge, team name, elims and total points.',
-    size: '1920 x 1080',
-    category: 'Live',
-  },
-  {
-    name: 'MVP',
-    path: '/overlay/mvp',
-    description: 'Match MVP display — top fragger with team tag, eliminations, and detailed stats panel.',
-    size: '1920 x 1080',
-    category: 'Post-Match',
-  },
-  {
-    name: 'Winner Winner Chicken Dinner',
-    path: '/overlay/wwcd',
-    description: 'WWCD celebration screen with player silhouettes, WWCD count, total elims, placement and total points.',
-    size: '1920 x 1080',
-    category: 'Post-Match',
-  },
-  {
-    name: 'Top Fraggers',
-    path: '/overlay/fraggers',
-    description: 'Top 5 players by eliminations with MVP badge. Cards show player name, team, and kill count.',
-    size: '1920 x 1080',
-    category: 'Post-Match',
-  },
-  {
-    name: 'After Match Score',
-    path: '/overlay/results',
-    description: 'Two-column match results table with all teams ranked by total points. Shows elims and totals.',
-    size: '1920 x 1080',
-    category: 'Post-Match',
-  },
-  {
-    name: 'Point Table',
-    path: '/overlay/pointtable',
-    description: 'Visual PUBG Mobile standard point system — placement points grid and elimination point value.',
-    size: '1920 x 1080',
-    category: 'Static',
-  },
-  {
-    name: 'Team List',
-    path: '/overlay/teamlist',
-    description: 'Two-column grid of all participating teams with logos and slot numbers. Good for pre-match.',
-    size: '1920 x 1080',
-    category: 'Static',
-  },
-  {
-    name: 'Match Info',
-    path: '/overlay/matchinfo',
-    description: 'Match started notification with tournament banner, stage name, game number, and map.',
-    size: '1920 x 1080',
-    category: 'Static',
-    params: '?stage=Groups&game=Game 1&map=Erangel',
-  },
-  {
-    name: 'Match Schedule',
-    path: '/overlay/schedule',
-    description: 'Bottom bar showing all matches with map names and live/finished/upcoming status indicators.',
-    size: '1920 x 1080',
-    category: 'Static',
-    params: '?matches=MATCH 1:ERANGEL:finished,MATCH 2:MIRAMAR:live,MATCH 3:SANHOK:upcoming',
-  },
+  { name: 'Match Ranking', path: '/overlay/leaderboard', description: 'Live leaderboard with teams, player alive/dead status bars, points and eliminations.', size: '420 x 1080', category: 'Live' },
+  { name: 'Kill Feed', path: '/overlay/killfeed', description: 'Real-time kill events showing killer → victim with team colors and distance.', size: '1920 x 1080', category: 'Live' },
+  { name: 'Player Card', path: '/overlay/playercard', description: 'Stats overlay for the currently observed player: health bar, kills, team info.', size: '1920 x 1080', category: 'Live' },
+  { name: 'Elimination', path: '/overlay/elimination', description: 'Animated popup when a team is fully eliminated. Shows rank badge and points.', size: '1920 x 1080', category: 'Live' },
+  { name: 'MVP', path: '/overlay/mvp', description: 'Match MVP display — top fragger with team tag and detailed stats panel.', size: '1920 x 1080', category: 'Post-Match' },
+  { name: 'WWCD', path: '/overlay/wwcd', description: 'Winner Winner Chicken Dinner celebration with player stats and elims.', size: '1920 x 1080', category: 'Post-Match' },
+  { name: 'Top Fraggers', path: '/overlay/fraggers', description: 'Top 5 players by eliminations with MVP badge and kill count.', size: '1920 x 1080', category: 'Post-Match' },
+  { name: 'After Match Score', path: '/overlay/results', description: 'Two-column match results table with all teams ranked by total points.', size: '1920 x 1080', category: 'Post-Match' },
+  { name: 'Point Table', path: '/overlay/pointtable', description: 'Visual PUBG Mobile standard point system — placement and elimination points.', size: '1920 x 1080', category: 'Static' },
+  { name: 'Team List', path: '/overlay/teamlist', description: 'Two-column grid of all participating teams with logos and slot numbers.', size: '1920 x 1080', category: 'Static' },
+  { name: 'Match Info', path: '/overlay/matchinfo', description: 'Match started notification with tournament banner, stage name, map.', size: '1920 x 1080', category: 'Static', params: '?stage=Groups&game=Game 1&map=Erangel' },
+  { name: 'Schedule', path: '/overlay/schedule', description: 'Bottom bar showing all matches with map names and live/finished status.', size: '1920 x 1080', category: 'Static', params: '?matches=MATCH 1:ERANGEL:finished,MATCH 2:MIRAMAR:live,MATCH 3:SANHOK:upcoming' },
 ];
 
 const CATEGORIES = ['All', 'Live', 'Post-Match', 'Static'];
 
 const API_ENDPOINTS = [
-  { method: 'GET', path: '/api/live', description: 'Current match leaderboard (JSON). Teams sorted by points, includes kills, placement, alive status.' },
-  { method: 'GET', path: '/api/stream', description: 'Full game state SSE stream. Events: hello, state, ping. Real-time updates.' },
-  { method: 'GET', path: '/api/killfeed', description: 'Kill events SSE stream. Sends last 8 kills on connect, then new kills in real-time.' },
-  { method: 'GET', path: '/api/playercard', description: 'Observed player SSE stream. Updates when caster switches player focus.' },
-  { method: 'GET', path: '/api/theme', description: 'Overlay theme config: bg_color, accent_color, font, brand_color from roster_mapping.json.' },
-  { method: 'POST', path: '/api/pcob', description: 'Game data ingestion endpoint. Accepts team/player state from game client.' },
-  { method: 'POST', path: '/api/watcher', description: 'Start/stop watching game log files. Actions: start (with filePath), stop.' },
+  { method: 'GET', path: '/api/live', description: 'Current match leaderboard (JSON). Teams sorted by points.' },
+  { method: 'GET', path: '/api/stream', description: 'Full game state SSE stream. Events: hello, state, ping.' },
+  { method: 'GET', path: '/api/killfeed', description: 'Kill events SSE stream. Last 8 kills on connect, then real-time.' },
+  { method: 'GET', path: '/api/playercard', description: 'Observed player SSE stream. Updates on player focus switch.' },
+  { method: 'GET', path: '/api/theme', description: 'Overlay theme config: colors, font, brand from roster_mapping.' },
+  { method: 'POST', path: '/api/pcob', description: 'Game data ingestion endpoint. Accepts team/player state.' },
+  { method: 'POST', path: '/api/watcher', description: 'Start/stop watching game log files.' },
 ];
 
 export default function WidgetsPage() {
   const [copied, setCopied] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeTab, setActiveTab] = useState<'widgets' | 'api'>('widgets');
-
   const localUrl = 'http://localhost:3000';
 
   function copyUrl(path: string, params?: string) {
-    const url = `${localUrl}${path}${params || ''}`;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(`${localUrl}${path}${params || ''}`);
     setCopied(path);
     setTimeout(() => setCopied(null), 2000);
   }
 
-  const filtered = activeCategory === 'All'
-    ? WIDGETS
-    : WIDGETS.filter(w => w.category === activeCategory);
+  const filtered = activeCategory === 'All' ? WIDGETS : WIDGETS.filter(w => w.category === activeCategory);
+
+  const categoryStyle: Record<string, string> = {
+    Live: 'badge-danger',
+    'Post-Match': 'badge-accent',
+    Static: 'badge-muted',
+  };
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Widgets & API</h1>
-        <p className="text-[#8b8da6] text-sm mt-1">OBS overlay widgets and API endpoints for the local engine</p>
+    <div className="p-10 max-w-[1100px] page-enter">
+      <div className="mb-8">
+        <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Widgets & API</h1>
+        <p className="text-[var(--text-secondary)] text-sm font-body">OBS overlay widgets and API endpoints for the local engine</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-[#1a2a3a] border border-white/10 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 mb-8 surface rounded-xl p-1 w-fit">
         {(['widgets', 'api'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === tab
-                ? 'bg-white/10 text-white'
-                : 'text-[#8b8da6] hover:text-white'
-            }`}
-          >
+          <button key={tab} onClick={() => setActiveTab(tab)}
+            className={`px-5 py-2.5 rounded-lg text-sm font-display font-semibold tracking-wide transition-all ${
+              activeTab === tab ? 'bg-white/[0.06] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+            }`}>
             {tab === 'widgets' ? 'Overlay Widgets' : 'API Endpoints'}
           </button>
         ))}
       </div>
 
-      {/* WIDGETS TAB */}
       {activeTab === 'widgets' && (
         <>
-          {/* Master Overlay + Controller Banner */}
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            <div className="bg-gradient-to-br from-[#00ffc3]/10 to-transparent border border-[#00ffc3]/20 rounded-xl p-4">
-              <div className="text-[10px] font-bold text-[#00ffc3] uppercase tracking-wider mb-1">Recommended</div>
-              <div className="text-white font-semibold text-sm">Master Overlay</div>
-              <p className="text-[#8b8da6] text-xs mt-1 mb-2">Single OBS source — composites all widgets. Toggle from Controller.</p>
-              <code className="text-[10px] bg-black/30 border border-[#00ffc3]/20 rounded-lg px-2.5 py-1.5 text-[#00ffc3] font-mono block">
-                {localUrl}/overlay/master
-              </code>
+          {/* Master + Controller */}
+          <div className="grid grid-cols-2 gap-4 mb-6 stagger">
+            <div className="surface-elevated rounded-xl p-5 relative overflow-hidden accent-top">
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-[0.04]" style={{ background: '#00ffc3' }} />
+              <div className="relative">
+                <div className="badge badge-accent mb-3 w-fit">Recommended</div>
+                <div className="font-display text-sm font-semibold tracking-wide mb-1">Master Overlay</div>
+                <p className="text-[var(--text-muted)] text-xs mb-3">Single OBS source — composites all widgets. Toggle from Controller.</p>
+                <code className="text-[11px] bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-[#00ffc3] font-mono block">
+                  {localUrl}/overlay/master
+                </code>
+              </div>
             </div>
-            <div className="bg-[#1a2a3a] border border-white/10 rounded-xl p-4">
-              <div className="text-[10px] font-bold text-[#ff4e4e] uppercase tracking-wider mb-1">Observer Tool</div>
-              <div className="text-white font-semibold text-sm">Widget Controller</div>
-              <p className="text-[#8b8da6] text-xs mt-1 mb-2">Toggle widgets with hotkeys (F1-F12). Quick presets for match phases.</p>
-              <code className="text-[10px] bg-black/30 border border-white/5 rounded-lg px-2.5 py-1.5 text-[#00ffc3] font-mono block">
-                {localUrl}/controller
-              </code>
+            <div className="surface-elevated rounded-xl p-5 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl opacity-[0.04]" style={{ background: '#ff4e4e' }} />
+              <div className="relative">
+                <div className="badge badge-danger mb-3 w-fit">Observer Tool</div>
+                <div className="font-display text-sm font-semibold tracking-wide mb-1">Widget Controller</div>
+                <p className="text-[var(--text-muted)] text-xs mb-3">Toggle widgets with hotkeys (F1-F12). Quick presets for match phases.</p>
+                <code className="text-[11px] bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-[#00ffc3] font-mono block">
+                  {localUrl}/controller
+                </code>
+              </div>
             </div>
           </div>
 
           {/* Category filter */}
-          <div className="flex gap-2 mb-5">
+          <div className="flex gap-2 mb-6">
             {CATEGORIES.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setActiveCategory(cat)}
-                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+              <button key={cat} onClick={() => setActiveCategory(cat)}
+                className={`text-xs px-4 py-2 rounded-lg font-display font-semibold tracking-wide transition-all ${
                   activeCategory === cat
-                    ? 'bg-[#00ffc3]/15 text-[#00ffc3] border border-[#00ffc3]/30'
-                    : 'bg-white/5 text-[#8b8da6] border border-white/10 hover:text-white'
-                }`}
-              >
+                    ? 'bg-[#00ffc3]/8 text-[#00ffc3] border border-[#00ffc3]/15'
+                    : 'surface text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                }`}>
                 {cat}
               </button>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Widget grid */}
+          <div className="grid grid-cols-2 gap-4 stagger">
             {filtered.map((w) => (
-              <div
-                key={w.path}
-                className="bg-[#1a2a3a] border border-white/10 rounded-xl p-5 flex flex-col gap-3"
-              >
+              <div key={w.path} className="surface-elevated rounded-xl p-5 flex flex-col gap-3 card-hover">
                 <div className="flex items-start justify-between">
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-white font-semibold text-sm">{w.name}</h3>
-                      <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                        w.category === 'Live' ? 'bg-[#ff4e4e]/15 text-[#ff4e4e]'
-                        : w.category === 'Post-Match' ? 'bg-[#00ffc3]/15 text-[#00ffc3]'
-                        : 'bg-white/5 text-[#8b8da6]'
-                      }`}>
-                        {w.category}
-                      </span>
+                    <div className="flex items-center gap-2.5">
+                      <h3 className="font-display text-sm font-semibold tracking-wide">{w.name}</h3>
+                      <span className={`badge text-[9px] ${categoryStyle[w.category] || ''}`}>{w.category}</span>
                     </div>
-                    <span className="text-[10px] text-[#8b8da6]">{w.size}</span>
+                    <span className="text-[10px] text-[var(--text-muted)] font-mono">{w.size}</span>
                   </div>
-                  <a
-                    href={`${localUrl}${w.path}${w.params || ''}`}
-                    target="_blank"
-                    rel="noopener"
-                    className="text-[10px] text-[#00ffc3] border border-[#00ffc3]/30 px-2 py-1 rounded-md hover:bg-[#00ffc3]/10 transition-colors"
-                  >
-                    Preview
-                  </a>
+                  <a href={`${localUrl}${w.path}${w.params || ''}`} target="_blank" rel="noopener"
+                    className="btn-ghost btn-sm text-[10px]">Preview</a>
                 </div>
-
-                <p className="text-[#8b8da6] text-xs leading-relaxed">{w.description}</p>
-
+                <p className="text-[var(--text-muted)] text-xs leading-relaxed flex-1">{w.description}</p>
                 <div className="flex items-center gap-2 mt-auto">
-                  <code className="flex-1 text-[10px] bg-black/30 border border-white/5 rounded-lg px-2.5 py-1.5 text-[#00ffc3] font-mono truncate">
+                  <code className="flex-1 text-[10px] bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-[#00ffc3] font-mono truncate">
                     {localUrl}{w.path}{w.params || ''}
                   </code>
-                  <button
-                    onClick={() => copyUrl(w.path, w.params)}
-                    className={`text-[10px] px-2.5 py-1.5 rounded-lg font-semibold transition-colors flex-shrink-0 ${
+                  <button onClick={() => copyUrl(w.path, w.params)}
+                    className={`text-[10px] px-3 py-2 rounded-lg font-display font-semibold tracking-wide transition-all flex-shrink-0 ${
                       copied === w.path
-                        ? 'bg-[#00ffc3] text-[#000]'
-                        : 'bg-white/5 text-[#8b8da6] border border-white/10 hover:text-white'
-                    }`}
-                  >
+                        ? 'bg-[#00ffc3] text-[var(--bg-base)]'
+                        : 'surface text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                    }`}>
                     {copied === w.path ? 'Copied!' : 'Copy'}
                   </button>
                 </div>
@@ -236,50 +143,39 @@ export default function WidgetsPage() {
             ))}
           </div>
 
-          {/* Setup instructions */}
-          <div className="mt-8 bg-[#1a2a3a] border border-white/10 rounded-xl p-5">
-            <h3 className="text-white font-semibold text-sm mb-3">OBS Setup Instructions</h3>
-            <ol className="text-[#8b8da6] text-xs space-y-2 list-decimal list-inside leading-relaxed">
-              <li>Make sure the local engine is running at <code className="text-[#00ffc3] bg-black/30 px-1.5 py-0.5 rounded">http://localhost:3000</code></li>
-              <li>In OBS, add a <strong className="text-white">Browser Source</strong></li>
-              <li>Paste the widget URL, set size to <strong className="text-white">1920 x 1080</strong></li>
-              <li>Check <strong className="text-white">"Shutdown source when not visible"</strong> for performance</li>
-              <li>Set <strong className="text-white">Custom CSS</strong> to: <code className="text-[#00ffc3] bg-black/30 px-1.5 py-0.5 rounded">{'body { background: transparent !important; }'}</code></li>
+          {/* Setup guide */}
+          <div className="mt-8 surface-elevated rounded-xl p-6 relative accent-top">
+            <h3 className="font-display text-sm font-semibold tracking-wide mb-4">OBS Setup</h3>
+            <ol className="text-[var(--text-muted)] text-xs space-y-2.5 list-decimal list-inside leading-relaxed">
+              <li>Ensure the local engine runs at <code className="text-[#00ffc3] bg-[var(--bg-base)] px-2 py-0.5 rounded font-mono text-[11px]">localhost:3000</code></li>
+              <li>In OBS, add a <strong className="text-[var(--text-primary)]">Browser Source</strong></li>
+              <li>Paste the widget URL, set size to <strong className="text-[var(--text-primary)]">1920 x 1080</strong></li>
+              <li>Enable <strong className="text-[var(--text-primary)]">&quot;Shutdown source when not visible&quot;</strong></li>
+              <li>Set Custom CSS: <code className="text-[#00ffc3] bg-[var(--bg-base)] px-2 py-0.5 rounded font-mono text-[11px]">{'body { background: transparent !important; }'}</code></li>
             </ol>
           </div>
         </>
       )}
 
-      {/* API TAB */}
       {activeTab === 'api' && (
-        <div className="space-y-3">
-          <p className="text-[#8b8da6] text-xs mb-4">
-            These endpoints run on the local engine at <code className="text-[#00ffc3]">http://localhost:3000</code>.
-            SSE streams auto-reconnect and include ping keepalives every 10 seconds.
+        <div className="space-y-3 stagger">
+          <p className="text-[var(--text-muted)] text-xs mb-5">
+            These endpoints run on the local engine at <code className="text-[#00ffc3] font-mono">localhost:3000</code>.
+            SSE streams auto-reconnect with 10s keepalives.
           </p>
-
           {API_ENDPOINTS.map((ep) => (
-            <div
-              key={ep.path}
-              className="bg-[#1a2a3a] border border-white/10 rounded-xl px-5 py-4 flex items-start gap-4"
-            >
-              <span className={`text-[10px] font-black px-2 py-1 rounded flex-shrink-0 mt-0.5 ${
-                ep.method === 'GET' ? 'bg-[#00ffc3]/15 text-[#00ffc3]' : 'bg-amber-500/15 text-amber-400'
-              }`}>
-                {ep.method}
-              </span>
+            <div key={ep.path} className="surface-elevated rounded-xl px-6 py-4 flex items-start gap-4 card-hover">
+              <span className={`badge flex-shrink-0 mt-0.5 ${
+                ep.method === 'GET' ? 'badge-accent' : 'badge-warning'
+              }`}>{ep.method}</span>
               <div className="flex-1 min-w-0">
-                <code className="text-sm text-white font-mono font-semibold">{ep.path}</code>
-                <p className="text-[#8b8da6] text-xs mt-1 leading-relaxed">{ep.description}</p>
+                <code className="text-sm font-mono font-semibold">{ep.path}</code>
+                <p className="text-[var(--text-muted)] text-xs mt-1 leading-relaxed">{ep.description}</p>
               </div>
-              <button
-                onClick={() => copyUrl(ep.path)}
-                className={`text-[10px] px-2.5 py-1.5 rounded-lg font-semibold transition-colors flex-shrink-0 ${
-                  copied === ep.path
-                    ? 'bg-[#00ffc3] text-[#000]'
-                    : 'bg-white/5 text-[#8b8da6] border border-white/10 hover:text-white'
-                }`}
-              >
+              <button onClick={() => copyUrl(ep.path)}
+                className={`text-[10px] px-3 py-2 rounded-lg font-display font-semibold tracking-wide transition-all flex-shrink-0 ${
+                  copied === ep.path ? 'bg-[#00ffc3] text-[var(--bg-base)]' : 'surface text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                }`}>
                 {copied === ep.path ? 'Copied!' : 'Copy'}
               </button>
             </div>

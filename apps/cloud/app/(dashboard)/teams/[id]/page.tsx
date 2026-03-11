@@ -88,54 +88,73 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
     setLogoUploading(false);
   }
 
-  if (loading) return <div className="p-8 text-[#8b8da6]">Loading…</div>;
+  if (loading) {
+    return (
+      <div className="p-10 flex items-center justify-center min-h-[50vh]">
+        <span className="loader" aria-label="Loading" />
+      </div>
+    );
+  }
   if (!team) return null;
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="p-10 max-w-[900px] page-enter">
       {/* Breadcrumb */}
       <div className="flex items-center gap-3 mb-6 text-sm">
-        <Link href="/teams" className="text-[#8b8da6] hover:text-white transition-colors">Teams</Link>
-        <span className="text-[#8b8da6]/40">/</span>
-        <span className="text-white">{team.name}</span>
+        <Link href="/teams" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Teams</Link>
+        <span className="text-[var(--text-muted)]/50">/</span>
+        <span className="text-[var(--text-primary)]">{team.name}</span>
       </div>
 
       {/* Team card */}
-      <div className="bg-[#213448] border border-white/10 rounded-2xl p-6 mb-6">
+      <div className="surface p-6 mb-6">
         {editTeam ? (
-          <form onSubmit={saveTeam} className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
+          <form onSubmit={saveTeam} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
-                <label className="block text-xs text-[#8b8da6] mb-1">Team Name *</label>
+                <label className="label">Team Name *</label>
                 <input
                   autoFocus
                   type="text"
                   value={teamForm.name}
                   onChange={(e) => setTeamForm((f) => ({ ...f, name: e.target.value }))}
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                  className="input-premium"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[#8b8da6] mb-1">Short Name</label>
+                <label className="label">Short Name</label>
                 <input
                   type="text"
                   value={teamForm.short_name}
                   onChange={(e) => setTeamForm((f) => ({ ...f, short_name: e.target.value.toUpperCase().slice(0, 5) }))}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                  className="input-premium uppercase"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[#8b8da6] mb-1">Brand Color</label>
-                <div className="flex items-center gap-2">
-                  <input type="color" value={teamForm.brand_color} onChange={(e) => setTeamForm((f) => ({ ...f, brand_color: e.target.value }))} className="w-10 h-9 rounded cursor-pointer" />
-                  <span className="text-sm font-mono text-[#8b8da6]">{teamForm.brand_color}</span>
+                <label className="label">Brand Color</label>
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <label className="relative cursor-pointer w-10 h-10 shrink-0 block">
+                      <input
+                        type="color"
+                        value={teamForm.brand_color}
+                        onChange={(e) => setTeamForm((f) => ({ ...f, brand_color: e.target.value }))}
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                      />
+                      <div
+                        className="w-10 h-10 rounded-lg border border-[var(--border)]"
+                        style={{ backgroundColor: teamForm.brand_color }}
+                      />
+                    </label>
+                  </div>
+                  <span className="text-[13px] font-mono text-[var(--text-secondary)] uppercase">{teamForm.brand_color}</span>
                 </div>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button type="submit" className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors">Save</button>
-              <button type="button" onClick={() => setEditTeam(false)} className="text-[#8b8da6] hover:text-white text-sm px-4 py-2 rounded-lg border border-white/10 transition-colors">Cancel</button>
+            <div className="flex gap-3">
+              <button type="submit" className="btn-primary">Save</button>
+              <button type="button" onClick={() => setEditTeam(false)} className="btn-ghost">Cancel</button>
             </div>
           </form>
         ) : (
@@ -144,11 +163,11 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
               {/* Logo */}
               <div className="relative group/logo">
                 {team.logo_url ? (
-                  <img src={team.logo_url} alt={team.name} className="w-16 h-16 rounded-xl object-cover" />
+                  <img src={team.logo_url} alt={team.name} className="w-16 h-16 rounded-xl object-cover border border-[var(--border)]" />
                 ) : (
                   <div
-                    className="w-16 h-16 rounded-xl flex items-center justify-center text-xl font-bold"
-                    style={{ backgroundColor: team.brand_color + '22', border: `1.5px solid ${team.brand_color}44` }}
+                    className="w-16 h-16 rounded-xl flex items-center justify-center text-xl font-bold border"
+                    style={{ backgroundColor: team.brand_color + '22', borderColor: `${team.brand_color}44` }}
                   >
                     <span style={{ color: team.brand_color }}>
                       {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
@@ -156,22 +175,22 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                   </div>
                 )}
                 <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl opacity-0 group-hover/logo:opacity-100 transition-opacity cursor-pointer text-xs text-white font-medium">
-                  {logoUploading ? '…' : 'Upload'}
+                  {logoUploading ? 'Uploading…' : 'Upload'}
                   <input type="file" accept="image/*" onChange={uploadLogo} className="hidden" />
                 </label>
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-xl font-bold text-white">{team.name}</h1>
+                  <h1 className="text-xl font-semibold text-[var(--text-primary)]">{team.name}</h1>
                   {team.short_name && (
-                    <span className="text-xs text-[#8b8da6] bg-white/5 px-2 py-0.5 rounded">{team.short_name}</span>
+                    <span className="badge badge-muted">{team.short_name}</span>
                   )}
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.brand_color, boxShadow: `0 0 6px ${team.brand_color}88` }} />
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.brand_color }} />
                 </div>
-                <div className="text-sm text-[#8b8da6]">{players.length} player{players.length !== 1 ? 's' : ''}</div>
+                <div className="text-sm text-[var(--text-secondary)]">{players.length} player{players.length !== 1 ? 's' : ''}</div>
               </div>
             </div>
-            <button onClick={() => setEditTeam(true)} className="text-xs text-[#8b8da6] hover:text-white border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors">
+            <button onClick={() => setEditTeam(true)} className="btn-ghost btn-sm">
               Edit
             </button>
           </div>
@@ -179,22 +198,19 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
       </div>
 
       {/* Players */}
-      <div className="bg-[#213448] border border-white/10 rounded-2xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
-          <span className="text-sm font-semibold text-white">Players & IDs</span>
-          <button
-            onClick={() => setAddingPlayer(true)}
-            className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors"
-          >
+      <div className="surface overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border)]">
+          <span className="text-sm font-semibold text-[var(--text-primary)]">Players & IDs</span>
+          <button onClick={() => setAddingPlayer(true)} className="btn-ghost btn-sm">
             + Add Player
           </button>
         </div>
 
         {/* Add player form */}
         {addingPlayer && (
-          <form onSubmit={addPlayer} className="border-b border-white/5 px-5 py-4 bg-black/10 flex items-end gap-3">
+          <form onSubmit={addPlayer} className="border-b border-[var(--border)] px-5 py-4 bg-[var(--bg-base)] flex items-end gap-3">
             <div className="flex-1">
-              <label className="block text-xs text-[#8b8da6] mb-1">Display Name</label>
+              <label className="label">Display Name</label>
               <input
                 autoFocus
                 type="text"
@@ -202,13 +218,12 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                 onChange={(e) => setPlayerForm((f) => ({ ...f, display_name: e.target.value }))}
                 placeholder="e.g. SnipeKing"
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                className="input-premium"
               />
             </div>
             <div className="flex-1">
-              <label className="block text-xs text-[#8b8da6] mb-1">
-                playerOpenId{' '}
-                <span className="text-[#00ffc3] font-semibold">(exact in-game ID)</span>
+              <label className="label">
+                playerOpenId <span className="text-[var(--text-muted)]">(exact in-game ID)</span>
               </label>
               <input
                 type="text"
@@ -216,13 +231,13 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                 onChange={(e) => setPlayerForm((f) => ({ ...f, player_open_id: e.target.value.trim() }))}
                 placeholder="Paste exact character ID"
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm font-mono placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                className="input-premium font-mono"
               />
             </div>
-            <button type="submit" disabled={saving} className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-50">
-              {saving ? '…' : 'Add'}
+            <button type="submit" disabled={saving} className="btn-primary">
+              {saving ? 'Saving…' : 'Add'}
             </button>
-            <button type="button" onClick={() => setAddingPlayer(false)} className="text-[#8b8da6] hover:text-white text-sm px-2 transition-colors">✕</button>
+            <button type="button" onClick={() => setAddingPlayer(false)} className="btn-ghost btn-sm">Cancel</button>
           </form>
         )}
 
@@ -232,17 +247,17 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
             {players.map((player, i) => (
               <div
                 key={player.id}
-                className={`flex items-center justify-between px-5 py-3 hover:bg-white/5 transition-colors group ${
-                  i > 0 ? 'border-t border-white/5' : ''
+                className={`flex items-center justify-between px-5 py-3 hover:bg-[var(--bg-hover)] transition-colors group ${
+                  i > 0 ? 'border-t border-[var(--border)]' : ''
                 }`}
               >
                 <div>
-                  <div className="text-sm font-medium text-white">{player.display_name}</div>
-                  <div className="text-xs font-mono text-[#8b8da6] mt-0.5">{player.player_open_id}</div>
+                  <div className="text-sm font-medium text-[var(--text-primary)]">{player.display_name}</div>
+                  <div className="text-xs font-mono text-[var(--text-muted)] mt-0.5">{player.player_open_id}</div>
                 </div>
                 <button
                   onClick={() => deletePlayer(player.id)}
-                  className="text-xs text-[#8b8da6] hover:text-[#ff4e4e] transition-colors opacity-0 group-hover:opacity-100"
+                  className="text-xs text-[var(--text-muted)] hover:text-[var(--red)] transition-colors opacity-0 group-hover:opacity-100"
                 >
                   Remove
                 </button>
@@ -250,7 +265,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
             ))}
           </div>
         ) : (
-          <div className="px-5 py-8 text-center text-[#8b8da6] text-sm">
+          <div className="px-5 py-8 text-center text-[var(--text-muted)] text-sm">
             No players yet. Add their in-game character IDs to enable ID matching.
           </div>
         )}

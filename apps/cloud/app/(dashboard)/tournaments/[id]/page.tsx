@@ -99,6 +99,18 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     tournament: true, stages: true, matches: true, results: true, teams: true, players: true,
   });
 
+  // Inline toast (replaces alert())
+  const [toast, setToast] = useState<{ message: string; type: 'error' | 'info' } | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  function showToast(message: string, type: 'error' | 'info' = 'error') {
+    clearTimeout(toastTimer.current);
+    setToast({ message, type });
+    toastTimer.current = setTimeout(() => setToast(null), 5000);
+  }
+
+  // Inline confirm dialog (replaces confirm())
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+
   useEffect(() => {
     async function load() {
       const { data: t } = await supabase.from('tournaments').select('*').eq('id', id).single();
@@ -225,7 +237,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       stageConfigs = STAGE_PRESETS[stagePreset] ?? [];
     }
 
-    if (stageConfigs.length === 0) { alert('Please provide at least one stage name.'); return; }
+    if (stageConfigs.length === 0) { showToast('Please provide at least one stage name.'); return; }
 
     const rawMatchCounts = matchesPerStageInput.trim();
     let matchCounts = stageConfigs.map(() => 0);
@@ -238,14 +250,14 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
           .map((cfg, idx) => (cfg.type === 'finals' ? idx : -1))
           .filter((idx) => idx >= 0);
         if (finalsIdx.length === 0) {
-          alert('No finals stage to apply match count.');
+          showToast('No finals stage to apply match count.');
           return;
         }
         for (const idx of finalsIdx) matchCounts[idx] = parsed[0];
       } else if (parsed.length === stageConfigs.length) {
         matchCounts = parsed;
       } else {
-        alert('Matches per stage must match the number of stages, or be a single finals value.');
+        showToast('Matches per stage must match the number of stages, or be a single finals value.');
         return;
       }
     }
@@ -268,7 +280,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       .select('id, stage_type');
 
     if (stageError || !createdStages) {
-      alert(stageError?.message ?? 'Failed to create stages');
+      showToast(stageError?.message ?? 'Failed to create stages');
       return;
     }
 
@@ -312,9 +324,14 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   }
 
   async function deleteStage(stageId: string) {
-    if (!confirm('Delete this stage and all its matches?')) return;
-    await supabase.from('stages').delete().eq('id', stageId);
-    await refreshStages();
+    setConfirmDialog({
+      message: 'Delete this stage and all its matches?',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await supabase.from('stages').delete().eq('id', stageId);
+        await refreshStages();
+      },
+    });
   }
 
   async function updateStageStatus(stageId: string, status: 'pending' | 'active' | 'completed') {
@@ -435,25 +452,33 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
     const freshTeams = await refreshTournamentTeams();
 
-    if (!confirm(`Distribute ${freshTeams.length} team${freshTeams.length !== 1 ? 's' : ''} across ${stage.groups.length} group${stage.groups.length !== 1 ? 's' : ''}? This clears existing assignments.`)) return;
-
-    try {
-      const res = await fetch(`/api/tournaments/${id}/auto-distribute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ stageId }),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        alert('Failed to distribute: ' + (err.error ?? res.statusText));
-        return;
-      }
-    } catch (e) {
-      alert('Failed to distribute: ' + String(e));
+    if (freshTeams.length === 0) {
+      showToast('No teams linked to this tournament. Link teams first before distributing.', 'error');
       return;
     }
 
-    await refreshStages();
+    setConfirmDialog({
+      message: `Distribute ${freshTeams.length} team${freshTeams.length !== 1 ? 's' : ''} across ${stage.groups.length} group${stage.groups.length !== 1 ? 's' : ''}? This clears existing assignments.`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          const res = await fetch(`/api/tournaments/${id}/auto-distribute`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stageId }),
+          });
+          if (!res.ok) {
+            const err = await res.json();
+            showToast('Failed to distribute: ' + (err.error ?? res.statusText));
+            return;
+          }
+        } catch (e) {
+          showToast('Failed to distribute: ' + String(e));
+          return;
+        }
+        await refreshStages();
+      },
+    });
   }
 
   // ─── Application management ───
@@ -472,7 +497,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     }
 
     const toAccept = remainingSlots === Number.POSITIVE_INFINITY ? apps : apps.slice(0, remainingSlots);
-    if (toAccept.length === 0) { alert('Acceptance limit reached.'); setAccepting(null); return; }
+    if (toAccept.length === 0) { showToast('Acceptance limit reached.', 'info'); setAccepting(null); return; }
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -579,13 +604,13 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       const res = await fetch(`/api/tournaments/${id}/link-registered-teams`, { method: 'POST' });
       if (!res.ok) {
         const err = await res.json();
-        alert('Link failed: ' + (err.error ?? res.statusText));
+        showToast('Link failed: ' + (err.error ?? res.statusText));
         setLinkingTeams(false);
         return;
       }
       await refreshTournamentTeams();
     } catch (e) {
-      alert('Link failed: ' + String(e));
+      showToast('Link failed: ' + String(e));
     }
     setLinkingTeams(false);
   }
@@ -593,15 +618,20 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   // ─── Other ───
 
   async function archiveTournament() {
-    if (!confirm('Archive this tournament?')) return;
-    await supabase.from('tournaments').update({ status: 'archived' }).eq('id', id);
-    setTournament((t) => t ? { ...t, status: 'archived' } : t);
+    setConfirmDialog({
+      message: 'Archive this tournament?',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await supabase.from('tournaments').update({ status: 'archived' }).eq('id', id);
+        setTournament((t) => t ? { ...t, status: 'archived' } : t);
+      },
+    });
   }
 
   async function exportTournament() {
     const include = Object.entries(exportInclude).filter(([, e]) => e).map(([k]) => k).join(',');
     const res = await fetch(`/api/export-tournament/${id}?include=${encodeURIComponent(include)}`);
-    if (!res.ok) { alert('Export failed: ' + ((await res.json()).error ?? res.statusText)); return; }
+    if (!res.ok) { showToast('Export failed: ' + ((await res.json()).error ?? res.statusText)); return; }
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -615,7 +645,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     const res = await fetch(`/api/export-group/${groupId}`);
     if (!res.ok) {
       const err = await res.json();
-      alert('Export failed: ' + (err.error ?? res.statusText));
+      showToast('Export failed: ' + (err.error ?? res.statusText));
       return;
     }
     const blob = await res.blob();
@@ -631,7 +661,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     const res = await fetch(`/api/export-stage/${stageId}`);
     if (!res.ok) {
       const err = await res.json();
-      alert('Export failed: ' + (err.error ?? res.statusText));
+      showToast('Export failed: ' + (err.error ?? res.statusText));
       return;
     }
     const blob = await res.blob();
@@ -655,7 +685,11 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   // ─── Render ───
 
   if (loading) {
-    return <div className="p-8 flex items-center justify-center"><div className="text-[#8b8da6]">Loading...</div></div>;
+    return (
+      <div className="p-10 flex items-center justify-center min-h-[50vh]">
+        <span className="loader" aria-label="Loading" />
+      </div>
+    );
   }
   if (!tournament) return null;
 
@@ -680,52 +714,61 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   }
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-10 max-w-[1400px] mx-auto page-enter">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-3 mb-6 text-sm">
-        <Link href="/tournaments" className="text-[#8b8da6] hover:text-white transition-colors">Tournaments</Link>
-        <span className="text-[#8b8da6]/40">/</span>
-        <span className="text-white">{tournament.name}</span>
+      <div className="flex items-center gap-3 mb-8 text-xs text-[var(--text-muted)]">
+        <Link href="/tournaments" className="hover:text-[var(--text-primary)] transition-colors">Tournaments</Link>
+        <span className="opacity-40">/</span>
+        <span className="text-[var(--text-primary)]">{tournament.name}</span>
       </div>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div className="flex items-start justify-between mb-8 pb-6 border-b border-[var(--border)]">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold text-white">{tournament.name}</h1>
-            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
-              tournament.status === 'active' ? 'bg-[#00ffc3]/10 text-[#00ffc3]' : 'bg-white/5 text-[#8b8da6]'
+          <div className="flex items-center gap-4 mb-2">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--text-primary)]">{tournament.name}</h1>
+            <span className={`text-[11px] uppercase font-semibold tracking-wide px-2.5 py-1 rounded-full border ${
+              tournament.status === 'active' ? 'bg-[var(--bg-hover)] text-[var(--accent)] border-[var(--accent-border)]' : 'bg-[var(--bg-hover)] text-[var(--text-muted)] border-[var(--border)]'
             }`}>
               {tournament.status}
             </span>
           </div>
-          <p className="text-[#8b8da6] text-sm">
-            {stages.length} stage{stages.length !== 1 ? 's' : ''} &middot; {tournamentTeams.length} team{tournamentTeams.length !== 1 ? 's' : ''} &middot; {totalMatches} match{totalMatches !== 1 ? 'es' : ''}
+          <p className="text-[var(--text-secondary)] text-sm flex items-center gap-3">
+            <span>{stages.length} Stage{stages.length !== 1 ? 's' : ''}</span>
+            <span className="text-[var(--border)]">&bull;</span>
+            <span>{tournamentTeams.length} Team{tournamentTeams.length !== 1 ? 's' : ''}</span>
+            <span className="text-[var(--border)]">&bull;</span>
+            <span>{totalMatches} Match{totalMatches !== 1 ? 'es' : ''}</span>
           </p>
         </div>
         {tournament.status === 'active' && (
           <button onClick={archiveTournament}
-            className="text-xs text-[#8b8da6] hover:text-white border border-white/10 hover:border-white/20 px-3 py-1.5 rounded-lg transition-colors">
-            Archive
+            className="btn-ghost py-2">
+            Archive Output
           </button>
         )}
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-5 bg-[#213448] border border-white/10 rounded-xl p-1 w-fit">
+      <div className="flex gap-2 mb-8 border-b border-[var(--border)]">
         {(['overview', 'stages', 'applications', 'ops'] as Tab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 ${
-              activeTab === tab ? 'bg-white/10 text-white' : 'text-[#8b8da6] hover:text-white'
+            className={`px-4 py-2 text-sm font-semibold transition-colors relative flex items-center gap-2 ${
+              activeTab === tab ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
             }`}
           >
-            {tab === 'overview' ? 'Overview' : tab === 'stages' ? 'Stages' : tab === 'applications' ? 'Applications' : 'Ops'}
+            <span className="relative z-10 block translate-y-px">
+              {tab === 'overview' ? 'Overview' : tab === 'stages' ? 'Stages' : tab === 'applications' ? 'Applications' : 'Ops'}
+            </span>
             {tab === 'applications' && pendingApps > 0 && (
-              <span className="bg-[#00ffc3] text-[#0e1621] text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+              <span className="relative z-10 bg-[var(--accent)] text-black text-[10px] font-semibold w-5 h-5 rounded-full flex items-center justify-center ml-1">
                 {pendingApps}
               </span>
+            )}
+            {activeTab === tab && (
+              <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--accent)]" />
             )}
           </button>
         ))}
@@ -733,48 +776,60 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
       {/* ════════════════════ OVERVIEW TAB ════════════════════ */}
       {activeTab === 'overview' && (
-        <div className="space-y-4">
+        <div className="space-y-6 animate-fade-in pb-32">
           {/* Stats row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Teams', value: tournamentTeams.length, color: '#00ffc3' },
-              { label: 'Stages', value: stages.length, color: '#8b8da6' },
-              { label: 'Total Matches', value: totalMatches, color: '#8b8da6' },
-              { label: 'Live / Finished', value: `${liveMatches} / ${finishedMatches}`, color: liveMatches > 0 ? '#ff4e4e' : '#00ffc3' },
+              { label: 'Teams', value: tournamentTeams.length, color: 'var(--text-primary)' },
+              { label: 'Stages', value: stages.length, color: 'var(--text-primary)' },
+              { label: 'Total Matches', value: totalMatches, color: 'var(--text-primary)' },
+              { label: 'Live / Finished', value: `${liveMatches} / ${finishedMatches}`, color: liveMatches > 0 ? 'var(--red)' : 'var(--text-secondary)' },
             ].map((stat) => (
-              <div key={stat.label} className="bg-[#213448] border border-white/10 rounded-xl p-4">
-                <div className="text-xs text-[#8b8da6] uppercase tracking-wider">{stat.label}</div>
-                <div className="text-2xl font-black mt-1" style={{ color: stat.color }}>{stat.value}</div>
+              <div key={stat.label} className="surface p-5 flex flex-col justify-between h-[92px]">
+                <div className="text-xs font-semibold text-[var(--text-muted)]">{stat.label}</div>
+                <div className="text-2xl font-semibold tracking-tight" style={{ color: stat.color }}>{stat.value}</div>
               </div>
             ))}
           </div>
 
           {/* Info cards */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
-              <span className="text-xs font-semibold text-[#8b8da6] uppercase tracking-wider">Cloud API Key</span>
-              <div className="flex items-center gap-2 mt-2">
-                <code className="flex-1 bg-black/30 border border-white/5 rounded-lg px-3 py-2 text-xs text-[#00ffc3] font-mono truncate">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="surface p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-1.5 h-1.5 bg-[var(--text-primary)]" />
+                <span className="text-sm font-display font-bold uppercase tracking-widest text-[var(--text-primary)]">Cloud API Key</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-black/40 border border-[var(--border)] rounded-lg px-4 py-2.5 text-[13px] text-[var(--accent)] font-mono truncate">
                   {tournament.api_key}
                 </code>
                 <button onClick={() => navigator.clipboard.writeText(tournament.api_key)}
-                  className="flex-shrink-0 text-xs text-[#8b8da6] hover:text-white border border-white/10 px-3 py-2 rounded-lg hover:border-white/20 transition-colors">
+                  className="flex-shrink-0 text-xs font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-white border border-[var(--border)] bg-white/5 hover:bg-white/10 px-4 py-2.5 rounded-lg transition-all">
                   Copy
                 </button>
               </div>
             </div>
-            <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-[#8b8da6] uppercase tracking-wider">Registration Link</span>
-                <span className="text-xs text-[#8b8da6]">{tournament.registration_open ? 'Open' : 'Closed'}</span>
+            <div className="surface p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-1.5 h-1.5 ${tournament.registration_open ? 'bg-[var(--accent)]' : 'bg-[var(--text-muted)]'}`} />
+                  <span className="text-sm font-display font-bold uppercase tracking-widest text-[var(--text-primary)]">Registration Link</span>
+                </div>
+                <span className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded border ${tournament.registration_open ? 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30' : 'bg-[var(--bg-elevated)] text-[var(--text-muted)] border-[var(--border)]'}`}>
+                  {tournament.registration_open ? 'Open' : 'Closed'}
+                </span>
               </div>
-              <div className="flex items-center gap-2 mt-2">
-                <code className="flex-1 bg-black/30 border border-white/5 rounded-lg px-3 py-2 text-xs text-[#00ffc3] font-mono truncate">
+              <div className="flex items-center gap-2">
+                <code className="flex-1 bg-black/40 border border-[var(--border)] rounded-lg px-4 py-2.5 text-[13px] text-[var(--accent)] font-mono truncate">
                   {typeof window !== 'undefined' ? `${window.location.origin}/apply/${id}` : `/apply/${id}`}
                 </code>
                 <button onClick={copyRegistrationLink}
-                  className="flex-shrink-0 text-xs text-[#8b8da6] hover:text-white border border-white/10 px-3 py-2 rounded-lg hover:border-white/20 transition-colors">
-                  {linkCopied ? 'Copied!' : 'Copy'}
+                  className={`flex-shrink-0 text-xs font-display font-bold uppercase tracking-widest px-4 py-2.5 rounded-lg transition-all border ${
+                    linkCopied 
+                      ? 'text-[var(--accent)] border-[var(--accent)]/50 bg-[var(--accent)]/10' 
+                      : 'text-[var(--text-muted)] hover:text-white border-[var(--border)] bg-white/5 hover:bg-white/10'
+                  }`}>
+                  {linkCopied ? 'Copied' : 'Copy'}
                 </button>
               </div>
             </div>
@@ -782,18 +837,26 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
           {/* Point System */}
           {pointSystem && (
-            <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
-              <div className="text-sm font-semibold text-white mb-1">Point System</div>
-              <div className="text-xs text-[#8b8da6] mb-3">{pointSystem.name} &mdash; {pointSystem.kill_points} pt/kill</div>
+            <div className="surface p-6">
+              <div className="flex justify-between items-start mb-6 pb-4 border-b border-[var(--border)]">
+                <div>
+                  <h2 className="text-sm font-display font-bold uppercase tracking-widest text-[var(--text-primary)] mb-1">Point System</h2>
+                  <div className="text-[13px] text-[var(--text-secondary)]">{pointSystem.name}</div>
+                </div>
+                <div className="bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/30 px-3 py-1.5 rounded text-xs font-display font-bold uppercase tracking-widest">
+                  {pointSystem.kill_points} pt / kill
+                </div>
+              </div>
+              
               <div className="flex flex-wrap gap-2">
                 {[
                   { rank: '1st', pts: 10 }, { rank: '2nd', pts: 6 }, { rank: '3rd', pts: 5 },
                   { rank: '4th', pts: 4 }, { rank: '5th', pts: 3 }, { rank: '6th', pts: 2 },
                   { rank: '7th', pts: 1 }, { rank: '8th', pts: 1 }, { rank: '9th+', pts: 0 },
                 ].map(({ rank, pts }) => (
-                  <div key={rank} className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-center min-w-[52px]">
-                    <div className="text-[10px] text-[#8b8da6]">{rank}</div>
-                    <div className={`text-sm font-mono ${pts > 0 ? 'text-[#00ffc3]' : 'text-[#8b8da6]'}`}>{pts}</div>
+                  <div key={rank} className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2 text-center min-w-[60px]">
+                    <div className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-1">{rank}</div>
+                    <div className={`text-base font-display font-black ${pts > 0 ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>{pts}</div>
                   </div>
                 ))}
               </div>
@@ -801,36 +864,43 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
           )}
 
           {/* Stage overview */}
-          <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
-            <div className="text-sm font-semibold text-white mb-3">Stage Pipeline</div>
-            <div className="flex items-center gap-2">
+          <div className="surface p-6">
+            <h2 className="text-sm font-display font-bold uppercase tracking-widest text-[var(--text-primary)] mb-4">Stage Pipeline</h2>
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
               {stages.map((stage, i) => (
-                <div key={stage.id} className="flex items-center gap-2">
-                  {i > 0 && <div className="text-[#8b8da6] text-xs">-&gt;</div>}
-                  <div className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
-                    stage.status === 'active' ? 'bg-[#00ffc3]/10 text-[#00ffc3] border-[#00ffc3]/30'
-                    : stage.status === 'completed' ? 'bg-white/10 text-[#8b8da6] border-white/10'
-                    : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                <div key={stage.id} className="flex items-center gap-2 shrink-0">
+                  {i > 0 && <div className="text-[var(--text-muted)] text-xs mx-1 font-bold">...</div>}
+                  <div className={`px-4 py-2 rounded-lg border flex items-center gap-3 ${
+                    stage.status === 'active' ? 'bg-[var(--bg-hover)] text-[var(--accent)] border-[var(--accent-border)]'
+                    : stage.status === 'completed' ? 'bg-[var(--bg-hover)] text-[var(--text-secondary)] border-[var(--border)]'
+                    : 'bg-[var(--bg-elevated)] text-[var(--amber)] border-[var(--amber)]/20'
                   }`}>
-                    {stage.name}
-                    <span className="ml-1.5 opacity-60">({stage.matches.length})</span>
+                    <span className="text-xs font-display font-bold uppercase tracking-wider">{stage.name}</span>
+                    <div className={`text-[10px] font-bold px-1.5 rounded-sm ${stage.status === 'active' ? 'bg-[var(--accent)]/20' : 'bg-black/40'}`}>
+                      {stage.matches.length}
+                    </div>
                   </div>
                 </div>
               ))}
-              {stages.length === 0 && <span className="text-[#8b8da6] text-sm">No stages yet. Go to the Stages tab to create them.</span>}
+              {stages.length === 0 && <span className="text-[13px] text-[var(--text-secondary)] italic">No stages yet. Go to the Stages tab to create them.</span>}
             </div>
           </div>
 
           {/* Registered teams */}
           {tournamentTeams.length > 0 && (
-            <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
-              <div className="text-sm font-semibold text-white mb-3">Registered Teams ({tournamentTeams.length})</div>
+            <div className="surface p-6">
+              <h2 className="text-sm font-display font-bold uppercase tracking-widest text-[var(--text-primary)] mb-4 flex items-center justify-between">
+                <span>Registered Teams</span>
+                <div className="bg-[var(--bg-hover)] text-[var(--text-secondary)] px-2 py-0.5 rounded text-[10px]">
+                  {tournamentTeams.length} TOTAL
+                </div>
+              </h2>
               <div className="flex flex-wrap gap-2">
                 {tournamentTeams.map((team) => (
-                  <div key={team.id} className="flex items-center gap-2 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: team.brand_color }} />
-                    <span className="text-xs text-white font-medium">{team.name}</span>
-                    {team.short_name && <span className="text-[10px] text-[#8b8da6]">[{team.short_name}]</span>}
+                  <div key={team.id} className="flex items-center gap-2 bg-[var(--bg-elevated)] border border-[var(--border)] hover:border-[var(--border-hover)] rounded-md px-3 py-1.5 transition-colors">
+                    <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ backgroundColor: team.brand_color }} />
+                    <span className="text-xs text-[var(--text-primary)] font-medium">{team.name}</span>
+                    {team.short_name && <span className="text-[10px] text-[var(--text-muted)] font-bold">[{team.short_name}]</span>}
                   </div>
                 ))}
               </div>
@@ -841,20 +911,21 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
       {/* ════════════════════ STAGES TAB ════════════════════ */}
       {activeTab === 'stages' && (
-        <>
+        <div className="space-y-6 animate-fade-in pb-32">
           {/* Stage creation bar */}
           {stages.length === 0 && (
-            <div className="bg-gradient-to-br from-[#00ffc3]/5 to-transparent border border-[#00ffc3]/20 rounded-2xl p-6 mb-4">
-              <div className="text-sm font-semibold text-white mb-1">Create Your Stage Pipeline</div>
-              <p className="text-xs text-[#8b8da6] mb-4">
+            <div className="surface p-8 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--accent)]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+              <div className="text-sm font-display font-bold uppercase tracking-widest text-[var(--accent)] mb-2">Create Your Stage Pipeline</div>
+              <p className="text-[13px] text-[var(--text-secondary)] mb-6 max-w-2xl">
                 Choose a preset to create stages. Group stages support divisions (A, B, C...) for team grouping.
                 Elimination and finals stages define how many teams advance.
               </p>
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-4">
                 <select
                   value={stagePreset}
                   onChange={(e) => setStagePreset(e.target.value as typeof stagePreset)}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                  className="input-premium py-2.5 w-auto"
                 >
                   <option value="groups_semis_finals">Groups &rarr; Semi-Finals &rarr; Grand Finals</option>
                   <option value="groups_finals">Groups &rarr; Grand Finals</option>
@@ -867,21 +938,21 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                     value={customStageNames}
                     onChange={(e) => setCustomStageNames(e.target.value)}
                     placeholder="e.g. Groups, Semi-Finals, Grand Finals"
-                    className="w-80 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                    className="input-premium py-2.5 w-80"
                   />
                 )}
-                <div className="flex items-center gap-2">
-                  <label className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold whitespace-nowrap">Matches / stage</label>
+                <div className="flex items-center gap-3">
+                  <label className="text-[10px] font-display font-bold text-[var(--text-muted)] uppercase tracking-widest whitespace-nowrap">Matches / stage</label>
                   <input
                     type="text"
                     value={matchesPerStageInput}
                     onChange={(e) => setMatchesPerStageInput(e.target.value)}
                     placeholder="e.g. 6,4,6"
-                    className="w-32 bg-white/5 border border-white/10 rounded-lg px-2 py-2 text-xs text-white placeholder-white/20 text-center focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                    className="input-premium py-2.5 w-32 text-center"
                   />
                 </div>
                 <button onClick={createStagesFromPreset}
-                  className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+                  className="btn-primary py-2.5">
                   Create Stages
                 </button>
               </div>
@@ -890,11 +961,12 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
           {/* Existing stages - add more */}
           {stages.length > 0 && (
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex flex-wrap items-center gap-3 mb-6 p-4 surface">
+              <span className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] mr-2">Pipeline Builder</span>
               <select
                 value={stagePreset}
                 onChange={(e) => setStagePreset(e.target.value as typeof stagePreset)}
-                className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                className="input-premium w-auto text-sm"
               >
                 <option value="groups_semis_finals">Groups &rarr; Semis &rarr; Finals</option>
                 <option value="groups_finals">Groups &rarr; Finals</option>
@@ -904,76 +976,85 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
               {stagePreset === 'custom' && (
                 <input type="text" value={customStageNames} onChange={(e) => setCustomStageNames(e.target.value)}
                   placeholder="Stage names (comma-separated)"
-                  className="w-64 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors" />
+                  className="input-premium w-64 text-sm" />
               )}
               <button onClick={createStagesFromPreset}
-                className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
+                className="btn-primary">
                 + Add Stages
               </button>
+              <div className="w-[1px] h-6 bg-[var(--border)] mx-1" />
               <button onClick={linkAllTeamsToTournament} disabled={linkingTeams}
-                className="text-xs text-[#8b8da6] hover:text-white border border-white/10 px-3 py-2 rounded-lg hover:border-white/20 transition-colors">
+                className="btn-ghost text-xs">
                 {linkingTeams ? 'Linking...' : 'Link registered teams'}
               </button>
             </div>
           )}
 
           {/* Stage Cards */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             {stages.map((stage, stageIdx) => {
               const isExpanded = expandedStages.has(stage.id);
               const prevStage = stageIdx > 0 ? stages[stageIdx - 1] : null;
               const statusClass = stage.status === 'active'
-                ? 'bg-[#00ffc3]/10 text-[#00ffc3] border-[#00ffc3]/30'
+                ? 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30'
                 : stage.status === 'completed'
-                  ? 'bg-white/10 text-[#8b8da6] border-white/10'
-                  : 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                  ? 'bg-[var(--bg-hover)] text-[var(--text-secondary)] border-[var(--border)]'
+                  : 'bg-[var(--amber)]/10 text-[var(--amber)] border-[var(--amber)]/20';
               const typeLabel = stage.stage_type === 'group' ? 'GROUP' : stage.stage_type === 'elimination' ? 'ELIMINATION' : 'FINALS';
-              const typeColor = stage.stage_type === 'group' ? '#00ffc3' : stage.stage_type === 'elimination' ? '#ffd166' : '#ff4e4e';
+              const typeColor = stage.stage_type === 'group' ? 'var(--accent)' : stage.stage_type === 'elimination' ? 'var(--amber)' : 'var(--red)';
               const canStart = stage.status === 'pending' && !stages.some((s) => s.status === 'active');
 
               return (
-                <div key={stage.id} className="bg-[#213448] border border-white/10 rounded-2xl overflow-hidden">
+                <div key={stage.id} className={`surface transition-colors ${isExpanded ? 'border-[var(--border-hover)]' : ''}`}>
                   {/* Stage header */}
                   <div
-                    className="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-white/[0.02] transition-colors"
+                    className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors"
                     onClick={() => toggleExpanded(stage.id)}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-[#8b8da6] text-xs select-none">{isExpanded ? '\u25BC' : '\u25B6'}</span>
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: typeColor }} />
-                      <span className="font-semibold text-white text-base">{stage.name}</span>
-                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ color: typeColor, backgroundColor: typeColor + '15', border: `1px solid ${typeColor}30` }}>
+                    <div className="flex items-center gap-4">
+                      <div className={`text-[10px] text-[var(--text-muted)] transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}>
+                        &#x25B6;
+                      </div>
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: typeColor, boxShadow: `0 0 8px ${typeColor}80` }} />
+                      <span className="font-display font-bold uppercase tracking-wider text-white text-sm">{stage.name}</span>
+                      <span className="text-[10px] font-display font-bold uppercase tracking-widest px-2 py-0.5 rounded border" style={{ color: typeColor, backgroundColor: 'transparent', borderColor: `${typeColor}40` }}>
                         {typeLabel}
                       </span>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusClass}`}>
+                      <span className={`text-[10px] font-display font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${statusClass}`}>
                         {stage.status}
                       </span>
-                      <span className="text-xs text-[#8b8da6]">{stage.matches.length} match{stage.matches.length !== 1 ? 'es' : ''}</span>
+                      
+                      <div className="h-4 w-[1px] bg-[var(--border)] mx-1" />
+                      
+                      <span className="text-xs text-[var(--text-secondary)]">{stage.matches.length} match{stage.matches.length !== 1 ? 'es' : ''}</span>
                       {stage.groups.length > 0 && (
-                        <span className="text-xs text-[#8b8da6]">&middot; {stage.groups.length} group{stage.groups.length !== 1 ? 's' : ''}</span>
+                        <>
+                          <span className="text-[var(--border)]">&bull;</span>
+                          <span className="text-xs text-[var(--text-secondary)]">{stage.groups.length} group{stage.groups.length !== 1 ? 's' : ''}</span>
+                        </>
                       )}
                     </div>
-                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => toggleStageAutoAdvance(stage.id, !stage.auto_advance)}
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-colors ${
-                          stage.auto_advance ? 'border-[#00ffc3]/40 text-[#00ffc3] bg-[#00ffc3]/10' : 'border-white/10 text-[#8b8da6] bg-white/5'
+                        className={`text-[10px] font-display font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
+                          stage.auto_advance ? 'border-[var(--accent)]/40 text-[var(--accent)] bg-[var(--accent)]/10' : 'border-[var(--border)] text-[var(--text-muted)] hover:text-white bg-white/5'
                         }`}>
                         Auto-advance {stage.auto_advance ? 'On' : 'Off'}
                       </button>
                       {canStart && (
                         <button onClick={() => updateStageStatus(stage.id, 'active')}
-                          className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors">
+                          className="text-xs font-display font-bold uppercase tracking-widest text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors px-2">
                           Start
                         </button>
                       )}
                       {stage.status === 'active' && (
                         <button onClick={() => updateStageStatus(stage.id, 'completed')}
-                          className="text-xs text-amber-400 hover:text-amber-300 font-medium transition-colors">
+                          className="text-xs font-display font-bold uppercase tracking-widest text-[var(--amber)] hover:text-white transition-colors px-2">
                           Complete
                         </button>
                       )}
                       <button onClick={() => deleteStage(stage.id)}
-                        className="text-xs text-[#8b8da6] hover:text-[#ff4e4e] transition-colors">
+                        className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--red)] transition-colors px-2">
                         Delete
                       </button>
                     </div>
@@ -981,16 +1062,16 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
                   {/* Expanded content */}
                   {isExpanded && (
-                    <div className="border-t border-white/5">
+                    <div className="border-t border-[var(--border)]">
                       {/* ─── Division management (all stages except finals) ─── */}
                       {stage.stage_type !== 'finals' && (
-                        <div className="px-5 py-4 border-b border-white/5 bg-black/10">
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="text-xs font-semibold text-[#8b8da6] uppercase tracking-wider">Divisions</div>
-                            <div className="flex items-center gap-2">
+                        <div className="px-6 py-5 border-b border-[var(--border)] bg-black/20">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="text-[10px] font-display font-bold text-[var(--text-muted)] uppercase tracking-widest">Divisions</div>
+                            <div className="flex items-center gap-3">
                               {stage.groups.length > 0 && (
                                 <button onClick={() => autoDistributeTeams(stage.id)}
-                                  className="text-[10px] text-[#00ffc3] hover:text-[#8b7ffe] font-semibold transition-colors">
+                                  className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors">
                                   Auto-distribute teams
                                 </button>
                               )}
@@ -1002,7 +1083,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                     setNewGroupMatchCount(stage.match_count ?? 6);
                                   }
                                 }}
-                                className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors">
+                                className="text-xs font-display font-bold uppercase tracking-widest text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors">
                                 + Create Divisions
                               </button>
                             </div>
@@ -1010,38 +1091,38 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
                           {/* Create divisions form */}
                           {creatingGroupFor === stage.id && (
-                            <div className="bg-[#1a2a3a] border border-[#00ffc3]/20 rounded-xl p-4 mb-3">
-                              <div className="grid grid-cols-3 gap-3 mb-3">
+                            <div className="surface p-5 mb-4">
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                 <div>
-                                  <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1">Number of Groups</label>
+                                  <label className="block text-[10px] font-display font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Number of Groups</label>
                                   <input type="number" min={1} max={26} value={newGroupCount}
                                     onChange={(e) => setNewGroupCount(Number(e.target.value))}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00ffc3]/60 transition-colors" />
-                                  <div className="text-[10px] text-[#8b8da6] mt-1">
+                                    className="input-premium w-full" />
+                                  <div className="text-[10px] text-[var(--text-muted)] mt-1.5 font-mono">
                                     {Array.from({ length: Math.min(newGroupCount, 26) }).map((_, i) => String.fromCharCode(65 + i)).join(', ')}
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1">Teams per Group</label>
+                                  <label className="block text-[10px] font-display font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Teams per Group</label>
                                   <input type="number" min={1} value={newGroupTeamCount}
                                     onChange={(e) => setNewGroupTeamCount(e.target.value === '' ? '' : Number(e.target.value))}
                                     placeholder="e.g. 16"
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors" />
+                                    className="input-premium w-full" />
                                 </div>
                                 <div>
-                                  <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1">Matches per Group</label>
+                                  <label className="block text-[10px] font-display font-bold text-[var(--text-muted)] uppercase tracking-widest mb-1.5">Matches per Group</label>
                                   <input type="number" min={0} max={20} value={newGroupMatchCount}
                                     onChange={(e) => setNewGroupMatchCount(Number(e.target.value))}
-                                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00ffc3]/60 transition-colors" />
+                                    className="input-premium w-full" />
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
                                 <button onClick={() => createDivisions(stage.id)}
-                                  className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-                                  Create {newGroupCount} Group{newGroupCount !== 1 ? 's' : ''} with {newGroupMatchCount} match{newGroupMatchCount !== 1 ? 'es' : ''} each
+                                  className="btn-primary py-2 px-5 text-[11px]">
+                                  Create {newGroupCount} Group{newGroupCount !== 1 ? 's' : ''} ({newGroupMatchCount} match{newGroupMatchCount !== 1 ? 'es' : ''} each)
                                 </button>
                                 <button onClick={() => setCreatingGroupFor(null)}
-                                  className="text-[#8b8da6] hover:text-white text-sm px-3 transition-colors">
+                                  className="text-[11px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-white transition-colors px-3 py-2 border border-transparent hover:border-[var(--border)] rounded-lg">
                                   Cancel
                                 </button>
                               </div>
@@ -1050,48 +1131,49 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
                           {/* Group cards — each with teams + matches */}
                           {stage.groups.length > 0 ? (
-                            <div className="space-y-3">
+                            <div className="space-y-4">
                               {stage.groups.map((group) => (
-                                <div key={group.id} className="bg-[#1a2a3a] border border-white/10 rounded-xl overflow-hidden">
+                                <div key={group.id} className="surface overflow-hidden">
                                   {/* Group header */}
-                                  <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/5">
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-sm font-bold text-white">{group.name}</span>
-                                      <span className="text-[10px] text-[#8b8da6]">
-                                        {group.teams.length}{group.team_count ? `/${group.team_count}` : ''} teams
+                                  <div className="flex flex-col md:flex-row md:items-center justify-between px-5 py-3 border-b border-[var(--border)] bg-[var(--bg-hover)]">
+                                    <div className="flex items-center gap-4 mb-2 md:mb-0">
+                                      <span className="text-sm font-display font-bold uppercase tracking-wider text-white">{group.name}</span>
+                                      <div className="w-[1px] h-4 bg-[var(--border)]" />
+                                      <span className="text-[11px] font-display font-bold uppercase tracking-widest text-[var(--text-secondary)]">
+                                        <span className="text-white">{group.teams.length}</span>{group.team_count ? `/${group.team_count}` : ''} teams
                                       </span>
-                                      <span className="text-[10px] text-[#8b8da6]">
-                                        {group.matches.length} match{group.matches.length !== 1 ? 'es' : ''}
+                                      <span className="text-[11px] font-display font-bold uppercase tracking-widest text-[var(--text-secondary)]">
+                                        <span className="text-white">{group.matches.length}</span> match{group.matches.length !== 1 ? 'es' : ''}
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-3">
                                       <button
                                         onClick={() => exportGroup(group.id, group.name)}
-                                        className="text-[10px] text-[#00ffc3] hover:text-[#8b7ffe] font-semibold transition-colors"
+                                        className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
                                       >
-                                        Export Division
+                                        Export
                                       </button>
                                       <button onClick={() => setAddingTeamToGroup(addingTeamToGroup === group.id ? null : group.id)}
-                                        className="text-[10px] text-[#00ffc3] hover:text-[#8b7ffe] font-semibold transition-colors">
+                                        className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors">
                                         + Team
                                       </button>
                                       <button onClick={() => { setAddingMatchTo(group.id); setMatchName(''); setMatchMap(''); }}
-                                        className="text-[10px] text-[#00ffc3] hover:text-[#8b7ffe] font-semibold transition-colors">
+                                        className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors">
                                         + Match
                                       </button>
                                     </div>
                                   </div>
 
-                                  <div className="grid grid-cols-[200px_1fr] divide-x divide-white/5">
+                                  <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr] divide-y lg:divide-y-0 lg:divide-x divide-[var(--border)]">
                                     {/* Left: Teams */}
-                                    <div className="px-3 py-2">
-                                      <div className="text-[9px] text-[#8b8da6] uppercase tracking-wider font-semibold mb-1">Teams</div>
+                                    <div className="px-4 py-3 bg-black/10">
+                                      <div className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3">Teams</div>
                                       {addingTeamToGroup === group.id && (
-                                        <div className="mb-2">
+                                        <div className="mb-3">
                                           <select
                                             onChange={(e) => { if (e.target.value) addTeamToGroup(group.id, e.target.value); }}
                                             defaultValue=""
-                                            className="w-full bg-[#0e1621] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#00ffc3]/60 transition-colors [&>option]:bg-[#0e1621] [&>option]:text-white"
+                                            className="input-premium w-full py-1.5 px-2 text-xs"
                                           >
                                             <option value="">Select team...</option>
                                             {availableTeams(stage).map((t) => (
@@ -1101,78 +1183,82 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                         </div>
                                       )}
                                       {group.teams.length === 0 ? (
-                                        <div className="text-[10px] text-[#8b8da6] py-1">No teams</div>
+                                        <div className="text-[11px] text-[var(--text-muted)] italic py-1">No teams assigned</div>
                                       ) : (
-                                        group.teams.map((team) => (
-                                          <div key={team.id} className="flex items-center justify-between py-0.5 group/team">
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: team.brand_color }} />
-                                              <span className="text-[11px] text-white truncate">{team.short_name || team.name}</span>
+                                        <div className="space-y-1">
+                                          {group.teams.map((team) => (
+                                            <div key={team.id} className="flex items-center justify-between py-1 group/team hover:bg-white/5 px-2 -mx-2 rounded transition-colors">
+                                              <div className="flex items-center gap-2 min-w-0">
+                                                <div className="w-2 h-2 rounded flex-shrink-0" style={{ backgroundColor: team.brand_color }} />
+                                                <span className="text-[12px] text-[var(--text-primary)] truncate font-medium">{team.short_name || team.name}</span>
+                                              </div>
+                                              <button onClick={() => removeTeamFromGroup(group.id, team.id)}
+                                                className="text-[12px] font-display font-bold text-[var(--text-muted)] hover:text-[var(--red)] opacity-0 group-hover/team:opacity-100 transition-all flex-shrink-0">
+                                                &times;
+                                              </button>
                                             </div>
-                                            <button onClick={() => removeTeamFromGroup(group.id, team.id)}
-                                              className="text-[10px] text-[#8b8da6] hover:text-[#ff4e4e] opacity-0 group-hover/team:opacity-100 transition-all flex-shrink-0">
-                                              x
-                                            </button>
-                                          </div>
-                                        ))
+                                          ))}
+                                        </div>
                                       )}
                                     </div>
 
                                     {/* Right: Matches */}
-                                    <div className="px-3 py-2">
-                                      <div className="text-[9px] text-[#8b8da6] uppercase tracking-wider font-semibold mb-1">Matches</div>
+                                    <div className="px-4 py-3 bg-black/10">
+                                      <div className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] mb-3">Matches</div>
                                       {group.matches.length === 0 && addingMatchTo !== group.id ? (
-                                        <div className="text-[10px] text-[#8b8da6] py-1">
-                                          No matches.{' '}
+                                        <div className="text-[11px] text-[var(--text-muted)] italic py-1">
+                                          No matches scheduled.{' '}
                                           <button onClick={() => { setAddingMatchTo(group.id); setMatchName(''); setMatchMap(''); }}
-                                            className="text-[#00ffc3] hover:text-[#8b7ffe]">Add one</button>
+                                            className="text-[var(--accent)] hover:text-white not-italic font-medium transition-colors">Add one</button>
                                         </div>
                                       ) : (
-                                        group.matches.map((match) => (
-                                          <div key={match.id} className="flex items-center justify-between py-1 group/match">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                              <span className="text-[11px] text-white font-medium">{match.name}</span>
-                                              <select
-                                                value={match.map_name ?? ''}
-                                                onChange={(e) => updateMatchMap(match.id, e.target.value || null)}
-                                                className="bg-[#0e1621] border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-white cursor-pointer focus:outline-none focus:border-[#00ffc3]/60 [&>option]:bg-[#0e1621] [&>option]:text-white"
-                                              >
-                                                <option value="">No map</option>
-                                                {MAPS.map((m) => <option key={m} value={m}>{m}</option>)}
-                                              </select>
-                                              <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full ${
-                                                match.status === 'finished' ? 'bg-[#00ffc3]/10 text-[#00ffc3]'
-                                                : match.status === 'live' ? 'bg-[#ff4e4e]/10 text-[#ff4e4e]'
-                                                : 'bg-white/5 text-[#8b8da6]'
-                                              }`}>
-                                                {match.status}
-                                              </span>
+                                        <div className="space-y-1">
+                                          {group.matches.map((match) => (
+                                            <div key={match.id} className="flex items-center justify-between py-1 group/match hover:bg-white/5 px-2 -mx-2 rounded transition-colors">
+                                              <div className="flex items-center gap-3 min-w-0">
+                                                <span className="text-[12px] text-[var(--text-primary)] font-medium truncate">{match.name}</span>
+                                                <select
+                                                  value={match.map_name ?? ''}
+                                                  onChange={(e) => updateMatchMap(match.id, e.target.value || null)}
+                                                  className="input-premium py-0.5 px-1.5 text-[10px]"
+                                                >
+                                                  <option value="">No map</option>
+                                                  {MAPS.map((m) => <option key={m} value={m}>{m}</option>)}
+                                                </select>
+                                                <span className={`text-[9px] font-display font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
+                                                  match.status === 'finished' ? 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30'
+                                                  : match.status === 'live' ? 'bg-[var(--red)]/10 text-[var(--red)] border-[var(--red)]/30'
+                                                  : 'bg-white/5 text-[var(--text-muted)] border-[var(--border)]'
+                                                }`}>
+                                                  {match.status}
+                                                </span>
+                                              </div>
+                                              <div className="flex items-center gap-2 flex-shrink-0 opacity-0 group-hover/match:opacity-100 transition-all">
+                                                <Link href={`/tournaments/${id}/stages/${stage.id}/matches/${match.id}`}
+                                                  className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-white transition-colors">
+                                                  View
+                                                </Link>
+                                              </div>
                                             </div>
-                                            <div className="flex items-center gap-1.5 flex-shrink-0 opacity-0 group-hover/match:opacity-100 transition-all">
-                                              <Link href={`/tournaments/${id}/stages/${stage.id}/matches/${match.id}`}
-                                                className="text-[10px] text-[#8b8da6] hover:text-white">
-                                                View
-                                              </Link>
-                                            </div>
-                                          </div>
-                                        ))
+                                          ))}
+                                        </div>
                                       )}
                                       {/* Add match to group form */}
                                       {addingMatchTo === group.id && (
-                                        <div className="flex items-center gap-2 mt-1 pt-1 border-t border-white/5">
+                                        <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border)]">
                                           <input type="text" autoFocus placeholder="Match name" value={matchName}
                                             onChange={(e) => setMatchName(e.target.value)}
                                             onKeyDown={(e) => { if (e.key === 'Enter') addMatch(stage.id, group.id); if (e.key === 'Escape') setAddingMatchTo(null); }}
-                                            className="flex-1 bg-[#0e1621] border border-white/10 rounded px-2 py-1 text-xs text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors" />
+                                            className="input-premium flex-1 py-1 px-2 text-xs" />
                                           <select value={matchMap} onChange={(e) => setMatchMap(e.target.value)}
-                                            className="bg-[#0e1621] border border-white/10 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-[#00ffc3]/60 [&>option]:bg-[#0e1621] [&>option]:text-white">
+                                            className="input-premium py-1 px-2 text-xs">
                                             <option value="">Map</option>
                                             {MAPS.map((m) => <option key={m} value={m}>{m}</option>)}
                                           </select>
                                           <button onClick={() => addMatch(stage.id, group.id)}
-                                            className="text-[10px] text-[#00ffc3] hover:text-[#8b7ffe] font-semibold">Add</button>
+                                            className="btn-primary py-1 px-3 text-[10px]">Add</button>
                                           <button onClick={() => setAddingMatchTo(null)}
-                                            className="text-[10px] text-[#8b8da6] hover:text-white">x</button>
+                                            className="text-[12px] font-display font-bold text-[var(--text-muted)] hover:text-[var(--red)] transition-colors px-1">&times;</button>
                                         </div>
                                       )}
                                     </div>
@@ -1181,8 +1267,8 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                               ))}
                             </div>
                           ) : (
-                            <div className="text-center py-4 text-[#8b8da6] text-xs">
-                              No divisions created yet. Click &quot;Create Divisions&quot; to set up groups.
+                            <div className="text-center py-8 text-[12px] text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-xl bg-white/[0.01]">
+                              No divisions created yet.<br/><span className="mt-1 block opcaity-70">Click &quot;Create Divisions&quot; to set up groups.</span>
                             </div>
                           )}
                         </div>
@@ -1460,7 +1546,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
               )}
             </div>
           </details>
-        </>
+        </div>
       )}
 
       {/* ════════════════════ APPLICATIONS TAB ════════════════════ */}
@@ -1689,6 +1775,39 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                   </div>
                 ))
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Toast notification ─── */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 max-w-sm px-4 py-3 rounded-lg border shadow-lg backdrop-blur-sm text-sm animate-in slide-in-from-bottom-2 ${
+          toast.type === 'error'
+            ? 'bg-red-950/90 border-red-800/60 text-red-200'
+            : 'bg-[var(--bg-card)]/90 border-[var(--border)] text-[var(--text-primary)]'
+        }`}>
+          <div className="flex items-start gap-3">
+            <span className="flex-1">{toast.message}</span>
+            <button onClick={() => setToast(null)} className="text-white/40 hover:text-white/80 shrink-0">&times;</button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Confirm dialog ─── */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="surface max-w-md w-full mx-4 p-6 rounded-xl shadow-2xl border border-[var(--border)]">
+            <p className="text-sm text-[var(--text-primary)] mb-6">{confirmDialog.message}</p>
+            <div className="flex items-center justify-end gap-3">
+              <button onClick={() => setConfirmDialog(null)}
+                className="btn-ghost py-2 px-4 text-sm">
+                Cancel
+              </button>
+              <button onClick={confirmDialog.onConfirm}
+                className="btn-primary py-2 px-4 text-sm">
+                Confirm
+              </button>
+            </div>
           </div>
         </div>
       )}

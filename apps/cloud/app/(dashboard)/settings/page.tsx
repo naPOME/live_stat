@@ -57,10 +57,11 @@ function TableStylePreview({
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-xl overflow-hidden border-2 transition-all text-left w-full ${
-        selected ? 'border-[#00ffc3] shadow-[0_0_0_1px_rgba(0,255,195,0.3)]' : 'border-white/10 hover:border-white/20'
+    className={`relative rounded-xl overflow-hidden border transition-colors text-left w-full group ${
+        selected ? 'border-[var(--accent-border)]' : 'border-[var(--border)] hover:border-[var(--border-hover)]'
       }`}
-    >
+  >
+      {selected && <div className="absolute inset-0 bg-[var(--accent)]/5" />}
       <div className="p-2" style={{ background: bgColor, fontFamily: font }}>
         <div className="flex items-center justify-between px-2 py-1 mb-1" style={{ borderBottom: `1px solid ${accentColor}22` }}>
           <span className="text-[7px] font-bold uppercase tracking-widest" style={{ color: accentColor }}>Live Rankings</span>
@@ -74,7 +75,7 @@ function TableStylePreview({
           </div>
         ))}
       </div>
-      <div className={`px-2 py-1.5 text-center text-[9px] font-semibold ${selected ? 'bg-[#00ffc3]/20 text-[#00ffc3]' : 'bg-white/5 text-[#8b8da6]'}`}>
+      <div className={`px-2 py-1.5 text-center text-[9px] font-display font-semibold uppercase tracking-wider ${selected ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] border-t border-[var(--border)]' : 'bg-[var(--bg-hover)] text-[var(--text-muted)] border-t border-transparent'}`}>
         {TABLE_STYLES.find(s => s.id === style)?.label}
       </div>
     </button>
@@ -88,25 +89,30 @@ function ImageUploader({
 }) {
   return (
     <div>
-      <label className="block text-xs text-[#8b8da6] mb-2">{label}</label>
-      <div className="flex items-center gap-4">
+      <label className="label">{label}</label>
+      <div className="flex items-center gap-5">
         <div className="relative group/img">
           {currentUrl ? (
-            <img src={currentUrl} alt="" className="w-16 h-16 rounded-xl object-cover bg-white/5" />
+            <div className="w-16 h-16 rounded-lg bg-[var(--bg-surface)] border border-[var(--border)] overflow-hidden flex items-center justify-center relative">
+              <img src={currentUrl} alt="" className="w-full h-full object-contain" />
+              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/img:opacity-100 transition-opacity" />
+            </div>
           ) : (
-            <div className="w-16 h-16 rounded-xl bg-white/5 border border-dashed border-white/20 flex items-center justify-center text-[#8b8da6]">
-              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <div className="w-16 h-16 rounded-lg bg-[var(--bg-surface)] border border-dashed border-[var(--border)] flex items-center justify-center text-[var(--text-muted)] relative overflow-hidden group-hover/img:border-[var(--text-primary)] group-hover/img:text-[var(--text-primary)] transition-colors">
+              <svg width="24" height="24" viewBox="0 0 20 20" fill="none" className="z-10 relative">
                 <path d="M4 14l4-4 3 3 3-4 4 5H4z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
                 <circle cx="7" cy="7" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
               </svg>
             </div>
           )}
-          <label className="absolute inset-0 flex items-center justify-center bg-black/70 rounded-xl opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer text-xs text-white font-medium">
-            {uploading ? '...' : 'Upload'}
+          <label className="absolute inset-0 flex items-center justify-center rounded-lg opacity-0 group-hover/img:opacity-100 transition-opacity cursor-pointer z-20">
+            <div className="badge badge-accent backdrop-blur-sm shadow-sm">
+               {uploading ? 'UPDATING...' : 'REPLACE'}
+            </div>
             <input type="file" accept="image/*" onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); }} className="hidden" />
           </label>
         </div>
-        <div className="text-[10px] text-[#8b8da6] leading-relaxed">{hint}</div>
+        <div className="text-[13px] text-[var(--text-secondary)] leading-relaxed max-w-[200px]">{hint}</div>
       </div>
     </div>
   );
@@ -210,7 +216,13 @@ export default function SettingsPage() {
     }));
   }
 
-  if (loading) return <div className="p-8 text-[#8b8da6]">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="p-10 flex items-center justify-center min-h-[50vh]">
+        <span className="loader" aria-label="Loading" />
+      </div>
+    );
+  }
 
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: 'branding', label: 'Logo & Branding' },
@@ -219,23 +231,29 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-[#8b8da6] text-sm mt-1">Customize your organization branding, overlay theme, and widget visibility</p>
+    <div className="p-10 max-w-[1200px] page-enter mx-auto">
+      {/* HEADER */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Settings</h1>
+        <p className="text-[var(--text-secondary)] text-sm font-body">
+          Customize organization branding, competitive overlay theme, and telemetry visibility.
+        </p>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-6 bg-[#1a2a3a] border border-white/10 rounded-xl p-1 w-fit">
+      <div className="flex gap-6 mb-8 border-b border-[var(--border)]">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-              activeTab === tab.id ? 'bg-white/10 text-white' : 'text-[#8b8da6] hover:text-white'
+            className={`pb-3 text-sm font-medium transition-colors relative ${
+              activeTab === tab.id ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
             }`}
           >
             {tab.label}
+            {activeTab === tab.id && (
+              <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--text-primary)]" />
+            )}
           </button>
         ))}
       </div>
@@ -243,12 +261,12 @@ export default function SettingsPage() {
       <form onSubmit={save}>
         {/* ─── BRANDING TAB ─── */}
         {activeTab === 'branding' && (
-          <div className="space-y-5">
+          <div className="space-y-6 animate-fade-in pb-32">
             {/* Organization Info */}
-            <div className="bg-[#1a2a3a] border border-white/10 rounded-2xl p-5 space-y-4">
-              <div className="text-sm font-semibold text-white">Organization</div>
+            <div className="surface p-6">
+              <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-6 pb-4 border-b border-[var(--border)]">Organization Profile</h2>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <ImageUploader
                   label="Organization Logo"
                   hint="PNG or SVG recommended. Included in match export ZIP and overlays."
@@ -265,92 +283,95 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs text-[#8b8da6] mb-1.5">Organization Name</label>
+              <div className="max-w-md">
+                <label className="label">Organization Name</label>
                 <input
                   type="text"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                  className="input-premium"
                 />
               </div>
             </div>
 
             {/* Sponsor Logos */}
-            <div className="bg-[#1a2a3a] border border-white/10 rounded-2xl p-5 space-y-4">
-              <div>
-                <div className="text-sm font-semibold text-white">Sponsor Logos</div>
-                <div className="text-xs text-[#8b8da6] mt-0.5">Up to 3 sponsor logos displayed on overlays and public pages</div>
+            <div className="surface p-6">
+              <div className="mb-6 pb-4 border-b border-[var(--border)]">
+                <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Sponsor Logos</h2>
+                <div className="text-[13px] text-[var(--text-secondary)]">Up to 3 sponsor logos displayed on overlays and public pages</div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                {[
-                  { field: 'sponsor1_url', path: 'sponsor1', label: 'Sponsor 1' },
-                  { field: 'sponsor2_url', path: 'sponsor2', label: 'Sponsor 2' },
-                  { field: 'sponsor3_url', path: 'sponsor3', label: 'Sponsor 3' },
-                ].map(({ field, path, label }) => (
-                  <ImageUploader
-                    key={field}
-                    label={label}
-                    hint="PNG with transparent bg"
-                    currentUrl={(org as any)?.[field]}
-                    onUpload={(f) => uploadImage(f, field, path)}
-                    uploading={uploading === field}
-                  />
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {[
+                    { field: 'sponsor1_url', path: 'sponsor1', label: 'Sponsor 1' },
+                    { field: 'sponsor2_url', path: 'sponsor2', label: 'Sponsor 2' },
+                    { field: 'sponsor3_url', path: 'sponsor3', label: 'Sponsor 3' },
+                  ].map(({ field, path, label }) => (
+                    <ImageUploader
+                      key={field}
+                      label={label}
+                      hint="PNG with transparent bg"
+                      currentUrl={(org as any)?.[field]}
+                      onUpload={(f) => uploadImage(f, field, path)}
+                      uploading={uploading === field}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
 
             {/* Banner / Hero */}
-            <div className="bg-[#1a2a3a] border border-white/10 rounded-2xl p-5 space-y-4">
-              <div>
-                <div className="text-sm font-semibold text-white">Banner & Hero</div>
-                <div className="text-xs text-[#8b8da6] mt-0.5">Displayed on tournament public pages and overlay headers</div>
+            <div className="surface p-6">
+              <div className="mb-6 pb-4 border-b border-[var(--border)]">
+                <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Banner & Hero</h2>
+                <div className="text-[13px] text-[var(--text-secondary)]">Displayed on tournament public pages and overlay headers</div>
               </div>
 
-              <ImageUploader
-                label="Banner Image"
-                hint="Recommended: 1920x400 or wider. Used as hero background on public pages."
-                currentUrl={org?.banner_url}
-                onUpload={(f) => uploadImage(f, 'banner_url', 'banner')}
-                uploading={uploading === 'banner_url'}
-              />
+              <div className="space-y-6">
+                <ImageUploader
+                  label="Banner Image"
+                  hint="Recommended: 1920x400 or wider. Used as hero background on public pages."
+                  currentUrl={org?.banner_url}
+                  onUpload={(f) => uploadImage(f, 'banner_url', 'banner')}
+                  uploading={uploading === 'banner_url'}
+                />
 
-              {/* Banner preview */}
-              {org?.banner_url && (
-                <div
-                  className="relative rounded-xl overflow-hidden h-[120px] bg-cover bg-center"
-                  style={{ backgroundImage: `url(${org.banner_url})` }}
-                >
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-                  <div className="absolute bottom-0 left-0 p-4">
-                    <div className="text-white font-black text-lg">{form.banner_title || 'Tournament Title'}</div>
-                    <div className="text-[#8b8da6] text-xs">{form.banner_subtitle || 'Subtitle text'}</div>
+                {/* Banner preview */}
+                {org?.banner_url && (
+                  <div className="relative rounded-lg overflow-hidden h-[160px] bg-[var(--bg-elevated)] border border-[var(--border)] group">
+                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${org.banner_url})` }} />
+                    <div className="absolute inset-0 bg-black/40" />
+                    <div className="absolute bottom-0 left-0 p-6 w-full flex items-end justify-between">
+                      <div>
+                        <div className="font-display font-bold text-2xl text-white mb-1">{form.banner_title || 'Tournament Title'}</div>
+                        <div className="text-[var(--text-secondary)] text-sm">{form.banner_subtitle || 'Subtitle text'}</div>
+                      </div>
+                      <div className="badge badge-muted">Preview</div>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs text-[#8b8da6] mb-1.5">Banner Title</label>
-                  <input
-                    type="text"
-                    value={form.banner_title}
-                    onChange={(e) => setForm((f) => ({ ...f, banner_title: e.target.value }))}
-                    placeholder="e.g. PMPL Africa Championship"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-[#8b8da6] mb-1.5">Banner Subtitle</label>
-                  <input
-                    type="text"
-                    value={form.banner_subtitle}
-                    onChange={(e) => setForm((f) => ({ ...f, banner_subtitle: e.target.value }))}
-                    placeholder="e.g. $50,000 Prize Pool"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                  <div>
+                    <label className="label">Banner Title</label>
+                    <input
+                      type="text"
+                      value={form.banner_title}
+                      onChange={(e) => setForm((f) => ({ ...f, banner_title: e.target.value }))}
+                      placeholder="e.g. PMPL Africa Championship"
+                      className="input-premium"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Banner Subtitle</label>
+                    <input
+                      type="text"
+                      value={form.banner_subtitle}
+                      onChange={(e) => setForm((f) => ({ ...f, banner_subtitle: e.target.value }))}
+                      placeholder="e.g. $50,000 Prize Pool"
+                      className="input-premium"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -359,33 +380,33 @@ export default function SettingsPage() {
 
         {/* ─── THEME TAB ─── */}
         {activeTab === 'theme' && (
-          <div className="grid grid-cols-[1fr_320px] gap-6 items-start">
-            <div className="space-y-5">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-8 pb-32 animate-fade-in items-start">
+            <div className="space-y-6">
               {/* Colors */}
-              <div className="bg-[#1a2a3a] border border-white/10 rounded-2xl p-5 space-y-5">
-                <div>
-                  <div className="text-sm font-semibold text-white mb-0.5">Overlay Colors</div>
-                  <div className="text-xs text-[#8b8da6]">Applied to all live overlays in OBS</div>
+              <div className="surface p-6">
+                <div className="mb-6 pb-4 border-b border-[var(--border)]">
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Overlay Colors</h2>
+                  <div className="text-[13px] text-[var(--text-secondary)]">Applied to all live overlays in OBS</div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   {[
                     { key: 'brand_color', label: 'Brand / Primary', desc: 'Team rows, rank highlights' },
                     { key: 'accent_color', label: 'Accent', desc: 'Kill counts, alive bars, live dots' },
                     { key: 'bg_color', label: 'Background', desc: 'Overlay panel background' },
                   ].map(({ key, label, desc }) => (
                     <div key={key}>
-                      <label className="block text-xs font-semibold text-[#8b8da6] uppercase tracking-wider mb-2">{label}</label>
-                      <div className="flex items-center mb-1">
+                      <label className="label">{label}</label>
+                      <div className="flex items-center mb-2">
                         <label className="relative cursor-pointer w-10 h-10 shrink-0 block">
                           <input
                             type="color"
                             value={form[key as keyof typeof form] as string}
                             onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-10"
+                            className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-20"
                           />
                           <div
-                            className="w-10 h-10 rounded-l-lg border border-r-0 border-white/10 absolute inset-0"
+                            className="w-10 h-10 rounded-l-lg border border-r-0 border-[var(--border)] absolute inset-0"
                             style={{ backgroundColor: form[key as keyof typeof form] as string }}
                           />
                         </label>
@@ -396,28 +417,28 @@ export default function SettingsPage() {
                             const v = e.target.value;
                             if (/^#[0-9a-fA-F]{0,6}$/.test(v)) setForm((f) => ({ ...f, [key]: v }));
                           }}
-                          className="flex-1 w-full min-w-0 bg-white/5 border border-white/10 rounded-r-lg px-3 h-10 text-white text-sm font-mono focus:outline-none focus:border-[#00ffc3]/60 transition-colors uppercase"
+                          className="flex-1 min-w-0 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-r-lg px-3 h-10 text-[var(--text-primary)] text-sm font-mono focus:outline-none focus:border-[var(--text-primary)] transition-colors uppercase"
                         />
                       </div>
-                      <div className="text-[10px] text-[#8b8da6]">{desc}</div>
+                      <div className="text-[12px] text-[var(--text-secondary)]">{desc}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Font */}
-              <div className="bg-[#1a2a3a] border border-white/10 rounded-2xl p-5 space-y-3">
-                <label className="block text-xs font-semibold text-[#8b8da6] uppercase tracking-wider">Overlay Font</label>
-                <div className="flex gap-2 flex-wrap">
+              <div className="surface p-6">
+                <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">Overlay Typography</h2>
+                <div className="flex gap-3 flex-wrap">
                   {FONTS.map((f) => (
                     <button
                       key={f}
                       type="button"
                       onClick={() => setForm((form) => ({ ...form, font: f }))}
-                      className={`px-3 py-1.5 rounded-lg text-sm border transition-all ${
+                      className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
                         form.font === f
-                          ? 'border-[#00ffc3] bg-[#00ffc3]/15 text-white'
-                          : 'border-white/10 bg-white/5 text-[#8b8da6] hover:text-white hover:border-white/20'
+                          ? 'border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-base)]'
+                          : 'border-[var(--border)] bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)]'
                       }`}
                       style={{ fontFamily: f }}
                     >
@@ -428,12 +449,13 @@ export default function SettingsPage() {
               </div>
 
               {/* Table Style */}
-              <div className="bg-[#1a2a3a] border border-white/10 rounded-2xl p-5 space-y-3">
-                <div>
-                  <div className="text-xs font-semibold text-[#8b8da6] uppercase tracking-wider mb-1">Leaderboard Style</div>
-                  <div className="text-[10px] text-[#8b8da6] mb-3">How team rows appear in the overlay leaderboard</div>
+              <div className="surface p-6">
+                <div className="mb-6 pb-4 border-b border-[var(--border)]">
+                  <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Leaderboard Architecture</h2>
+                  <div className="text-[13px] text-[var(--text-secondary)]">Structure and appearance of team rows in the broadcast</div>
                 </div>
-                <div className="grid grid-cols-4 gap-3">
+                
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {TABLE_STYLES.map((s) => (
                     <div key={s.id}>
                       <TableStylePreview
@@ -445,7 +467,7 @@ export default function SettingsPage() {
                         selected={form.table_style === s.id}
                         onClick={() => setForm((f) => ({ ...f, table_style: s.id }))}
                       />
-                      <div className="text-[9px] text-[#8b8da6] mt-1 text-center leading-tight">{s.desc}</div>
+                      <div className="text-[12px] text-[var(--text-secondary)] mt-2 text-center">{s.desc}</div>
                     </div>
                   ))}
                 </div>
@@ -454,24 +476,24 @@ export default function SettingsPage() {
 
             {/* Live Preview */}
             <div className="sticky top-8">
-              <div className="text-xs font-semibold text-[#8b8da6] uppercase tracking-wider mb-3">Live Preview</div>
+              <h3 className="text-xs font-semibold text-[var(--text-primary)] uppercase tracking-wider mb-4">Live Output Preview</h3>
               <div
-                className="rounded-2xl overflow-hidden shadow-2xl"
-                style={{ fontFamily: form.font, background: `${form.bg_color}ee`, border: `1px solid ${form.accent_color}22`, width: 320 }}
+                className="rounded-xl overflow-hidden shadow-lg border relative"
+                style={{ fontFamily: form.font, background: `${form.bg_color}f5`, borderColor: `${form.accent_color}40`, width: '100%' }}
               >
                 <div className="px-3 py-2 flex items-center justify-between" style={{ borderBottom: `1px solid ${form.accent_color}22` }}>
                   <div className="flex items-center gap-2">
                     {org?.logo_url && <img src={org.logo_url} alt="" className="w-5 h-5 rounded object-cover" />}
-                    <span className="text-xs font-bold uppercase tracking-widest" style={{ color: form.accent_color }}>Live Rankings</span>
+                    <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: form.accent_color }}>Live Rankings</span>
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: form.accent_color }} />
-                    <span className="text-[9px] font-bold uppercase" style={{ color: form.accent_color }}>Live</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: form.accent_color }}>Live</span>
                   </div>
                 </div>
                 <div className="grid grid-cols-[20px_1fr_28px_28px_36px] gap-1 px-3 py-1.5" style={{ borderBottom: `1px solid ${form.accent_color}11` }}>
                   {['#', 'Team', '', 'K', 'Pts'].map((h) => (
-                    <span key={h} className="text-[8px] font-bold uppercase tracking-wider text-center" style={{ color: form.accent_color + '88' }}>{h}</span>
+                    <span key={h} className="text-[9px] font-semibold uppercase tracking-wider text-center" style={{ color: form.accent_color + 'aa' }}>{h}</span>
                   ))}
                 </div>
                 {[
@@ -481,111 +503,110 @@ export default function SettingsPage() {
                   { name: 'TEAM D', pts: 8, kills: 3, alive: 0 },
                 ].map((t, i) => {
                   const s = form.table_style;
-                  const rs = s === 'strip' ? { background: i === 0 ? `${form.brand_color}18` : 'transparent' }
-                    : s === 'card' ? { background: i === 0 ? `${form.brand_color}15` : '#ffffff05', borderLeft: `4px solid ${i === 0 ? form.brand_color : '#ffffff'}88` }
-                    : s === 'dark' ? { background: i === 0 ? '#ffffff0d' : 'transparent', borderBottom: `1px solid #ffffff15` }
+                  const rs = s === 'strip' ? { background: i === 0 ? `${form.brand_color}1a` : 'transparent' }
+                    : s === 'card' ? { background: i === 0 ? `${form.brand_color}15` : 'transparent', borderLeft: `3px solid ${i === 0 ? form.brand_color : '#ffffff'}40` }
+                    : s === 'dark' ? { background: i === 0 ? '#ffffff0a' : 'transparent', borderBottom: `1px solid #ffffff0a` }
                     : {};
                   return (
                     <div key={i} className="grid grid-cols-[20px_1fr_28px_28px_36px] gap-1 items-center px-3 py-1.5" style={rs}>
-                      <span className="text-[10px] font-black text-center" style={{ color: i === 0 ? form.accent_color : '#ffffff55' }}>{i + 1}</span>
-                      <span className="text-[11px] font-bold uppercase truncate" style={{ color: i === 0 ? '#fff' : '#ffffff99' }}>{t.name}</span>
-                      <div className="flex gap-0.5 justify-center">
+                      <span className="text-[11px] font-medium text-center" style={{ color: i === 0 ? form.accent_color : '#ffffff55' }}>{i + 1}</span>
+                      <span className="text-[12px] font-medium truncate" style={{ color: i === 0 ? '#fff' : '#ffffffbb' }}>{t.name}</span>
+                      <div className="flex gap-[1px] justify-center">
                         {Array.from({ length: 4 }, (_, b) => (
-                          <div key={b} className="w-1 h-3 rounded-sm" style={{ backgroundColor: b < t.alive ? form.accent_color : '#ffffff15' }} />
+                          <div key={b} className="w-1 h-2.5 rounded-[1px]" style={{ backgroundColor: b < t.alive ? form.accent_color : '#ffffff15' }} />
                         ))}
                       </div>
-                      <span className="text-[11px] font-bold text-center tabular-nums" style={{ color: form.accent_color }}>{t.kills}</span>
-                      <span className="text-[12px] font-black text-center tabular-nums" style={{ color: i === 0 ? form.brand_color : '#fff' }}>{t.pts}</span>
+                      <span className="text-[12px] font-medium text-center tabular-nums" style={{ color: form.accent_color }}>{t.kills}</span>
+                      <span className="text-[13px] font-semibold text-center tabular-nums" style={{ color: i === 0 ? form.brand_color : '#fff' }}>{t.pts}</span>
                     </div>
                   );
                 })}
               </div>
-              <p className="text-[10px] text-[#8b8da6] mt-3 text-center">Updates in real-time as you adjust</p>
             </div>
           </div>
         )}
 
         {/* ─── VISIBILITY TAB ─── */}
         {activeTab === 'visibility' && (
-          <div className="space-y-5">
-            <div className="bg-[#1a2a3a] border border-white/10 rounded-2xl p-5">
-              <div className="mb-4">
-                <div className="text-sm font-semibold text-white">Widget Visibility</div>
-                <div className="text-xs text-[#8b8da6] mt-0.5">Control which overlay widgets are active during your broadcast. Disabled widgets will show nothing when loaded in OBS.</div>
+          <div className="surface p-6 pb-32 animate-fade-in">
+            <div className="mb-6 flex items-start justify-between pb-4 border-b border-[var(--border)]">
+              <div>
+                <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Widget Visibility</h2>
+                <div className="text-[13px] text-[var(--text-secondary)]">Control which overlay widgets are active during your broadcast</div>
               </div>
-
-              <div className="space-y-1">
-                {VISIBILITY_OPTIONS.map(({ key, label, desc }) => {
-                  const enabled = form.visibility[key] ?? true;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => toggleVisibility(key)}
-                      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-colors ${
-                        enabled ? 'bg-white/5 hover:bg-white/8' : 'bg-transparent hover:bg-white/3 opacity-50'
-                      }`}
-                    >
-                      <div className="text-left">
-                        <div className="text-sm font-medium text-white">{label}</div>
-                        <div className="text-[10px] text-[#8b8da6]">{desc}</div>
-                      </div>
-                      {/* Toggle switch */}
-                      <div
-                        className={`w-10 h-5 rounded-full relative transition-colors flex-shrink-0 ml-4 ${
-                          enabled ? 'bg-[#00ffc3]' : 'bg-white/10'
-                        }`}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded-full bg-white absolute top-0.5 transition-transform ${
-                            enabled ? 'translate-x-5' : 'translate-x-0.5'
-                          }`}
-                        />
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const all: Record<string, boolean> = {};
+                    VISIBILITY_OPTIONS.forEach(o => { all[o.key] = true; });
+                    setForm(f => ({ ...f, visibility: all }));
+                  }}
+                  className="btn-ghost btn-sm"
+                >
+                  Enable All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const none: Record<string, boolean> = {};
+                    VISIBILITY_OPTIONS.forEach(o => { none[o.key] = false; });
+                    setForm(f => ({ ...f, visibility: none }));
+                  }}
+                  className="btn-ghost btn-sm"
+                >
+                  Disable All
+                </button>
               </div>
             </div>
 
-            {/* Quick actions */}
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  const all: Record<string, boolean> = {};
-                  VISIBILITY_OPTIONS.forEach(o => { all[o.key] = true; });
-                  setForm(f => ({ ...f, visibility: all }));
-                }}
-                className="text-xs text-[#00ffc3] hover:text-white border border-[#00ffc3]/30 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                Enable All
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const none: Record<string, boolean> = {};
-                  VISIBILITY_OPTIONS.forEach(o => { none[o.key] = false; });
-                  setForm(f => ({ ...f, visibility: none }));
-                }}
-                className="text-xs text-[#8b8da6] hover:text-white border border-white/10 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                Disable All
-              </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {VISIBILITY_OPTIONS.map(({ key, label, desc }) => {
+                const enabled = form.visibility[key] ?? true;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => toggleVisibility(key)}
+                    className={`flex flex-col items-start p-4 rounded-lg border transition-all text-left ${
+                      enabled 
+                        ? 'bg-[var(--bg-elevated)] border-[var(--border-hover)]' 
+                        : 'bg-[var(--bg-surface)] border-[var(--border)] opacity-60 hover:opacity-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className={`text-sm font-medium transition-colors ${enabled ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>{label}</div>
+                      <div className={`text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded ${
+                        enabled ? 'bg-[var(--text-primary)] text-[var(--bg-base)]' : 'bg-[var(--bg-elevated)] text-[var(--text-muted)]'
+                      }`}>
+                        {enabled ? 'Active' : 'Hidden'}
+                      </div>
+                    </div>
+                    <div className="text-[12px] text-[var(--text-secondary)]">{desc}</div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Save button - always visible */}
-        <div className="flex items-center gap-3 mt-6 pt-6 border-t border-white/5">
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 disabled:opacity-50 text-[#00ffc3] font-semibold px-6 py-2.5 rounded-lg transition-colors text-sm"
-          >
-            {saving ? 'Saving...' : 'Save Settings'}
-          </button>
-          {saved && <span className="text-[#00ffc3] text-sm font-medium">Saved</span>}
+        {/* Save button - always visible floating dock */}
+        <div className="fixed bottom-0 left-0 right-0 p-6 z-50 pointer-events-none flex justify-center pb-8">
+          <div className="pointer-events-auto flex items-center gap-6 bg-[var(--bg-surface)] backdrop-blur-xl border border-[var(--border)] rounded-full p-2 pl-6 shadow-xl animate-slide-up">
+            <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${saving ? 'bg-[var(--text-muted)]' : saved ? 'bg-green-500' : 'bg-[var(--text-muted)]'}`} />
+              <div className="text-[13px] font-medium text-[var(--text-secondary)]">
+                {saving ? 'Saving...' : saved ? 'Saved' : 'Unsaved Changes'}
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={saving}
+              className="btn-primary rounded-full px-6 py-2"
+            >
+              Save Configuration
+            </button>
+          </div>
         </div>
       </form>
     </div>

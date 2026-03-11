@@ -7,102 +7,69 @@ export default async function PlayersPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
-  const { data: profile } = await supabase
-    .from('profiles').select('org_id').eq('id', user.id).single();
+  const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', user.id).single();
   if (!profile?.org_id) redirect('/');
 
-  // Get all teams for this org
-  const { data: teams } = await supabase
-    .from('teams')
-    .select('id, name, short_name, brand_color')
-    .eq('org_id', profile.org_id);
-
+  const { data: teams } = await supabase.from('teams').select('id, name, short_name, brand_color').eq('org_id', profile.org_id);
   const teamIds = (teams || []).map(t => t.id);
   const teamMap = new Map((teams || []).map(t => [t.id, t]));
 
-  // Get all players
   const { data: players } = teamIds.length > 0
-    ? await supabase
-        .from('players')
-        .select('*')
-        .in('team_id', teamIds)
-        .order('display_name')
+    ? await supabase.from('players').select('*').in('team_id', teamIds).order('display_name')
     : { data: [] };
+  const cols = '40px 1.5fr 1.5fr 1fr';
+
+
 
   return (
-    <div className="p-8 max-w-5xl">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-white">Players</h1>
-          <p className="text-[#8b8da6] text-sm mt-1">{players?.length ?? 0} players across {teams?.length ?? 0} teams</p>
-        </div>
+    <div className="p-10 max-w-[1100px] page-enter">
+      <div className="mb-8">
+        <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Players</h1>
+        <p className="text-[var(--text-secondary)] text-sm font-body">
+          {players?.length ?? 0} players across {teams?.length ?? 0} teams
+        </p>
       </div>
 
       {(!players || players.length === 0) ? (
-        <div className="bg-[#1a2a3a] border border-dashed border-white/10 rounded-2xl p-12 text-center">
-          <div className="text-4xl mb-3">👤</div>
-          <h3 className="text-white font-semibold mb-1">No players yet</h3>
-          <p className="text-[#8b8da6] text-sm mb-4">Add players to your teams to start building rosters</p>
-          <Link
-            href="/teams"
-            className="inline-flex items-center gap-2 bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors"
-          >
-            Go to Teams
-          </Link>
+        <div className="surface animate-slide-up mt-8">
+          <div className="p-16 text-center relative overflow-hidden flex flex-col items-center">
+            <div className="w-16 h-16 rounded-2xl mb-6 flex items-center justify-center border border-[var(--border)] bg-[var(--bg-surface)]">
+              <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
+                <circle cx="13" cy="9" r="4.5" stroke="currentColor" strokeWidth="1.6" className="text-[var(--text-muted)]"/>
+                <path d="M4 23c0-5 4-8.5 9-8.5s9 3.5 9 8.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" className="text-[var(--text-muted)]"/>
+              </svg>
+            </div>
+            <h3 className="font-display text-lg font-semibold mb-2 text-[var(--text-primary)]">No Players Yet</h3>
+            <p className="text-[var(--text-secondary)] text-[14px] mb-8 max-w-sm">Add players to your teams to start building rosters.</p>
+            <Link href="/teams" className="btn-primary">Go to Teams</Link>
+          </div>
         </div>
       ) : (
-        <div className="bg-[#1a2a3a] border border-white/10 rounded-2xl overflow-hidden">
-          {/* Header */}
-          <div className="grid grid-cols-[2fr_2fr_1.5fr_auto] px-5 py-2.5 border-b border-white/5 text-[10px] font-bold uppercase tracking-wider text-[#8b8da6]">
-            <span>Player</span>
-            <span>In-Game ID</span>
-            <span>Team</span>
-            <span className="w-12" />
+        <div className="data-table animate-slide-up">
+          <div className="data-table-header" style={{ gridTemplateColumns: cols }}>
+            {['#', 'Player', 'In-Game ID', 'Team'].map((h) => (
+              <span key={h} className="text-[11px] font-display font-medium text-[var(--text-muted)] uppercase tracking-wider">{h}</span>
+            ))}
           </div>
-
-          {/* Rows */}
-          {players.map((player: any, i: number) => {
-            const team = teamMap.get(player.team_id);
-            const color = team?.brand_color || '#ffffff';
-
-            return (
-              <div
-                key={player.id}
-                className={`grid grid-cols-[2fr_2fr_1.5fr_auto] items-center px-5 py-3 ${
-                  i > 0 ? 'border-t border-white/5' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-black flex-shrink-0"
-                    style={{ background: color + '22', color }}
-                  >
-                    {(player.display_name || '?').substring(0, 2).toUpperCase()}
+          <div>
+            {players.map((player: any, i: number) => {
+              const team = teamMap.get(player.team_id);
+              const color = team?.brand_color || '#7a8ba8';
+              return (
+                <Link key={player.id} href={`/teams/${player.team_id}`}
+                  className="data-table-row group transition-colors"
+                  style={{ gridTemplateColumns: cols }}>
+                  <span className="text-[12px] font-mono text-[var(--text-muted)] tabular-nums">{i + 1}</span>
+                  <span className="text-[14px] font-medium text-[var(--text-primary)] truncate group-hover:text-white transition-colors">{player.display_name}</span>
+                  <span className="text-[13px] font-mono text-[var(--text-muted)] truncate">{player.player_open_id}</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}44` }} />
+                    <span className="text-[13px] text-[var(--text-secondary)] truncate">{team?.name ?? 'Unknown'}</span>
                   </div>
-                  <span className="text-sm font-medium text-white">{player.display_name}</span>
-                </div>
-                <span className="text-sm font-mono text-[#8b8da6]">{player.player_open_id}</span>
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-2 h-2 rounded-full flex-shrink-0"
-                    style={{ background: color }}
-                  />
-                  <Link
-                    href={`/teams/${player.team_id}`}
-                    className="text-xs text-[#8b8da6] hover:text-[#00ffc3] transition-colors"
-                  >
-                    {team?.name ?? 'Unknown'}
-                  </Link>
-                </div>
-                <Link
-                  href={`/teams/${player.team_id}`}
-                  className="text-xs text-[#8b8da6] hover:text-[#00ffc3] w-12 text-right transition-colors"
-                >
-                  Edit
                 </Link>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
     </div>

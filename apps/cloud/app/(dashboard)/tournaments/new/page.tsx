@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 
-// PUBG Mobile standard point system — hardcoded
 const PUBGM_PLACEMENT_POINTS: Record<string, number> = {
   '1': 10, '2': 6, '3': 5, '4': 4, '5': 3, '6': 2, '7': 1, '8': 1,
   '9': 0, '10': 0, '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0,
@@ -36,11 +35,8 @@ export default function NewTournamentPage() {
     if (!profile?.org_id) { setError('No organization found'); setLoading(false); return; }
 
     const targetTeamCount = targetTeams === '' ? null : Number(targetTeams);
-    const registrationMode = targetTeamCount
-      ? (allowOverflow ? 'pick_first' : 'cap')
-      : 'open';
+    const registrationMode = targetTeamCount ? (allowOverflow ? 'pick_first' : 'cap') : 'open';
 
-    // Create tournament
     const { data: tournament, error: tErr } = await supabase
       .from('tournaments')
       .insert({
@@ -57,7 +53,6 @@ export default function NewTournamentPage() {
 
     if (tErr || !tournament) { setError(tErr?.message ?? 'Failed to create'); setLoading(false); return; }
 
-    // Auto-create PUBG Mobile standard point system
     await supabase.from('point_systems').insert({
       tournament_id: tournament.id,
       name: 'PUBG Mobile Standard',
@@ -68,130 +63,125 @@ export default function NewTournamentPage() {
     router.push(`/tournaments/${tournament.id}`);
   }
 
+  const placementData = [
+    { rank: '1st', pts: 10 }, { rank: '2nd', pts: 6 }, { rank: '3rd', pts: 5 },
+    { rank: '4th', pts: 4 }, { rank: '5th', pts: 3 }, { rank: '6th', pts: 2 },
+    { rank: '7th', pts: 1 }, { rank: '8th', pts: 1 }, { rank: '9th+', pts: 0 },
+  ];
+
   return (
-    <div className="p-8 max-w-2xl">
-      <div className="flex items-center gap-3 mb-8">
-        <Link href="/tournaments" className="text-[#8b8da6] hover:text-white transition-colors text-sm">
-          ← Tournaments
+    <div className="p-10 max-w-[700px] page-enter">
+      {/* Breadcrumb */}
+      <div className="flex items-center gap-2 mb-8 text-xs text-[var(--text-muted)]">
+        <Link href="/tournaments" className="hover:text-[var(--text-primary)] transition-colors">
+          Tournaments
         </Link>
-        <span className="text-[#8b8da6]/40">/</span>
-        <span className="text-white text-sm">New Tournament</span>
+        <span className="opacity-40">/</span>
+        <span className="text-[var(--text-primary)]">Create</span>
       </div>
 
-      <h1 className="text-2xl font-bold text-white mb-6">New Tournament</h1>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
+            New Tournament
+          </h1>
+          <p className="text-sm text-[var(--text-muted)] mt-1">
+            Configure registration and default scoring.
+          </p>
+        </div>
+      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6 relative">
+        
         {error && (
-          <div className="bg-[#ff4e4e]/10 border border-[#ff4e4e]/30 text-[#ff4e4e] text-sm px-3 py-2.5 rounded-lg">
+          <div className="surface-elevated border border-[var(--red-border)] text-[var(--red)] text-sm px-4 py-3 rounded-lg animate-slide-down">
             {error}
           </div>
         )}
 
-        {/* Tournament name */}
-        <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
-          <label className="block text-xs font-semibold text-[#8b8da6] uppercase tracking-wider mb-2">
-            Tournament Name
-          </label>
+        {/* Name */}
+        <div className="surface-elevated p-6">
+          <label className="block text-xs font-semibold text-[var(--text-muted)] mb-2">Tournament Name</label>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
             autoFocus
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 focus:ring-1 focus:ring-[#00ffc3]/30 transition-colors"
-            placeholder="e.g. PMPL Africa Season 4 — Grand Finals"
+            className="input-premium h-12 w-full"
+            placeholder="e.g. PMPL Africa Season 4"
           />
         </div>
 
-        {/* Team count */}
-        <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
-          <div className="mb-3">
-            <div className="text-sm font-semibold text-white">Teams</div>
-            <div className="text-xs text-[#8b8da6] mt-0.5">Set how many teams you want to accept</div>
+        {/* Teams */}
+        <div className="surface-elevated p-6">
+          <div className="mb-4 pb-3 border-b border-[var(--border)]">
+            <div className="text-sm font-semibold text-[var(--text-primary)]">Roster Allocation</div>
+            <div className="text-xs text-[var(--text-muted)] mt-1">Configure squad limits and overflow rules.</div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">
-                Target team count
-              </label>
-              <input
-                type="number"
-                min={0}
-                value={targetTeams}
-                onChange={(e) => setTargetTeams(e.target.value === '' ? '' : Number(e.target.value))}
-                placeholder="e.g. 60"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 focus:ring-1 focus:ring-[#00ffc3]/30 transition-colors"
-              />
-            </div>
-            <div className="flex items-end">
-              <label className="flex items-center gap-2 text-xs text-[#8b8da6]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-[var(--text-muted)] mb-2">Target Team Count</label>
                 <input
-                  type="checkbox"
-                  checked={allowOverflow}
-                  onChange={(e) => setAllowOverflow(e.target.checked)}
-                  className="accent-[#00ffc3]"
+                  type="number"
+                  min={0}
+                  value={targetTeams}
+                  onChange={(e) => setTargetTeams(e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="e.g. 60"
+                  className="input-premium h-11 w-full"
                 />
-                Allow overflow and pick first N later
-              </label>
+              </div>
+              <div className="flex flex-col justify-end pb-1">
+                <label className="flex items-center gap-4 cursor-pointer group p-3 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] transition-colors">
+                  <div className="relative flex-shrink-0">
+                    <input type="checkbox" checked={allowOverflow} onChange={(e) => setAllowOverflow(e.target.checked)}
+                      className="sr-only peer" />
+                    <div className="w-10 h-6 rounded-full bg-[var(--bg-base)] border border-[var(--border)] peer-checked:bg-[var(--accent)]/15 peer-checked:border-[var(--accent-border)] transition-all" />
+                    <div className="absolute top-1 left-1 w-4 h-4 rounded-full bg-[var(--text-muted)] peer-checked:bg-[var(--accent)] peer-checked:translate-x-4 transition-all" />
+                  </div>
+                  <div>
+                    <span className="block text-sm font-semibold text-[var(--text-primary)]">Allow overflow</span>
+                    <span className="block text-xs text-[var(--text-muted)] mt-0.5">Accept teams beyond target.</span>
+                  </div>
+                </label>
+              </div>
             </div>
-          </div>
-          <div className="text-[10px] text-[#8b8da6] mt-3">
-            If target count is set, registration will be capped unless overflow is enabled.
-          </div>
         </div>
 
-        {/* Point system info (read-only) */}
-        <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
-          <div className="mb-3">
-            <div className="text-sm font-semibold text-white">Point System</div>
-            <div className="text-xs text-[#8b8da6] mt-0.5">PUBG Mobile Standard — applied to all matches</div>
+        {/* Point System */}
+        <div className="surface-elevated p-6">
+          <div className="mb-4 pb-3 border-b border-[var(--border)] flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-[var(--text-primary)]">Scoring Matrix</div>
+              <div className="text-xs text-[var(--text-muted)] mt-1">PUBG Mobile standard ruleset.</div>
+            </div>
+            <div className="badge badge-accent">Preset</div>
           </div>
 
-          <div className="flex items-center gap-6 mb-3">
-            <div>
-              <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Kill Points</span>
-              <div className="text-sm text-[#00ffc3] font-mono mt-0.5">1 pt / kill</div>
-            </div>
+          <div className="mb-5 border border-[var(--border)] rounded-lg p-4 bg-[var(--bg-base)] flex items-center justify-between">
+            <span className="text-xs font-semibold text-[var(--text-muted)]">Elimination value</span>
+            <span className="text-sm font-semibold text-[var(--text-primary)]">1 pt / kill</span>
           </div>
 
           <div>
-            <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Placement Points</span>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {[
-                { rank: '1st', pts: 10 },
-                { rank: '2nd', pts: 6 },
-                { rank: '3rd', pts: 5 },
-                { rank: '4th', pts: 4 },
-                { rank: '5th', pts: 3 },
-                { rank: '6th', pts: 2 },
-                { rank: '7th', pts: 1 },
-                { rank: '8th', pts: 1 },
-                { rank: '9th+', pts: 0 },
-              ].map(({ rank, pts }) => (
-                <div
-                  key={rank}
-                  className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-center min-w-[52px]"
-                >
-                  <div className="text-[10px] text-[#8b8da6]">{rank}</div>
-                  <div className={`text-sm font-mono ${pts > 0 ? 'text-[#00ffc3]' : 'text-[#8b8da6]'}`}>{pts}</div>
+            <span className="block text-xs font-semibold text-[var(--text-muted)] mb-3">Placement distribution</span>
+            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
+              {placementData.map(({ rank, pts }) => (
+                <div key={rank} className={`border rounded-lg p-2 text-center ${pts > 0 ? 'bg-[var(--bg-hover)] border-[var(--border)]' : 'bg-[var(--bg-base)] border-[var(--border)]'}`}>
+                  <div className="text-[10px] text-[var(--text-muted)] mb-1">{rank}</div>
+                  <div className={`text-[13px] font-semibold ${pts > 0 ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)]'}`}>{pts}</div>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 disabled:opacity-50 text-[#00ffc3] font-semibold py-2.5 rounded-lg transition-colors text-sm"
-          >
-            {loading ? 'Creating…' : 'Create Tournament'}
+        {/* Submit */}
+        <div className="flex gap-4 pt-4 border-t border-[var(--border)] mt-8 pt-8">
+          <button type="submit" disabled={loading} className="btn-primary flex-1 h-12 text-sm font-semibold">
+            {loading ? 'Creating...' : 'Create Tournament'}
           </button>
-          <Link
-            href="/tournaments"
-            className="px-5 py-2.5 rounded-lg border border-white/10 text-[#8b8da6] hover:text-white hover:border-white/20 text-sm font-medium transition-colors"
-          >
+          <Link href="/tournaments" className="btn-ghost flex-1 h-12 text-sm font-semibold flex items-center justify-center">
             Cancel
           </Link>
         </div>
