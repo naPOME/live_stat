@@ -20,6 +20,13 @@ export async function POST(req: NextRequest) {
       kill_count: number;
       total_pts: number;
     }>;
+    player_results?: Array<{
+      player_open_id: string;
+      team_id: string;
+      kills: number;
+      damage: number;
+      survived: boolean;
+    }>;
   };
 
   try {
@@ -153,6 +160,38 @@ export async function POST(req: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+  }
+
+  // Upsert player match results (if provided)
+  if (body.player_results && body.player_results.length > 0) {
+    // Validate player team_ids reference assigned teams
+    for (const p of body.player_results) {
+      if (!assignedTeams.has(p.team_id)) {
+        flags.push({ teamId: p.team_id, code: 'player_team_not_assigned', message: `Player ${p.player_open_id} references team ${p.team_id} not assigned to this match` });
+      }
+    }
+
+    // Resolve player_open_id → player_id
+    const openIds = body.player_results.map((p) => p.player_open_id);
+    const { data: existingPlayers } = await supabase
+      .from('players')
+      .select('id, player_open_id')
+      .in('player_open_id', openIds);
+    const playerIdMap = new Map((existingPlayers ?? []).map((p) => [p.player_open_id, p.id]));
+
+    const playerRows = body.player_results.map((p) => ({
+      match_id: body.match_id,
+      player_id: playerIdMap.get(p.player_open_id) ?? null,
+      player_open_id: p.player_open_id,
+      team_id: p.team_id,
+      kills: p.kills,
+      damage: p.damage,
+      survived: p.survived,
+    }));
+
+    await supabase
+      .from('player_match_results')
+      .upsert(playerRows, { onConflict: 'match_id,player_open_id' });
   }
 
   // Mark match as finished

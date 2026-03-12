@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback, use } from 'react';
+import { useEffect, useState, useRef, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -8,7 +8,19 @@ import type { MatchResultFlag, MatchDispute, Stage, Match, PointSystem, TeamAppl
 
 type GroupWithTeams = StageGroup & { teams: Team[]; matches: Match[] };
 type StageWithDetails = Stage & { matches: Match[]; groups: GroupWithTeams[] };
-type Tab = 'overview' | 'stages' | 'applications' | 'ops';
+type Tab = 'overview' | 'stages' | 'standings' | 'applications' | 'ops';
+
+type StandingEntry = {
+  team_id: string;
+  total_pts: number;
+  total_kills: number;
+  matches_played: number;
+  wins: number;
+  avg_placement: number;
+  rank: number;
+  team: { id: string; name: string; short_name: string | null; logo_url: string | null; brand_color: string } | null;
+};
+type StageStandings = { id: string; name: string; stage_order: number; matchCount: number; standings: StandingEntry[] };
 
 const MAPS = ['Erangel', 'Miramar', 'Vikendi', 'Sanhok', 'Rondo', 'Deston', 'Nusa', 'Taego'];
 const STAGE_PRESETS: Record<string, { name: string; type: Stage['stage_type'] }[]> = {
@@ -110,6 +122,24 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
   // Inline confirm dialog (replaces confirm())
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
+
+  // Standings
+  const [stageStandings, setStageStandings] = useState<StageStandings[]>([]);
+  const [standingsStageId, setStandingsStageId] = useState<string>('all');
+  const [standingsLoading, setStandingsLoading] = useState(false);
+
+  async function fetchStandings(stageId?: string) {
+    setStandingsLoading(true);
+    try {
+      const qs = stageId && stageId !== 'all' ? `?stageId=${stageId}` : '';
+      const res = await fetch(`/api/standings/${id}${qs}`);
+      if (res.ok) {
+        const data = await res.json();
+        setStageStandings(data.stages ?? []);
+      }
+    } catch { /* ignore */ }
+    setStandingsLoading(false);
+  }
 
   useEffect(() => {
     async function load() {
@@ -284,7 +314,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       return;
     }
 
-    // Auto-create matches only for finals (group + elimination use divisions) — batched
+    // Auto-create matches only for finals (group + elimination use groups) — batched
     const allMatchRows = createdStages.flatMap((created, i) => {
       const cfg = stageConfigs[i];
       if (cfg.type !== 'finals') return [];
@@ -396,7 +426,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     await refreshStages();
   }
 
-  // ─── Group (Division) CRUD ───
+  // ─── Group CRUD ───
 
   async function createDivisions(stageId: string) {
     const groupNames = Array.from({ length: newGroupCount }).map((_, i) => String.fromCharCode(65 + i));
@@ -673,6 +703,17 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     URL.revokeObjectURL(url);
   }
 
+  function matchCountdown(scheduledAt: string | null): string | null {
+    if (!scheduledAt) return null;
+    const diff = new Date(scheduledAt).getTime() - Date.now();
+    if (diff <= 0) return null;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    if (h > 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
+
   function toggleExpanded(stageId: string) {
     setExpandedStages((prev) => {
       const next = new Set(prev);
@@ -744,23 +785,26 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
         {tournament.status === 'active' && (
           <button onClick={archiveTournament}
             className="btn-ghost py-2">
-            Archive Output
+            Archive Tournament
           </button>
         )}
       </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-8 border-b border-[var(--border)]">
-        {(['overview', 'stages', 'applications', 'ops'] as Tab[]).map((tab) => (
+        {(['overview', 'stages', 'standings', 'applications', 'ops'] as Tab[]).map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab)}
+            onClick={() => {
+              setActiveTab(tab);
+              if (tab === 'standings' && stageStandings.length === 0) fetchStandings();
+            }}
             className={`px-4 py-2 text-sm font-semibold transition-colors relative flex items-center gap-2 ${
               activeTab === tab ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
             }`}
           >
             <span className="relative z-10 block translate-y-px">
-              {tab === 'overview' ? 'Overview' : tab === 'stages' ? 'Stages' : tab === 'applications' ? 'Applications' : 'Ops'}
+              {tab === 'overview' ? 'Overview' : tab === 'stages' ? 'Stages' : tab === 'standings' ? 'Standings' : tab === 'applications' ? 'Applications' : 'Disputes & Flags'}
             </span>
             {tab === 'applications' && pendingApps > 0 && (
               <span className="relative z-10 bg-[var(--accent)] text-black text-[10px] font-semibold w-5 h-5 rounded-full flex items-center justify-center ml-1">
@@ -916,9 +960,9 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
           {stages.length === 0 && (
             <div className="surface p-8 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-[var(--accent)]/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-              <div className="text-sm font-display font-bold uppercase tracking-widest text-[var(--accent)] mb-2">Create Your Stage Pipeline</div>
+              <div className="text-sm font-display font-bold uppercase tracking-widest text-[var(--accent)] mb-2">Set Up Tournament Stages</div>
               <p className="text-[13px] text-[var(--text-secondary)] mb-6 max-w-2xl">
-                Choose a preset to create stages. Group stages support divisions (A, B, C...) for team grouping.
+                Choose a preset to create stages. Group stages let you split teams into groups (A, B, C...).
                 Elimination and finals stages define how many teams advance.
               </p>
               <div className="flex flex-wrap items-center gap-4">
@@ -1036,6 +1080,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                     </div>
                     <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
                       <button onClick={() => toggleStageAutoAdvance(stage.id, !stage.auto_advance)}
+                        title="When on, top teams automatically move to the next stage when this stage is completed"
                         className={`text-[10px] font-display font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
                           stage.auto_advance ? 'border-[var(--accent)]/40 text-[var(--accent)] bg-[var(--accent)]/10' : 'border-[var(--border)] text-[var(--text-muted)] hover:text-white bg-white/5'
                         }`}>
@@ -1063,11 +1108,11 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                   {/* Expanded content */}
                   {isExpanded && (
                     <div className="border-t border-[var(--border)]">
-                      {/* ─── Division management (all stages except finals) ─── */}
+                      {/* ─── Group management (all stages except finals) ─── */}
                       {stage.stage_type !== 'finals' && (
                         <div className="px-6 py-5 border-b border-[var(--border)] bg-black/20">
                           <div className="flex items-center justify-between mb-4">
-                            <div className="text-[10px] font-display font-bold text-[var(--text-muted)] uppercase tracking-widest">Divisions</div>
+                            <div className="text-[10px] font-display font-bold text-[var(--text-muted)] uppercase tracking-widest">Groups</div>
                             <div className="flex items-center gap-3">
                               {stage.groups.length > 0 && (
                                 <button onClick={() => autoDistributeTeams(stage.id)}
@@ -1084,12 +1129,12 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                   }
                                 }}
                                 className="text-xs font-display font-bold uppercase tracking-widest text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors">
-                                + Create Divisions
+                                + Create Groups
                               </button>
                             </div>
                           </div>
 
-                          {/* Create divisions form */}
+                          {/* Create groups form */}
                           {creatingGroupFor === stage.id && (
                             <div className="surface p-5 mb-4">
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
@@ -1232,6 +1277,11 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                                 }`}>
                                                   {match.status}
                                                 </span>
+                                                {match.status === 'pending' && match.scheduled_at && (() => {
+                                                  const cd = matchCountdown(match.scheduled_at);
+                                                  return cd ? <span className="text-[9px] text-[var(--accent)] font-mono">{cd}</span>
+                                                    : <span className="text-[9px] text-[var(--text-muted)] font-mono">{new Date(match.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>;
+                                                })()}
                                               </div>
                                               <div className="flex items-center gap-2 flex-shrink-0 opacity-0 group-hover/match:opacity-100 transition-all">
                                                 <Link href={`/tournaments/${id}/stages/${stage.id}/matches/${match.id}`}
@@ -1268,7 +1318,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                             </div>
                           ) : (
                             <div className="text-center py-8 text-[12px] text-[var(--text-muted)] border border-dashed border-[var(--border)] rounded-xl bg-white/[0.01]">
-                              No divisions created yet.<br/><span className="mt-1 block opcaity-70">Click &quot;Create Divisions&quot; to set up groups.</span>
+                              No groups created yet.<br/><span className="mt-1 block opacity-70">Click &quot;Create Groups&quot; to split teams into groups like A, B, C.</span>
                             </div>
                           )}
                         </div>
@@ -1418,6 +1468,11 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                   }`}>
                                     {match.status}
                                   </span>
+                                  {match.status === 'pending' && match.scheduled_at && (() => {
+                                    const cd = matchCountdown(match.scheduled_at);
+                                    return cd ? <span className="text-[10px] text-[var(--accent)] font-mono">{cd}</span>
+                                      : <span className="text-[10px] text-[var(--text-muted)] font-mono">{new Date(match.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>;
+                                  })()}
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <Link href={`/tournaments/${id}/stages/${stage.id}/matches/${match.id}`}
@@ -1546,6 +1601,85 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
               )}
             </div>
           </details>
+        </div>
+      )}
+
+      {/* ════════════════════ STANDINGS TAB ════════════════════ */}
+      {activeTab === 'standings' && (
+        <div className="space-y-6 animate-fade-in pb-32">
+          {/* Stage filter */}
+          <div className="flex items-center gap-4">
+            <select
+              value={standingsStageId}
+              onChange={(e) => { setStandingsStageId(e.target.value); fetchStandings(e.target.value); }}
+              className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)]"
+            >
+              <option value="all">All Stages</option>
+              {stages.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <button onClick={() => fetchStandings(standingsStageId)} className="btn-ghost py-2 text-xs">
+              Refresh
+            </button>
+          </div>
+
+          {standingsLoading ? (
+            <div className="flex items-center justify-center py-16"><span className="loader" /></div>
+          ) : stageStandings.length === 0 ? (
+            <div className="surface p-12 text-center">
+              <p className="text-[var(--text-muted)] text-sm">No finished matches yet. Standings appear after match results are submitted.</p>
+            </div>
+          ) : (
+            stageStandings.map((stage) => (
+              <div key={stage.id} className="surface overflow-hidden">
+                <div className="px-5 py-4 border-b border-[var(--border)] flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-display font-bold text-[var(--text-primary)]">{stage.name}</h3>
+                    <p className="text-[10px] text-[var(--text-muted)] mt-0.5">{stage.matchCount} match{stage.matchCount !== 1 ? 'es' : ''} completed</p>
+                  </div>
+                </div>
+
+                {stage.standings.length === 0 ? (
+                  <div className="px-5 py-8 text-center text-sm text-[var(--text-muted)]">No results for this stage.</div>
+                ) : (
+                  <div>
+                    {/* Header */}
+                    <div className="grid px-5 py-2 border-b border-[var(--border)] bg-[var(--bg-hover)]"
+                      style={{ gridTemplateColumns: '40px 1.5fr repeat(5, 80px)' }}>
+                      {['#', 'Team', 'Points', 'Kills', 'Wins', 'Avg Place', 'Played'].map((h) => (
+                        <span key={h} className="text-[10px] font-display font-bold text-[var(--text-muted)] uppercase tracking-widest">{h}</span>
+                      ))}
+                    </div>
+                    {/* Rows */}
+                    {stage.standings.map((entry, i) => (
+                      <div key={entry.team_id}
+                        className={`grid px-5 py-3 items-center transition-colors hover:bg-[var(--bg-hover)] ${i > 0 ? 'border-t border-[var(--border)]' : ''}`}
+                        style={{ gridTemplateColumns: '40px 1.5fr repeat(5, 80px)' }}>
+                        <span className={`text-sm font-bold tabular-nums ${entry.rank <= 3 ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
+                          {entry.rank}
+                        </span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {entry.team?.logo_url && (
+                            <img src={entry.team.logo_url} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                          )}
+                          {!entry.team?.logo_url && entry.team && (
+                            <div className="w-6 h-6 rounded flex-shrink-0" style={{ background: entry.team.brand_color }} />
+                          )}
+                          <span className="text-sm font-medium text-[var(--text-primary)] truncate">{entry.team?.name ?? entry.team_id}</span>
+                        </div>
+                        <span className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{entry.total_pts}</span>
+                        <span className="text-sm text-[var(--text-secondary)] tabular-nums">{entry.total_kills}</span>
+                        <span className="text-sm text-[var(--text-secondary)] tabular-nums">{entry.wins}</span>
+                        <span className="text-sm text-[var(--text-secondary)] tabular-nums">{entry.avg_placement}</span>
+                        <span className="text-sm text-[var(--text-muted)] tabular-nums">{entry.matches_played}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
         </div>
       )}
 

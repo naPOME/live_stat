@@ -116,8 +116,8 @@ export default function NewTournamentPage() {
         {/* Teams */}
         <div className="surface-elevated p-6">
           <div className="mb-4 pb-3 border-b border-[var(--border)]">
-            <div className="text-sm font-semibold text-[var(--text-primary)]">Roster Allocation</div>
-            <div className="text-xs text-[var(--text-muted)] mt-1">Configure squad limits and overflow rules.</div>
+            <div className="text-sm font-semibold text-[var(--text-primary)]">Team Registration Settings</div>
+            <div className="text-xs text-[var(--text-muted)] mt-1">Set how many teams can register and what happens when the limit is reached.</div>
           </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -140,8 +140,8 @@ export default function NewTournamentPage() {
                     <div className="absolute top-1 left-1 w-4 h-4 rounded-full bg-[var(--text-muted)] peer-checked:bg-[var(--accent)] peer-checked:translate-x-4 transition-all" />
                   </div>
                   <div>
-                    <span className="block text-sm font-semibold text-[var(--text-primary)]">Allow overflow</span>
-                    <span className="block text-xs text-[var(--text-muted)] mt-0.5">Accept teams beyond target.</span>
+                    <span className="block text-sm font-semibold text-[var(--text-primary)]">Allow extra teams</span>
+                    <span className="block text-xs text-[var(--text-muted)] mt-0.5">Keep accepting registrations after the target is reached.</span>
                   </div>
                 </label>
               </div>
@@ -152,14 +152,14 @@ export default function NewTournamentPage() {
         <div className="surface-elevated p-6">
           <div className="mb-4 pb-3 border-b border-[var(--border)] flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold text-[var(--text-primary)]">Scoring Matrix</div>
-              <div className="text-xs text-[var(--text-muted)] mt-1">PUBG Mobile standard ruleset.</div>
+              <div className="text-sm font-semibold text-[var(--text-primary)]">Scoring Rules</div>
+              <div className="text-xs text-[var(--text-muted)] mt-1">Points awarded for kills and placements (PUBG Mobile standard).</div>
             </div>
             <div className="badge badge-accent">Preset</div>
           </div>
 
           <div className="mb-5 border border-[var(--border)] rounded-lg p-4 bg-[var(--bg-base)] flex items-center justify-between">
-            <span className="text-xs font-semibold text-[var(--text-muted)]">Elimination value</span>
+            <span className="text-xs font-semibold text-[var(--text-muted)]">Points per kill</span>
             <span className="text-sm font-semibold text-[var(--text-primary)]">1 pt / kill</span>
           </div>
 

@@ -19,7 +19,7 @@ export default function MatchPage({
   const supabase = createClient();
   const router = useRouter();
 
-  const [match, setMatch] = useState<{ id: string; name: string; map_name: string | null; status: string } | null>(null);
+  const [match, setMatch] = useState<{ id: string; name: string; map_name: string | null; status: string; scheduled_at: string | null } | null>(null);
   const [stage, setStage] = useState<{ name: string } | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [disputes, setDisputes] = useState<MatchDispute[]>([]);
@@ -167,6 +167,22 @@ export default function MatchPage({
     await refreshDisputes();
   }
 
+  async function updateSchedule(value: string) {
+    const scheduled_at = value ? new Date(value).toISOString() : null;
+    setMatch((m) => m ? { ...m, scheduled_at } : m);
+    await supabase.from('matches').update({ scheduled_at }).eq('id', matchId);
+  }
+
+  function formatCountdown(scheduledAt: string): string | null {
+    const diff = new Date(scheduledAt).getTime() - Date.now();
+    if (diff <= 0) return null;
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    if (h > 24) return `${Math.floor(h / 24)}d ${h % 24}h`;
+    if (h > 0) return `${h}h ${m}m`;
+    return `${m}m`;
+  }
+
   if (loading) {
     return (
       <div className="p-10 flex items-center justify-center min-h-[50vh]">
@@ -210,8 +226,14 @@ export default function MatchPage({
               {match?.status}
             </span>
           </div>
-          <p className="text-[var(--text-secondary)] text-sm">
-            {assignedCount}/{SLOT_COUNT} slots assigned
+          <p className="text-[var(--text-secondary)] text-sm flex items-center gap-3">
+            <span>{assignedCount}/{SLOT_COUNT} slots assigned</span>
+            {match?.scheduled_at && new Date(match.scheduled_at).getTime() > Date.now() && (
+              <>
+                <span className="text-[var(--border)]">&bull;</span>
+                <span className="text-[var(--accent)] font-medium">Starts in {formatCountdown(match.scheduled_at)}</span>
+              </>
+            )}
           </p>
         </div>
 
@@ -306,6 +328,33 @@ export default function MatchPage({
       <p className="text-xs text-[var(--text-muted)] mt-3">
         Tip: Slot number maps to the in-game lobby slot. Teams marked with ✓ are already assigned to another slot.
       </p>
+
+      {/* Schedule */}
+      <div className="mt-6 surface overflow-hidden">
+        <div className="px-5 py-4 flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold text-[var(--text-primary)]">Schedule</div>
+            <div className="text-xs text-[var(--text-muted)] mt-0.5">
+              {match?.scheduled_at
+                ? new Date(match.scheduled_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+                : 'No date set'}
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <input
+              type="datetime-local"
+              value={match?.scheduled_at ? new Date(match.scheduled_at).toISOString().slice(0, 16) : ''}
+              onChange={(e) => updateSchedule(e.target.value)}
+              className="bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]/60"
+            />
+            {match?.scheduled_at && (
+              <button onClick={() => updateSchedule('')} className="text-xs text-[var(--red)] hover:text-[var(--text-primary)] transition-colors">
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Disputes */}
       <div className="mt-8 surface overflow-hidden">

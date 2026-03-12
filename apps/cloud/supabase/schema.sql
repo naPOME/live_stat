@@ -4,14 +4,29 @@ create extension if not exists "pgcrypto";
 -- ─── Tables ────────────────────────────────────────────────────────────────────
 
 create table organizations (
-  id           uuid primary key default gen_random_uuid(),
-  name         text not null,
-  logo_url     text,
-  brand_color  text not null default '#00ffc3',
-  accent_color text not null default '#00ffc3',
-  bg_color     text not null default '#213448',
-  font         text not null default 'Inter',
-  created_at   timestamptz not null default now()
+  id              uuid primary key default gen_random_uuid(),
+  name            text not null,
+  logo_url        text,
+  brand_color     text not null default '#00ffc3',
+  accent_color    text not null default '#00ffc3',
+  bg_color        text not null default '#213448',
+  font            text not null default 'Inter',
+  table_style     text not null default 'strip' check (table_style in ('strip','card','dark','minimal')),
+  sponsor1_url    text,
+  sponsor2_url    text,
+  sponsor3_url    text,
+  banner_url      text,
+  banner_title    text,
+  banner_subtitle text,
+  favicon_url     text,
+  visibility      jsonb not null default '{
+    "leaderboard": true, "killfeed": true, "playercard": true,
+    "elimination": true, "wwcd": true, "fraggers": true,
+    "results": true, "pointtable": true, "teamlist": true,
+    "matchinfo": true, "mvp": true, "schedule": true,
+    "sponsor_overlay": true
+  }',
+  created_at      timestamptz not null default now()
 );
 
 -- Extends auth.users (auto-created via trigger)
@@ -19,6 +34,7 @@ create table profiles (
   id         uuid primary key references auth.users(id) on delete cascade,
   org_id     uuid references organizations(id) on delete set null,
   full_name  text,
+  is_admin   boolean not null default false,
   created_at timestamptz not null default now()
 );
 
@@ -117,6 +133,20 @@ create table match_results (
   unique (match_id, team_id)
 );
 
+-- Per-player stats pushed by local engine alongside team results
+create table player_match_results (
+  id               uuid primary key default gen_random_uuid(),
+  match_id         uuid not null references matches(id) on delete cascade,
+  player_id        uuid references players(id) on delete set null,
+  player_open_id   text not null,
+  team_id          uuid references teams(id) on delete set null,
+  kills            int not null default 0,
+  damage           int not null default 0,
+  survived         boolean not null default true,
+  created_at       timestamptz not null default now(),
+  unique (match_id, player_open_id)
+);
+
 create table match_disputes (
   id              uuid primary key default gen_random_uuid(),
   match_id        uuid not null references matches(id) on delete cascade,
@@ -177,6 +207,21 @@ create table tournament_teams (
   unique (tournament_id, team_id)
 );
 
+-- Public team registration submissions
+create table team_applications (
+  id            uuid primary key default gen_random_uuid(),
+  tournament_id uuid not null references tournaments(id) on delete cascade,
+  team_name     text not null,
+  short_name    text,
+  brand_color   text not null default '#ffffff',
+  logo_url      text,
+  contact_email text,
+  players       jsonb not null default '[]',
+  status        text not null default 'pending' check (status in ('pending','accepted','rejected')),
+  notes         text,
+  created_at    timestamptz not null default now()
+);
+
 -- ─── Storage ────────────────────────────────────────────────────────────────────
 -- Run manually in Supabase dashboard → Storage → New bucket:
 -- Name: logos, Public: true
@@ -234,12 +279,14 @@ alter table teams          enable row level security;
 alter table players        enable row level security;
 alter table match_slots    enable row level security;
 alter table match_results  enable row level security;
+alter table player_match_results enable row level security;
 alter table match_disputes enable row level security;
 alter table match_result_flags enable row level security;
 alter table tournament_templates enable row level security;
 alter table tournament_teams enable row level security;
 alter table stage_groups enable row level security;
 alter table group_teams enable row level security;
+alter table team_applications enable row level security;
 
 -- NOTE: All policies use an inlined (SELECT org_id FROM profiles WHERE id = auth.uid())
 -- instead of calling get_my_org_id(). PostgreSQL optimises this as a single-execution
@@ -301,6 +348,15 @@ create policy "Own match_slots" on match_slots for all
 
 -- Match results: org members can view; inserts handled by service role in API
 create policy "Own match_results read" on match_results for select
+  using (match_id in (
+    select m.id from matches m
+    join stages s on s.id = m.stage_id
+    join tournaments t on t.id = s.tournament_id
+    where t.org_id = (select org_id from profiles where id = auth.uid())
+  ));
+
+-- Player match results: org members can view; inserts handled by service role
+create policy "Own player_match_results read" on player_match_results for select
   using (match_id in (
     select m.id from matches m
     join stages s on s.id = m.stage_id
@@ -380,5 +436,15 @@ create policy "Own group_teams" on group_teams for all
     join stages s on s.id = g.stage_id
     join tournaments t on t.id = s.tournament_id
     where t.org_id = (select org_id from profiles where id = auth.uid())
+  ));
+
+create policy "Own team_applications" on team_applications for all
+  using (tournament_id in (
+    select id from tournaments
+    where org_id = (select org_id from profiles where id = auth.uid())
+  ))
+  with check (tournament_id in (
+    select id from tournaments
+    where org_id = (select org_id from profiles where id = auth.uid())
   ));
 

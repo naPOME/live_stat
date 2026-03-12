@@ -20,6 +20,13 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   const [editTeam, setEditTeam] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: '', short_name: '', brand_color: '#ffffff' });
   const [logoUploading, setLogoUploading] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+
+  function showToast(message: string, type: 'success' | 'error' = 'success') {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   async function loadData() {
     const [{ data: t }, { data: ps }] = await Promise.all([
@@ -54,10 +61,18 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
     setSaving(false);
   }
 
-  async function deletePlayer(playerId: string) {
-    if (!confirm('Remove this player?')) return;
-    await supabase.from('players').delete().eq('id', playerId);
-    await loadData();
+  function deletePlayer(playerId: string) {
+    const player = players.find(p => p.id === playerId);
+    setConfirmDialog({
+      title: 'Remove Player',
+      message: `Remove "${player?.display_name ?? 'this player'}" from the team?`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await supabase.from('players').delete().eq('id', playerId);
+        showToast('Player removed');
+        await loadData();
+      },
+    });
   }
 
   async function saveTeam(e: React.FormEvent) {
@@ -223,7 +238,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
             </div>
             <div className="flex-1">
               <label className="label">
-                playerOpenId <span className="text-[var(--text-muted)]">(exact in-game ID)</span>
+                In-Game Character ID <span className="text-[var(--text-muted)]">(must match exactly)</span>
               </label>
               <input
                 type="text"
@@ -257,7 +272,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                 </div>
                 <button
                   onClick={() => deletePlayer(player.id)}
-                  className="text-xs text-[var(--text-muted)] hover:text-[var(--red)] transition-colors opacity-0 group-hover:opacity-100"
+                  className="text-xs text-[var(--text-muted)] hover:text-[var(--red)] transition-colors"
                 >
                   Remove
                 </button>
@@ -266,10 +281,33 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
           </div>
         ) : (
           <div className="px-5 py-8 text-center text-[var(--text-muted)] text-sm">
-            No players yet. Add their in-game character IDs to enable ID matching.
+            No players yet. Add players with their exact in-game character IDs so they can be identified during live matches.
           </div>
         )}
       </div>
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-lg animate-slide-up ${
+          toast.type === 'error' ? 'bg-[var(--red)] text-white' : 'bg-[var(--accent)] text-black'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in">
+          <div className="surface-elevated rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-slide-up">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{confirmDialog.title}</h3>
+            <p className="text-sm text-[var(--text-secondary)] mb-6">{confirmDialog.message}</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirmDialog(null)} className="btn-ghost">Cancel</button>
+              <button onClick={confirmDialog.onConfirm} className="btn-primary bg-[var(--red)] hover:bg-[var(--red)]">Confirm</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(ls -la \"c:/Users/natnaelb/Downloads/Telegram Desktop/live_stat/apps/cloud/app/\\(dashboard\\)/\")",
+      "Bash(grep -r standings 'c:/Users/natnaelb/Downloads/Telegram Desktop/live_stat/apps/cloud' --include=*.ts --include=*.tsx)",
+      "Bash(grep -r \"SELECT\\\\|FROM\\\\|JOIN\" 'c:/Users/natnaelb/Downloads/Telegram Desktop/live_stat/apps/cloud' --include=*.ts)",
+      "Bash(find 'c:/Users/natnaelb/Downloads/Telegram Desktop/live_stat/apps/cloud' -name team_applications* -o -name *application*)",
+      "Bash(wc -l \"c:/Users/natnaelb/Downloads/Telegram Desktop/live_stat/apps/cloud/app/\\(dashboard\\)/tournaments/[id]/page.tsx\")"
+    ]
+  }
+}

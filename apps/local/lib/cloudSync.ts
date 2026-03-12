@@ -4,6 +4,14 @@ import { getState } from './gameStore';
 import { getRoster } from './rosterStore';
 import { calcTeamPoints } from './scorer';
 
+interface PlayerResult {
+  player_open_id: string;
+  team_id: string;
+  kills: number;
+  damage: number;
+  survived: boolean;
+}
+
 interface MatchResult {
   tournament_id: string;
   stage_id: string;
@@ -15,6 +23,7 @@ interface MatchResult {
     kill_count: number;
     total_pts: number;
   }>;
+  player_results?: PlayerResult[];
 }
 
 async function tryPost(url: string, apiKey: string, body: MatchResult, attempt: number): Promise<void> {
@@ -68,12 +77,28 @@ export async function pushMatchResult(): Promise<void> {
       total_pts: calcTeamPoints(i + 1, t.killNum),
     }));
 
+  // Collect per-player stats
+  const teamIdBySlot = new Map(sorted.filter(t => t.registeredTeamId).map(t => [t.slot, t.registeredTeamId!]));
+  const playerResults: PlayerResult[] = [];
+  for (const p of gs.players.values()) {
+    const teamId = teamIdBySlot.get(p.teamSlot);
+    if (!teamId) continue;
+    playerResults.push({
+      player_open_id: p.openId,
+      team_id: teamId,
+      kills: p.killNum,
+      damage: p.damage,
+      survived: !p.bHasDied,
+    });
+  }
+
   const body: MatchResult = {
     tournament_id: roster.tournament_id,
     stage_id: roster.stage_id,
     match_id: roster.match_id,
     game_id: gs.gameId,
     results,
+    player_results: playerResults,
   };
 
   await tryPost(roster.cloud_endpoint, roster.cloud_api_key, body, 1);

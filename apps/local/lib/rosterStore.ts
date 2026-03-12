@@ -38,6 +38,12 @@ export interface RosterMapping {
   tournament_id: string;
   stage_id: string;
   match_id: string;
+  /** All match IDs when exported at stage/group level (first is match_id) */
+  match_ids?: string[];
+  /** Stage/group metadata from stage/group exports */
+  stage_name?: string;
+  group_id?: string;
+  group_name?: string;
   cloud_endpoint?: string;
   cloud_api_key?: string;
   point_system: PointSystem;

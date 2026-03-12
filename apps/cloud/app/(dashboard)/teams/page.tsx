@@ -24,6 +24,13 @@ export default function TeamsPage() {
   const [form, setForm] = useState({ name: '', short_name: '', brand_color: '#00ffc3' });
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
+
+  function showToast(message: string, type: 'success' | 'error' = 'success') {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }
 
   async function loadTeams() {
     const [{ data: teamsData }, { count }, { data: playersData }] = await Promise.all([
@@ -58,10 +65,18 @@ export default function TeamsPage() {
     setSaving(false);
   }
 
-  async function deleteTeam(teamId: string) {
-    if (!confirm('Delete this team? This will remove all their player IDs too.')) return;
-    await supabase.from('teams').delete().eq('id', teamId);
-    await loadTeams();
+  function deleteTeam(teamId: string) {
+    const team = teams.find(t => t.id === teamId);
+    setConfirmDialog({
+      title: 'Delete Team',
+      message: `Delete "${team?.name ?? 'this team'}"? This will also remove all their players.`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        await supabase.from('teams').delete().eq('id', teamId);
+        showToast('Team deleted');
+        await loadTeams();
+      },
+    });
   }
 
   function getTeamPlayers(teamId: string) {
@@ -173,7 +188,7 @@ export default function TeamsPage() {
               </svg>
             </div>
             <h3 className="font-display text-lg font-semibold mb-2 text-[var(--text-primary)]">No Teams Registered</h3>
-            <p className="text-[var(--text-secondary)] text-[14px] mb-8 max-w-sm">Add teams and map internal player IDs prior to match deployment.</p>
+            <p className="text-[var(--text-secondary)] text-[14px] mb-8 max-w-sm">Create your teams and add players with their in-game IDs so they can be matched during live games.</p>
             <button onClick={() => setAdding(true)} className="btn-primary inline-flex items-center gap-2">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
               <span>Register Team</span>
@@ -245,7 +260,7 @@ export default function TeamsPage() {
                     <div className="border-t border-[var(--border)] bg-[var(--bg-surface)] animate-slide-down">
                       {teamPlayers.length === 0 ? (
                         <div className="px-6 py-8 text-center border-b border-[var(--border)]">
-                          <p className="text-[var(--text-muted)] text-[13px] mb-4">No operative agents linked</p>
+                          <p className="text-[var(--text-muted)] text-[13px] mb-4">No players added yet</p>
                           <Link href={`/teams/${team.id}`} className="btn-ghost btn-sm">
                             Manage Roster
                           </Link>
@@ -289,6 +304,29 @@ export default function TeamsPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed bottom-6 right-6 z-50 px-5 py-3 rounded-xl text-sm font-medium shadow-lg animate-slide-up ${
+          toast.type === 'error' ? 'bg-[var(--red)] text-white' : 'bg-[var(--accent)] text-black'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
+      {/* Confirm Dialog */}
+      {confirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 animate-fade-in">
+          <div className="surface-elevated rounded-2xl p-6 max-w-sm w-full mx-4 shadow-2xl animate-slide-up">
+            <h3 className="text-lg font-semibold text-[var(--text-primary)] mb-2">{confirmDialog.title}</h3>
+            <p className="text-sm text-[var(--text-secondary)] mb-6">{confirmDialog.message}</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => setConfirmDialog(null)} className="btn-ghost">Cancel</button>
+              <button onClick={confirmDialog.onConfirm} className="btn-primary bg-[var(--red)] hover:bg-[var(--red)]">Confirm</button>
+            </div>
           </div>
         </div>
       )}

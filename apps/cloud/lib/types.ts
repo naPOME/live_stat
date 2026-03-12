@@ -111,6 +111,18 @@ export type MatchResult = {
   created_at: string;
 };
 
+export type PlayerMatchResult = {
+  id: string;
+  match_id: string;
+  player_id: string | null;
+  player_open_id: string;
+  team_id: string | null;
+  kills: number;
+  damage: number;
+  survived: boolean;
+  created_at: string;
+};
+
 export type MatchDispute = {
   id: string;
   match_id: string;
