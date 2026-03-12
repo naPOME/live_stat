@@ -20,6 +20,7 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
   const [editTeam, setEditTeam] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: '', short_name: '', brand_color: '#ffffff' });
   const [logoUploading, setLogoUploading] = useState(false);
+  const [playerPhotoUploading, setPlayerPhotoUploading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
@@ -101,6 +102,23 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
       await loadData();
     }
     setLogoUploading(false);
+  }
+
+  async function uploadPlayerPhoto(playerId: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPlayerPhotoUploading(playerId);
+
+    const ext = file.name.split('.').pop();
+    const path = `players/${playerId}/photo.${ext}`;
+    const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
+
+    if (!error) {
+      const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
+      await supabase.from('players').update({ photo_url: publicUrl }).eq('id', playerId);
+      await loadData();
+    }
+    setPlayerPhotoUploading(null);
   }
 
   if (loading) {
@@ -266,9 +284,32 @@ export default function TeamDetailPage({ params }: { params: Promise<{ id: strin
                   i > 0 ? 'border-t border-[var(--border)]' : ''
                 }`}
               >
-                <div>
-                  <div className="text-sm font-medium text-[var(--text-primary)]">{player.display_name}</div>
-                  <div className="text-xs font-mono text-[var(--text-muted)] mt-0.5">{player.player_open_id}</div>
+                <div className="flex items-center gap-3">
+                  {/* Player photo */}
+                  <div className="relative group/photo flex-shrink-0">
+                    {player.photo_url ? (
+                      <img src={player.photo_url} alt={player.display_name} className="w-9 h-9 rounded-lg object-cover border border-[var(--border)]" />
+                    ) : (
+                      <div className="w-9 h-9 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-[11px] font-bold text-[var(--text-muted)]">
+                        {player.display_name.substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg opacity-0 group-hover/photo:opacity-100 transition-opacity cursor-pointer">
+                      {playerPhotoUploading === player.id ? (
+                        <span className="text-[8px] text-white">...</span>
+                      ) : (
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
+                          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+                          <circle cx="12" cy="13" r="4"/>
+                        </svg>
+                      )}
+                      <input type="file" accept="image/*" onChange={(e) => uploadPlayerPhoto(player.id, e)} className="hidden" />
+                    </label>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-[var(--text-primary)]">{player.display_name}</div>
+                    <div className="text-xs font-mono text-[var(--text-muted)] mt-0.5">{player.player_open_id}</div>
+                  </div>
                 </div>
                 <button
                   onClick={() => deletePlayer(player.id)}

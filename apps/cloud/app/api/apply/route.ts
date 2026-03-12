@@ -47,12 +47,13 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { tournament_id, team_name, short_name, brand_color, contact_email, players } = body as {
+  const { tournament_id, team_name, short_name, brand_color, contact_email, logo_url, players } = body as {
     tournament_id?: string;
     team_name?: string;
     short_name?: string | null;
     brand_color?: string | null;
     contact_email?: string | null;
+    logo_url?: string | null;
     players?: ApplicationPlayer[];
   };
 
@@ -125,6 +126,7 @@ export async function POST(request: NextRequest) {
     team_name: team_name.trim(),
     short_name: short_name?.trim() || null,
     brand_color: brand_color || '#ffffff',
+    logo_url: logo_url || null,
     contact_email: contact_email?.trim() || null,
     players: players.map((p) => ({
       display_name: p.display_name.trim(),

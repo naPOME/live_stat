@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getState, getPhase } from '@/lib/gameStore';
+import { getRoster } from '@/lib/rosterStore';
 import { calcTeamPoints } from '@/lib/scorer';
 
 export const runtime = 'nodejs';
@@ -13,7 +14,7 @@ export async function GET() {
     const phase = getPhase();
     const teams = Array.from(gs.teams.values());
 
-    const leaderboard = teams.map(t => {
+    let leaderboard = teams.map(t => {
       const kills = t.killNum;
       const placement = t.liveMemberNum === 0 ? t.rank : undefined;
       const placementPoints = calcTeamPoints(placement, 0);
@@ -34,6 +35,30 @@ export async function GET() {
         updatedAt: Date.now(),
       };
     });
+
+    // Fallback to roster teams when no live data yet
+    if (leaderboard.length === 0) {
+      const roster = getRoster();
+      if (roster?.teams?.length) {
+        leaderboard = roster.teams
+          .slice()
+          .sort((a, b) => a.slot_number - b.slot_number)
+          .map((t) => ({
+            teamName: t.name,
+            displayName: t.name,
+            shortName: t.short_name,
+            brandColor: t.brand_color,
+            logoPath: t.logo_path,
+            kills: 0,
+            placement: undefined,
+            alive: true,
+            liveMemberNum: t.players?.length ?? 4,
+            placementPoints: 0,
+            totalPoints: 0,
+            updatedAt: Date.now(),
+          }));
+      }
+    }
 
     leaderboard.sort((a, b) => {
       if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;

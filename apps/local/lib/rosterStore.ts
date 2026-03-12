@@ -61,9 +61,12 @@ export interface RosterMapping {
 // ─── Module State ──────────────────────────────────────────────────────────────
 
 let roster: RosterMapping | null = null;
+let rosterPathOverride: string | null = null;
+let watchedPath: string | null = null;
+let lastRosterError: string | null = null;
 
 function getRosterPath(): string | null {
-  return process.env.ROSTER_MAPPING_PATH ?? null;
+  return rosterPathOverride ?? process.env.ROSTER_MAPPING_PATH ?? null;
 }
 
 function load(): void {
@@ -74,17 +77,22 @@ function load(): void {
     const raw = fs.readFileSync(filePath, 'utf-8');
     roster = JSON.parse(raw) as RosterMapping;
     setRoster(roster);
+    lastRosterError = null;
     console.log('[RosterStore] Loaded roster:', filePath);
   } catch (err) {
+    lastRosterError = err instanceof Error ? err.message : String(err);
     console.error('[RosterStore] Failed to load roster:', err);
   }
 }
 
-function watch(): void {
-  const filePath = getRosterPath();
-  if (!filePath) return;
+function watch(filePath?: string | null): void {
+  const nextPath = filePath ?? getRosterPath();
+  if (!nextPath) return;
+  if (watchedPath === nextPath) return;
+  if (watchedPath) fs.unwatchFile(watchedPath);
 
-  fs.watchFile(filePath, { interval: 2000 }, () => {
+  watchedPath = nextPath;
+  fs.watchFile(nextPath, { interval: 2000 }, () => {
     console.log('[RosterStore] Roster file changed, reloading...');
     load();
   });
@@ -100,6 +108,26 @@ if (typeof window === 'undefined') {
 
 export function getRoster(): RosterMapping | null {
   return roster;
+}
+
+export function getRosterPathValue(): string | null {
+  return getRosterPath();
+}
+
+export function reloadRoster(): RosterMapping | null {
+  load();
+  return roster;
+}
+
+export function getRosterError(): string | null {
+  return lastRosterError;
+}
+
+export function setRosterPathOverride(nextPath: string | null): string | null {
+  rosterPathOverride = nextPath?.trim() || null;
+  load();
+  watch(rosterPathOverride);
+  return rosterPathOverride;
 }
 
 export function getPointSystem(): PointSystem {

@@ -127,6 +127,10 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   const [stageStandings, setStageStandings] = useState<StageStandings[]>([]);
   const [standingsStageId, setStandingsStageId] = useState<string>('all');
   const [standingsLoading, setStandingsLoading] = useState(false);
+  const [applicationsLoaded, setApplicationsLoaded] = useState(false);
+  const [templatesLoaded, setTemplatesLoaded] = useState(false);
+  const [stagesLoaded, setStagesLoaded] = useState(false);
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
 
   async function fetchStandings(stageId?: string) {
     setStandingsLoading(true);
@@ -151,22 +155,29 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
         .from('point_systems').select('*').eq('tournament_id', id).limit(1).single();
       setPointSystem(ps);
 
-      await Promise.all([refreshStages(), refreshApplications(), refreshTemplates(), refreshOps(), refreshTournamentTeams()]);
+      await Promise.all([refreshStages(false), refreshTournamentTeams()]);
       setLoading(false);
     }
     load();
   }, [id]);
 
   useEffect(() => {
+    if (activeTab === 'applications' && !applicationsLoaded) {
+      refreshApplications();
+    }
+    if (activeTab === 'stages') {
+      if (!stagesLoaded) refreshStages(true);
+      if (!templatesLoaded) refreshTemplates();
+    }
     if (activeTab === 'ops') refreshOps();
   }, [activeTab]);
 
   // ─── Data refresh ───
 
-  async function refreshStages() {
+  async function refreshStages(includeGroups: boolean) {
     const { data: stagesData } = await supabase
       .from('stages')
-      .select('*')
+      .select('id, tournament_id, name, stage_order, status, auto_advance, teams_expected, map_rotation, stage_type, advancing_count, invitational_count, match_count, created_at')
       .eq('tournament_id', id)
       .order('stage_order');
 
@@ -176,9 +187,15 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     if (stageIds.length === 0) { setStages([]); return; }
 
     // Parallel: matches, groups (with nested group_teams→teams join)
-    const [{ data: matchesData }, { data: groupsData }] = await Promise.all([
-      supabase.from('matches').select('*').in('stage_id', stageIds),
-      supabase.from('stage_groups').select('*, group_teams(team_id, teams(*))').in('stage_id', stageIds).order('group_order'),
+    const [{ data: matchesData }, groupsData] = await Promise.all([
+      supabase.from('matches').select('id, stage_id, group_id, name, map_name, status, point_system_id, scheduled_at, created_at').in('stage_id', stageIds),
+      includeGroups
+        ? supabase
+            .from('stage_groups')
+            .select('id, stage_id, name, group_order, team_count, created_at, group_teams(team_id, teams(id, name, short_name, logo_url, brand_color))')
+            .in('stage_id', stageIds)
+            .order('group_order')
+        : Promise.resolve({ data: [] as any[] }),
     ]);
 
     const allMatches = matchesData ?? [];
@@ -188,7 +205,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       return {
         ...s,
         matches: stageMatches,
-        groups: (groupsData ?? [])
+        groups: (groupsData?.data ?? groupsData ?? [])
           .filter((g: any) => g.stage_id === s.id)
           .map((g: any) => ({
             id: g.id,
@@ -206,6 +223,8 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     });
 
     setStages(enriched);
+    setStagesLoaded(true);
+    if (includeGroups) setGroupsLoaded(true);
     // Only auto-expand on first load (when nothing is expanded yet)
     setExpandedStages((prev) => prev.size === 0 ? new Set(enriched.map((s) => s.id)) : prev);
   }
@@ -225,19 +244,21 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   async function refreshApplications() {
     const { data } = await supabase
       .from('team_applications')
-      .select('*')
+      .select('id, team_name, short_name, brand_color, logo_url, contact_email, players, status, created_at, notes')
       .eq('tournament_id', id)
       .order('created_at', { ascending: false });
     setApplications((data as TeamApplication[]) ?? []);
+    setApplicationsLoaded(true);
   }
 
   async function refreshTemplates() {
     const { data } = await supabase
       .from('tournament_templates')
-      .select('*')
+      .select('id, tournament_id, name, map_rotation, matches_per_stage, teams_per_stage, auto_assign, created_at')
       .eq('tournament_id', id)
       .order('created_at', { ascending: false });
     setTemplates((data as TournamentTemplate[]) ?? []);
+    setTemplatesLoaded(true);
   }
 
   async function refreshOps() {
@@ -537,7 +558,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     for (const app of toAccept) {
       const { data: team, error: teamError } = await supabase
         .from('teams')
-        .insert({ org_id: profile.org_id, name: app.team_name, short_name: app.short_name || null, brand_color: app.brand_color })
+        .insert({ org_id: profile.org_id, name: app.team_name, short_name: app.short_name || null, brand_color: app.brand_color, logo_url: app.logo_url || null })
         .select('id')
         .single();
 
@@ -782,12 +803,21 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
             <span>{totalMatches} Match{totalMatches !== 1 ? 'es' : ''}</span>
           </p>
         </div>
-        {tournament.status === 'active' && (
-          <button onClick={archiveTournament}
-            className="btn-ghost py-2">
-            Archive Tournament
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/standings/${id}`}
+            target="_blank"
+            className="btn-ghost py-2"
+          >
+            Public Standings
+          </Link>
+          {tournament.status === 'active' && (
+            <button onClick={archiveTournament}
+              className="btn-ghost py-2">
+              Archive Tournament
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}
@@ -1685,151 +1715,205 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
       {/* ════════════════════ APPLICATIONS TAB ════════════════════ */}
       {activeTab === 'applications' && (
-        <div className="space-y-3">
-          <div className="bg-[#213448] border border-white/10 rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-3">
+        <div className="space-y-4">
+          {/* Registration link + settings */}
+          <div className="surface-elevated p-5">
+            <div className="flex items-center justify-between mb-4">
               <div>
-                <div className="text-sm font-semibold text-white">Registration Settings</div>
-                <div className="text-xs text-[#8b8da6] mt-0.5">Flexible modes for team intake</div>
+                <div className="text-sm font-semibold text-[var(--text-primary)]">Registration Link</div>
+                <div className="text-xs text-[var(--text-muted)] mt-0.5">Share this with teams so they can apply to your tournament</div>
               </div>
-              <div className="flex items-center gap-2">
-                {tournament?.registration_mode === 'pick_first' && (
-                  <>
-                    <div className="flex items-center gap-2">
-                      <input type="number" min={0} value={selectFirstCount}
-                        onChange={(e) => setSelectFirstCount(e.target.value === '' ? '' : Number(e.target.value))}
-                        placeholder="N"
-                        className="w-20 bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors" />
-                      <button onClick={selectFirstNApplications}
-                        className="bg-white/5 hover:bg-white/10 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
-                        Select first N
-                      </button>
-                    </div>
-                    <button onClick={autoAcceptFirstN}
-                      className="bg-white/5 hover:bg-white/10 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
-                      Auto-accept
-                    </button>
-                    <button onClick={acceptSelectedApplications}
-                      className="bg-white/5 hover:bg-white/10 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors">
-                      Accept selected
-                    </button>
-                  </>
-                )}
-                <button onClick={updateRegistrationSettings}
-                  className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-4 py-2 rounded-lg transition-colors">
-                  Save
-                </button>
+              <button onClick={copyRegistrationLink}
+                className="btn-primary text-xs px-4 py-2">
+                {linkCopied ? 'Copied!' : 'Copy Link'}
+              </button>
+            </div>
+            <div className="bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm font-mono text-[var(--text-secondary)] truncate select-all">
+              {typeof window !== 'undefined' ? `${window.location.origin}/apply/${id}` : `/apply/${id}`}
+            </div>
+          </div>
+
+          <div className="surface-elevated p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="text-sm font-semibold text-[var(--text-primary)]">Registration Settings</div>
+                <div className="text-xs text-[var(--text-muted)] mt-0.5">Control how teams can register for this tournament</div>
               </div>
+              <button onClick={updateRegistrationSettings}
+                className="btn-primary text-xs px-4 py-2">
+                Save Settings
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">Mode</label>
+                <label className="label">Registration Mode</label>
                 <select value={tournament?.registration_mode ?? 'open'}
                   onChange={(e) => setTournament((t) => t ? { ...t, registration_mode: e.target.value as 'open' | 'cap' | 'pick_first' } : t)}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00ffc3]/60 transition-colors">
-                  <option value="open">Open (no cap)</option>
-                  <option value="cap">Fixed slots (auto-close)</option>
-                  <option value="pick_first">Open + pick first N</option>
+                  className="input-premium w-full">
+                  <option value="open">Open — accept all teams</option>
+                  <option value="cap">Capped — close after limit reached</option>
+                  <option value="pick_first">Review — you choose which teams to accept</option>
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-semibold text-[#8b8da6] uppercase tracking-wider mb-1.5">Limit</label>
+                <label className="label">Max Teams {tournament?.registration_mode === 'open' && <span className="text-[var(--text-muted)]">(ignored in Open mode)</span>}</label>
                 <input type="number" min={0} value={tournament?.registration_limit ?? ''}
                   onChange={(e) => setTournament((t) => t ? { ...t, registration_limit: e.target.value === '' ? null : Number(e.target.value) } : t)}
                   placeholder="e.g. 60"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors" />
+                  className="input-premium w-full" />
               </div>
-              <div className="flex items-center">
-                <label className="flex items-center gap-2 text-xs text-[#8b8da6]">
-                  <input type="checkbox" checked={tournament?.registration_open ?? true}
-                    onChange={(e) => setTournament((t) => t ? { ...t, registration_open: e.target.checked } : t)}
-                    className="accent-[#00ffc3]" />
-                  Registration open
+              <div className="flex items-end pb-1">
+                <label className="flex items-center gap-3 cursor-pointer group p-3 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] transition-colors w-full">
+                  <div className="relative flex-shrink-0">
+                    <input type="checkbox" checked={tournament?.registration_open ?? true}
+                      onChange={(e) => setTournament((t) => t ? { ...t, registration_open: e.target.checked } : t)}
+                      className="sr-only peer" />
+                    <div className="w-10 h-6 rounded-full bg-[var(--bg-base)] border border-[var(--border)] peer-checked:bg-[var(--accent)]/15 peer-checked:border-[var(--accent-border)] transition-all" />
+                    <div className="absolute top-1 left-1 w-4 h-4 rounded-full bg-[var(--text-muted)] peer-checked:bg-[var(--accent)] peer-checked:translate-x-4 transition-all" />
+                  </div>
+                  <span className="text-sm font-medium text-[var(--text-primary)]">{tournament?.registration_open ? 'Open' : 'Closed'}</span>
                 </label>
               </div>
             </div>
           </div>
 
-          {applications.length === 0 ? (
-            <div className="bg-[#213448] border border-dashed border-white/10 rounded-2xl p-12 text-center">
-              <h3 className="text-white font-semibold mb-1">No applications yet</h3>
-              <p className="text-[#8b8da6] text-sm mb-4">Share the registration link with teams to start receiving applications.</p>
-              <button onClick={copyRegistrationLink}
-                className="inline-flex items-center gap-2 bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors">
-                {linkCopied ? 'Copied!' : 'Copy Registration Link'}
+          {/* Bulk actions for review mode */}
+          {tournament?.registration_mode === 'pick_first' && applications.some(a => a.status === 'pending') && (
+            <div className="surface-elevated p-4 flex items-center gap-3 flex-wrap">
+              <span className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Bulk Actions</span>
+              <div className="h-4 w-px bg-[var(--border)]" />
+              <div className="flex items-center gap-2">
+                <input type="number" min={1} value={selectFirstCount}
+                  onChange={(e) => setSelectFirstCount(e.target.value === '' ? '' : Number(e.target.value))}
+                  placeholder="Count"
+                  className="input-premium w-20 text-xs py-1.5" />
+                <button onClick={selectFirstNApplications}
+                  className="btn-ghost btn-sm text-xs">
+                  Select First
+                </button>
+              </div>
+              <button onClick={acceptSelectedApplications}
+                disabled={selectedApplicationIds.length === 0}
+                className="btn-primary text-xs px-3 py-1.5 disabled:opacity-40">
+                Accept {selectedApplicationIds.length > 0 ? `(${selectedApplicationIds.length})` : 'Selected'}
+              </button>
+              <button onClick={autoAcceptFirstN}
+                className="btn-ghost btn-sm text-xs"
+                title="Accept all pending applications (up to the team limit)">
+                Accept All Pending
               </button>
             </div>
-          ) : (
-            applications.map((app) => {
-              const isPending = app.status === 'pending';
-              const isAccepted = app.status === 'accepted';
-              return (
-                <div key={app.id}
-                  className={`bg-[#213448] border rounded-2xl overflow-hidden ${isPending ? 'border-[#00ffc3]/20' : 'border-white/10'}`}>
-                  <div className="flex items-center justify-between px-5 py-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      {tournament?.registration_mode === 'pick_first' && (
-                        <input type="checkbox" checked={selectedApplicationIds.includes(app.id)}
-                          onChange={(e) => {
-                            if (e.target.checked) setSelectedApplicationIds((p) => [...p, app.id]);
-                            else setSelectedApplicationIds((p) => p.filter((x) => x !== app.id));
-                          }}
-                          disabled={!isPending} className="accent-[#00ffc3]" />
-                      )}
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-bold text-xs flex-shrink-0"
-                        style={{ backgroundColor: app.brand_color + '33', border: `1.5px solid ${app.brand_color}55` }}>
-                        <span style={{ color: app.brand_color }}>
-                          {(app.short_name ?? app.team_name).substring(0, 2).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-white truncate">{app.team_name}</span>
-                          {app.short_name && <span className="text-xs text-[#8b8da6]">[{app.short_name}]</span>}
-                          <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                            isPending ? 'bg-amber-500/15 text-amber-400'
-                            : isAccepted ? 'bg-[#00ffc3]/10 text-[#00ffc3]'
-                            : 'bg-[#ff4e4e]/10 text-[#ff4e4e]'
-                          }`}>
-                            {app.status}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 mt-0.5">
-                          <span className="text-xs text-[#8b8da6]">{app.players.length} player{app.players.length !== 1 ? 's' : ''}</span>
-                          {app.contact_email && <span className="text-xs text-[#8b8da6]">{app.contact_email}</span>}
-                          <span className="text-xs text-[#8b8da6]">{new Date(app.created_at).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {isPending && (
-                      <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                        <button onClick={() => acceptApplication(app)} disabled={accepting === app.id}
-                          className="bg-[#00ffc3] hover:bg-[#00e6af] disabled:opacity-50 text-[#0e1621] text-xs font-bold px-4 py-2 rounded-lg transition-colors">
-                          {accepting === app.id ? 'Accepting...' : 'Accept'}
-                        </button>
-                        <button onClick={() => rejectApplication(app.id)}
-                          className="text-xs text-[#8b8da6] hover:text-[#ff4e4e] border border-white/10 hover:border-[#ff4e4e]/30 px-3 py-2 rounded-lg transition-colors">
-                          Reject
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                  <div className="border-t border-white/5 px-5 py-3 bg-black/10">
-                    <div className="grid grid-cols-[1fr_1fr] gap-2 mb-1.5">
-                      <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Display Name</span>
-                      <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">In-Game ID</span>
-                    </div>
-                    {app.players.map((p, pi) => (
-                      <div key={pi} className="grid grid-cols-[1fr_1fr] gap-2 py-1">
-                        <span className="text-sm text-white">{p.display_name}</span>
-                        <span className="text-sm text-[#8b8da6] font-mono">{p.player_open_id}</span>
-                      </div>
-                    ))}
-                  </div>
+          )}
+
+          {/* Application stats */}
+          {applications.length > 0 && (
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Pending', value: applications.filter(a => a.status === 'pending').length, cls: 'text-amber-400' },
+                { label: 'Accepted', value: applications.filter(a => a.status === 'accepted').length, cls: 'text-[var(--accent)]' },
+                { label: 'Rejected', value: applications.filter(a => a.status === 'rejected').length, cls: 'text-[var(--red)]' },
+              ].map(s => (
+                <div key={s.label} className="surface-elevated rounded-xl p-4 text-center">
+                  <div className={`text-2xl font-bold ${s.cls}`}>{s.value}</div>
+                  <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold mt-1">{s.label}</div>
                 </div>
-              );
-            })
+              ))}
+            </div>
+          )}
+
+          {/* Application list */}
+          {applications.length === 0 ? (
+            <div className="surface border border-dashed border-[var(--border)] rounded-2xl p-12 text-center">
+              <div className="w-14 h-14 rounded-2xl mx-auto mb-4 flex items-center justify-center border border-[var(--border)] bg-[var(--bg-surface)]">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-muted)]">
+                  <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v-2" strokeLinecap="round"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M22 21v-2a4 4 0 00-3-3.87" strokeLinecap="round"/>
+                  <path d="M16 3.13a4 4 0 010 7.75" strokeLinecap="round"/>
+                </svg>
+              </div>
+              <h3 className="font-semibold text-[var(--text-primary)] mb-1">No applications yet</h3>
+              <p className="text-[var(--text-muted)] text-sm mb-4 max-w-sm mx-auto">
+                Share the registration link above with teams. Applications will appear here as teams sign up.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {applications.map((app) => {
+                const isPending = app.status === 'pending';
+                const isAccepted = app.status === 'accepted';
+                return (
+                  <div key={app.id}
+                    className={`surface overflow-hidden ${isPending ? 'border-amber-500/20' : ''}`}>
+                    <div className="flex items-center justify-between px-5 py-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {tournament?.registration_mode === 'pick_first' && isPending && (
+                          <input type="checkbox" checked={selectedApplicationIds.includes(app.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) setSelectedApplicationIds((p) => [...p, app.id]);
+                              else setSelectedApplicationIds((p) => p.filter((x) => x !== app.id));
+                            }}
+                            className="accent-[var(--accent)] w-4 h-4" />
+                        )}
+                        {app.logo_url ? (
+                          <img src={app.logo_url} alt={app.team_name} className="w-10 h-10 rounded-lg object-cover border border-[var(--border)] flex-shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0"
+                            style={{ backgroundColor: app.brand_color + '22', border: `1.5px solid ${app.brand_color}44` }}>
+                            <span style={{ color: app.brand_color }}>
+                              {(app.short_name ?? app.team_name).substring(0, 2).toUpperCase()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-[var(--text-primary)] truncate">{app.team_name}</span>
+                            {app.short_name && <span className="badge badge-muted text-[10px]">{app.short_name}</span>}
+                            <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                              isPending ? 'bg-amber-500/15 text-amber-400'
+                              : isAccepted ? 'bg-[var(--accent)]/10 text-[var(--accent)]'
+                              : 'bg-[var(--red)]/10 text-[var(--red)]'
+                            }`}>
+                              {app.status}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-3 mt-0.5 text-xs text-[var(--text-muted)]">
+                            <span>{app.players.length} player{app.players.length !== 1 ? 's' : ''}</span>
+                            {app.contact_email && <span>{app.contact_email}</span>}
+                            <span>{new Date(app.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                      {isPending && (
+                        <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+                          <button onClick={() => acceptApplication(app)} disabled={accepting === app.id}
+                            className="btn-primary text-xs px-4 py-2">
+                            {accepting === app.id ? 'Accepting...' : 'Accept'}
+                          </button>
+                          <button onClick={() => rejectApplication(app.id)}
+                            className="btn-ghost btn-sm text-xs text-[var(--text-muted)] hover:text-[var(--red)]">
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="border-t border-[var(--border)] px-5 py-3 bg-[var(--bg-base)]">
+                      <div className="grid grid-cols-[1fr_1fr] gap-2 mb-1.5">
+                        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">Player Name</span>
+                        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-wider font-semibold">In-Game Character ID</span>
+                      </div>
+                      {app.players.map((p, pi) => (
+                        <div key={pi} className="grid grid-cols-[1fr_1fr] gap-2 py-1">
+                          <span className="text-sm text-[var(--text-primary)]">{p.display_name}</span>
+                          <span className="text-sm text-[var(--text-muted)] font-mono">{p.player_open_id}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}

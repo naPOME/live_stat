@@ -17,7 +17,7 @@ export default function TeamsPage() {
   const supabase = createClient();
   const router = useRouter();
   const [teams, setTeams] = useState<Team[]>([]);
-  const [players, setPlayers] = useState<Player[]>([]);
+  const [playersByTeam, setPlayersByTeam] = useState<Record<string, Player[]>>({});
   const [loading, setLoading] = useState(true);
   const [hasTournaments, setHasTournaments] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -33,13 +33,12 @@ export default function TeamsPage() {
   }
 
   async function loadTeams() {
-    const [{ data: teamsData }, { count }, { data: playersData }] = await Promise.all([
-      supabase.from('teams').select('*').order('name'),
+    const [{ data: teamsData }, { count }] = await Promise.all([
+      supabase.from('teams').select('id, org_id, name, short_name, logo_url, brand_color, created_at').order('name'),
       supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-      supabase.from('players').select('id, display_name, player_open_id, team_id'),
     ]);
     setTeams(teamsData ?? []);
-    setPlayers(playersData ?? []);
+    setPlayersByTeam({});
     setHasTournaments((count ?? 0) > 0);
     setLoading(false);
   }
@@ -79,8 +78,18 @@ export default function TeamsPage() {
     });
   }
 
+  async function ensureTeamPlayers(teamId: string) {
+    if (playersByTeam[teamId]) return;
+    const { data } = await supabase
+      .from('players')
+      .select('id, display_name, player_open_id, team_id')
+      .eq('team_id', teamId)
+      .order('display_name');
+    setPlayersByTeam((prev) => ({ ...prev, [teamId]: (data as Player[]) ?? [] }));
+  }
+
   function getTeamPlayers(teamId: string) {
-    return players.filter(p => p.team_id === teamId);
+    return playersByTeam[teamId] ?? [];
   }
 
   return (
@@ -207,7 +216,11 @@ export default function TeamsPage() {
                 <div key={team.id} className="group/row">
                   {/* Team row — clickable to expand */}
                   <button
-                    onClick={() => setExpanded(isOpen ? null : team.id)}
+                    onClick={async () => {
+                      const nextId = isOpen ? null : team.id;
+                      setExpanded(nextId);
+                      if (nextId) await ensureTeamPlayers(nextId);
+                    }}
                     className="w-full grid grid-cols-[auto_auto_1fr_auto_auto_auto] items-center gap-6 px-6 py-4 text-left hover:bg-[var(--bg-hover)] transition-colors"
                   >
                     {/* Color dot */}

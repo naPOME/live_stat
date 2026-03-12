@@ -45,10 +45,35 @@ interface GameData {
 export default function ControllerPage() {
   const [visibility, setVisibility] = useState<Record<string, boolean>>({});
   const [gameData, setGameData] = useState<GameData | null>(null);
+  const [rosterInfo, setRosterInfo] = useState<{
+    team_count: number;
+    player_count: number;
+    roster_loaded: boolean;
+    roster_path?: string | null;
+    tournament_id?: string | null;
+    match_id?: string | null;
+    teams_preview?: { slot_number: number; name: string; short_name: string }[];
+    error?: string | null;
+  } | null>(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState('');
+  const [rosterPathInput, setRosterPathInput] = useState('');
+  const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
 
   // Fetch initial state
   useEffect(() => {
     fetch('/api/widgets').then(r => r.json()).then(setVisibility).catch(() => {});
+  }, []);
+
+  // Fetch roster status
+  useEffect(() => {
+    fetch('/api/roster')
+      .then(r => r.json())
+      .then((data) => {
+        setRosterInfo(data);
+        if (!rosterPathInput && data?.roster_path) setRosterPathInput(data.roster_path);
+      })
+      .catch(() => {});
   }, []);
 
   // SSE for real-time widget state changes
@@ -99,6 +124,28 @@ export default function ControllerPage() {
     setVisibility(await res.json());
   }, []);
 
+  const syncRoster = useCallback(async () => {
+    setSyncing(true);
+    setSyncMsg('');
+    try {
+      const res = await fetch('/api/roster', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roster_path: rosterPathInput || null }),
+      });
+      const data = await res.json();
+      setRosterInfo(data);
+      setSyncMsg(data.roster_loaded ? 'Roster synced' : 'Roster not found');
+      setLastSyncAt(new Date().toISOString());
+    } catch {
+      setSyncMsg('Sync failed');
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncMsg(''), 3000);
+    }
+  }, []);
+
+
   // Keyboard hotkeys
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -126,7 +173,7 @@ export default function ControllerPage() {
     <div style={{ fontFamily: 'Inter, sans-serif', background: '#0e1621', minHeight: '100vh', color: '#fff' }}>
       <div style={{ maxWidth: 1100, margin: '0 auto', padding: '24px' }}>
         {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>Widget Controller</h1>
             <p style={{ color: '#8b8da6', fontSize: 12, margin: '4px 0 0' }}>
@@ -175,6 +222,123 @@ export default function ControllerPage() {
             >
               Hide All (ESC)
             </button>
+          </div>
+        </div>
+
+        {/* Roster Sync + Details */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: '1.2fr 1fr',
+          gap: 12,
+          marginBottom: 22,
+        }}>
+          <div style={{
+            background: '#1a2735',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 14,
+            padding: 14,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8b8da6' }}>
+                Roster Sync
+              </div>
+              <span style={{
+                fontSize: 10,
+                padding: '4px 8px',
+                borderRadius: 999,
+                background: rosterInfo?.roster_loaded ? 'rgba(0,255,195,0.15)' : 'rgba(255,78,78,0.15)',
+                color: rosterInfo?.roster_loaded ? '#00ffc3' : '#ff4e4e',
+                fontWeight: 800,
+              }}>
+                {rosterInfo?.roster_loaded ? 'Loaded' : 'Not loaded'}
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
+              <input
+                value={rosterPathInput}
+                onChange={(e) => setRosterPathInput(e.target.value)}
+                placeholder="C:\\path\\to\\roster_mapping.json"
+                style={{
+                  width: '100%',
+                  background: '#0f1b27',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: '#8b8da6',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  fontSize: 11,
+                }}
+              />
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={syncRoster}
+                  disabled={syncing}
+                  style={{
+                    background: syncing ? 'rgba(0,255,195,0.15)' : '#00ffc3',
+                    border: 'none',
+                    borderRadius: 8,
+                    padding: '8px 12px',
+                    color: '#0e1621',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    cursor: syncing ? 'default' : 'pointer',
+                  }}
+                >
+                  {syncing ? 'Syncing…' : 'Sync'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 10, display: 'flex', gap: 12, alignItems: 'center', fontSize: 11, color: '#8b8da6' }}>
+              <span>Teams: {rosterInfo?.team_count ?? 0}</span>
+              <span>Players: {rosterInfo?.player_count ?? 0}</span>
+              {lastSyncAt && (
+                <span>Last sync: {new Date(lastSyncAt).toLocaleTimeString()}</span>
+              )}
+              {syncMsg && <span>{syncMsg}</span>}
+              {rosterInfo?.error && <span style={{ color: '#ff4e4e' }}>{rosterInfo.error}</span>}
+            </div>
+          </div>
+
+          <div style={{
+            background: '#1a2735',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 14,
+            padding: 14,
+            minHeight: 108,
+          }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8b8da6', marginBottom: 10 }}>
+              Loaded Roster
+            </div>
+            {rosterInfo?.roster_loaded ? (
+              <>
+                <div style={{ fontSize: 11, color: '#8b8da6', marginBottom: 8 }}>
+                  Tournament: {rosterInfo.tournament_id ?? '—'} &nbsp; | &nbsp; Match: {rosterInfo.match_id ?? '—'}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6, maxHeight: 220, overflowY: 'auto', paddingRight: 4 }}>
+                  {(rosterInfo.teams_preview ?? []).map((t) => (
+                    <div key={t.slot_number} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      background: '#0f1b27', border: '1px solid rgba(255,255,255,0.08)',
+                      borderRadius: 8, padding: '6px 8px',
+                    }}>
+                      <div style={{
+                        width: 24, height: 24, borderRadius: 6,
+                        background: 'rgba(255,255,255,0.06)', color: '#8b8da6',
+                        fontSize: 10, fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {String(t.slot_number).padStart(2, '0')}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#e5e7eb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {t.name} {t.short_name ? `(${t.short_name})` : ''}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 11, color: '#8b8da6' }}>No roster loaded yet. Sync to preview teams.</div>
+            )}
           </div>
         </div>
 

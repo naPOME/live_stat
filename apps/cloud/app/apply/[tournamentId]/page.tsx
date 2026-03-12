@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, use } from 'react';
+import { useEffect, useState, useRef, use } from 'react';
 
 type PlayerRow = { display_name: string; player_open_id: string };
 
@@ -17,6 +17,10 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
   const [shortName, setShortName] = useState('');
   const [brandColor, setBrandColor] = useState('#ffffff');
   const [contactEmail, setContactEmail] = useState('');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [players, setPlayers] = useState<PlayerRow[]>([
     { display_name: '', player_open_id: '' },
     { display_name: '', player_open_id: '' },
@@ -47,7 +51,6 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
       }
 
       setTournament({ name: t.name, status: t.status });
-
       setOrgName(data.organization?.name ?? '');
       setLoading(false);
     }
@@ -67,6 +70,17 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
     setPlayers((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleLogoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Logo file too large (max 5MB)');
+      return;
+    }
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
@@ -79,6 +93,21 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
       return;
     }
 
+    // Upload logo if provided
+    let logoUrl: string | null = null;
+    if (logoFile) {
+      setLogoUploading(true);
+      const formData = new FormData();
+      formData.append('file', logoFile);
+      formData.append('folder', `applications/${tournamentId}`);
+      const uploadRes = await fetch('/api/upload', { method: 'POST', body: formData });
+      const uploadData = await uploadRes.json();
+      setLogoUploading(false);
+      if (uploadRes.ok && uploadData.url) {
+        logoUrl = uploadData.url;
+      }
+    }
+
     const res = await fetch('/api/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -88,6 +117,7 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
         short_name: shortName || null,
         brand_color: brandColor,
         contact_email: contactEmail || null,
+        logo_url: logoUrl,
         players: filledPlayers,
       }),
     });
@@ -105,9 +135,7 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0e1621] flex items-center justify-center">
-      <div className="flex items-center justify-center min-h-[50vh]">
         <span className="loader" aria-label="Loading" />
-      </div>
       </div>
     );
   }
@@ -177,6 +205,45 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
           <div className="bg-[#1a2735] border border-white/10 rounded-2xl p-5 space-y-4">
             <div className="text-sm font-semibold text-white">Team Details</div>
 
+            {/* Logo upload */}
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+                className="relative w-16 h-16 rounded-xl border-2 border-dashed border-white/20 hover:border-[#00ffc3]/50 transition-colors flex items-center justify-center overflow-hidden flex-shrink-0 group"
+              >
+                {logoPreview ? (
+                  <img src={logoPreview} alt="Logo preview" className="w-full h-full object-cover" />
+                ) : (
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-white/30 group-hover:text-[#00ffc3]/60 transition-colors">
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  </svg>
+                )}
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoSelect}
+                  className="hidden"
+                />
+              </button>
+              <div>
+                <div className="text-xs text-white font-medium">Team Logo</div>
+                <div className="text-[10px] text-[#8b8da6] mt-0.5">
+                  {logoFile ? logoFile.name : 'Click to upload (PNG/JPG, max 5MB)'}
+                </div>
+                {logoFile && (
+                  <button
+                    type="button"
+                    onClick={() => { setLogoFile(null); setLogoPreview(null); }}
+                    className="text-[10px] text-[#ff4e4e] mt-1 hover:underline"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2 sm:col-span-1">
                 <label className="block text-xs text-[#8b8da6] mb-1">Team Name *</label>
@@ -233,7 +300,7 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-sm font-semibold text-white">Players</div>
-                <div className="text-xs text-[#8b8da6]">In-game ID must be the exact open ID used in-game</div>
+                <div className="text-xs text-[#8b8da6]">In-game ID must match the exact character ID used in-game</div>
               </div>
               <button
                 type="button"
@@ -247,8 +314,8 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
             <div className="space-y-2">
               {/* Column labels */}
               <div className="grid grid-cols-[1fr_1fr_28px] gap-2 px-1">
-                <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Display Name</span>
-                <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">In-Game ID</span>
+                <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Player Name</span>
+                <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">In-Game Character ID</span>
                 <span />
               </div>
 
@@ -273,7 +340,7 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
                     onClick={() => removePlayerRow(i)}
                     className={`text-[#8b8da6] hover:text-[#ff4e4e] text-sm transition-colors ${players.length <= 1 ? 'invisible' : ''}`}
                   >
-                    x
+                    ×
                   </button>
                 </div>
               ))}
@@ -282,10 +349,10 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || logoUploading}
             className="w-full bg-[#00ffc3] hover:bg-[#00e6af] disabled:opacity-50 text-[#0e1621] font-bold py-3 rounded-xl transition-colors text-sm"
           >
-            {submitting ? 'Submitting...' : 'Submit Application'}
+            {logoUploading ? 'Uploading logo...' : submitting ? 'Submitting...' : 'Submit Application'}
           </button>
 
           <p className="text-center text-[#8b8da6] text-[10px]">

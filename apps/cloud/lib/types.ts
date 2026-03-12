@@ -91,6 +91,7 @@ export type Player = {
   team_id: string;
   display_name: string;
   player_open_id: string;
+  photo_url: string | null;
   created_at: string;
 };
 

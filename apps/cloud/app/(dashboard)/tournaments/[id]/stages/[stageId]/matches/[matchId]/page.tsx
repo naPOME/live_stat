@@ -19,7 +19,14 @@ export default function MatchPage({
   const supabase = createClient();
   const router = useRouter();
 
-  const [match, setMatch] = useState<{ id: string; name: string; map_name: string | null; status: string; scheduled_at: string | null } | null>(null);
+  const [match, setMatch] = useState<{
+    id: string;
+    name: string;
+    map_name: string | null;
+    status: string;
+    scheduled_at: string | null;
+    group_id: string | null;
+  } | null>(null);
   const [stage, setStage] = useState<{ name: string } | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [disputes, setDisputes] = useState<MatchDispute[]>([]);
@@ -29,6 +36,7 @@ export default function MatchPage({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
+  const [autoAssigning, setAutoAssigning] = useState(false);
   const [disputeTeamId, setDisputeTeamId] = useState('');
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeEvidenceUrl, setDisputeEvidenceUrl] = useState('');
@@ -123,6 +131,70 @@ export default function MatchPage({
   const assignedCount = slots.filter((s) => s.teamId).length;
   const usedTeamIds = new Set(slots.map((s) => s.teamId).filter(Boolean));
   const assignedTeams = teams.filter((t) => usedTeamIds.has(t.id));
+
+  async function autoAssignSlots() {
+    if (!match) return;
+    setAutoAssigning(true);
+    setSaveMsg('');
+    try {
+      let teamIds: string[] = [];
+
+      if (match.group_id) {
+        const { data } = await supabase
+          .from('group_teams')
+          .select('team_id, created_at')
+          .eq('group_id', match.group_id)
+          .order('created_at');
+        teamIds = (data ?? []).map((r) => r.team_id);
+      } else {
+        const { data } = await supabase
+          .from('tournament_teams')
+          .select('team_id, seed, created_at')
+          .eq('tournament_id', tournamentId);
+        const rows = (data ?? []).slice().sort((a, b) => {
+          const aSeed = a.seed ?? 9999;
+          const bSeed = b.seed ?? 9999;
+          if (aSeed !== bSeed) return aSeed - bSeed;
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        });
+        teamIds = rows.map((r) => r.team_id);
+      }
+
+      if (teamIds.length === 0) {
+        setSaveMsg('No linked teams found for auto-assign.');
+        setAutoAssigning(false);
+        return;
+      }
+
+      const uniqueTeamIds = Array.from(new Set(teamIds));
+      const shouldReplace = assignedCount > 0
+        ? window.confirm('Replace existing slot assignments?\nOK = replace all, Cancel = fill empty slots only.')
+        : true;
+
+      const nextSlots = shouldReplace
+        ? Array.from({ length: SLOT_COUNT }, () => ({ teamId: null as string | null }))
+        : slots.map((s) => ({ ...s }));
+
+      const alreadyAssigned = new Set(
+        shouldReplace ? [] : nextSlots.map((s) => s.teamId).filter(Boolean) as string[],
+      );
+      const remaining = uniqueTeamIds.filter((id) => !alreadyAssigned.has(id));
+
+      let index = 0;
+      for (let i = 0; i < nextSlots.length && index < remaining.length; i++) {
+        if (!nextSlots[i].teamId) {
+          nextSlots[i] = { teamId: remaining[index] };
+          index += 1;
+        }
+      }
+
+      setSlots(nextSlots);
+      setSaveMsg(`Auto-assigned ${index} team${index === 1 ? '' : 's'}.`);
+      setTimeout(() => setSaveMsg(''), 3000);
+    } finally {
+      setAutoAssigning(false);
+    }
+  }
 
   async function createDispute() {
     if (!disputeReason.trim()) return;
@@ -255,16 +327,25 @@ export default function MatchPage({
       </div>
 
       {/* Slot grid */}
-      <div className="surface overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
-          <span className="text-sm font-semibold text-[var(--text-primary)]">Lobby Slot Assignment</span>
-          <button
-            onClick={() => setSlots(Array.from({ length: SLOT_COUNT }, () => ({ teamId: null })))}
-            className="btn-ghost btn-sm text-[var(--red)] hover:text-[var(--red)]"
-          >
-            Clear all
-          </button>
-        </div>
+        <div className="surface overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
+            <span className="text-sm font-semibold text-[var(--text-primary)]">Lobby Slot Assignment</span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={autoAssignSlots}
+                disabled={autoAssigning}
+                className="btn-ghost btn-sm"
+              >
+                {autoAssigning ? 'Assigning…' : 'Auto assign'}
+              </button>
+              <button
+                onClick={() => setSlots(Array.from({ length: SLOT_COUNT }, () => ({ teamId: null })))}
+                className="btn-ghost btn-sm text-[var(--red)] hover:text-[var(--red)]"
+              >
+                Clear all
+              </button>
+            </div>
+          </div>
 
         <div className="p-5 grid grid-cols-2 gap-2">
           {slots.map((slot, idx) => {
