@@ -40,7 +40,9 @@ export default function MatchInfoOverlay() {
         <div
           className="w-[600px] h-[200px] rounded-2xl flex items-center justify-center mb-0 relative overflow-hidden"
           style={{
-            background: `linear-gradient(135deg, ${accent}22, rgba(10,10,26,0.95))`,
+            backgroundImage: `linear-gradient(135deg, ${accent}66, rgba(10,10,26,0.88)), url('https://pubg.wiki.gg/images/thumb/Erangel_Remastered_Mylta_Nuclear_power_plant.png/1200px-Erangel_Remastered_Mylta_Nuclear_power_plant.png?e0f334')`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
             border: `2px solid ${accent}33`,
           }}
         >
