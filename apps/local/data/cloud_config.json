@@ -1,0 +1,13 @@
+{
+  "cloud_url": "https://live-stat-beta.vercel.app",
+  "device_token": "776ffdf1-51e7-4574-8ea3-700b8929de2a",
+  "org": {
+    "id": "7f103a55-8143-412c-b3bc-d8668f51ad66",
+    "name": "tee"
+  },
+  "match_id": "d6531e0b-2c40-4b9a-b108-23341a3bf420",
+  "tournament": {
+    "id": "95184c59-77bc-4505-87dc-da78fba6af05",
+    "name": "raman"
+  }
+}

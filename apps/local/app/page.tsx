@@ -67,6 +67,9 @@ export default function Dashboard() {
   const [cloudErr, setCloudErr] = useState('');
   const [tournaments, setTournaments] = useState<{ id: string; name: string; status: string }[]>([]);
   const [selectedTournament, setSelectedTournament] = useState('');
+  const [cloudDetail, setCloudDetail] = useState<any>(null);
+  const [cloudDetailErr, setCloudDetailErr] = useState('');
+  const [cloudDetailLoading, setCloudDetailLoading] = useState(false);
 
   const [sync, setSync] = useState<SyncStatus>({ role: 'standalone', connected: false, matchId: null, peerCount: 0, lastSyncAt: null, error: null, syncCode: null });
   const [joinCode, setJoinCode] = useState('');
@@ -115,6 +118,12 @@ export default function Dashboard() {
     const id = setInterval(() => { pollDeviceStatus(deviceCode); }, 3000);
     return () => clearInterval(id);
   }, [deviceStatus, deviceCode, cloudUrl]);
+
+  useEffect(() => {
+    const tid = cloud?.tournament?.id || selectedTournament;
+    if (!tid) return;
+    loadCloudDetail(tid);
+  }, [cloud?.tournament?.id, selectedTournament]);
 
   // ── Actions ───────────────────────────────────────
   async function refreshTournaments() {
@@ -197,6 +206,24 @@ export default function Dashboard() {
     finally {
       setCloudBusy(false);
       setTimeout(() => setRosterMsg(''), 3000);
+    }
+  }
+
+  async function loadCloudDetail(tournamentId: string) {
+    setCloudDetailLoading(true);
+    setCloudDetailErr('');
+    try {
+      const res = await fetch(`/api/cloud/tournament?id=${encodeURIComponent(tournamentId)}`);
+      const d = await res.json();
+      if (d.ok) {
+        setCloudDetail(d.data);
+      } else {
+        setCloudDetailErr(d.error || 'Failed to load cloud detail');
+      }
+    } catch {
+      setCloudDetailErr('Network error');
+    } finally {
+      setCloudDetailLoading(false);
     }
   }
 
@@ -407,6 +434,60 @@ export default function Dashboard() {
         </div>
 
         {/* ── Multi-PC Sync ────────────────────── */}
+        {/* -- Cloud Detail ------------------------------------------------ */}
+        {cloud?.tournament?.id && (
+          <div style={{ marginBottom: 20 }}>
+            <div className="section-label">Cloud Detail</div>
+            <div className="card">
+              <div className="flex items-center" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
+                <div style={{ fontSize: 12, fontWeight: 700 }}>
+                  {cloud.tournament?.name || 'Tournament'} Details
+                </div>
+                <button
+                  className="btn"
+                  onClick={() => loadCloudDetail(cloud.tournament?.id || selectedTournament)}
+                  disabled={cloudDetailLoading}
+                  style={{ whiteSpace: 'nowrap' }}
+                >
+                  {cloudDetailLoading ? 'Refreshing…' : 'Refresh'}
+                </button>
+              </div>
+
+              {cloudDetailErr && <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 8 }}>{cloudDetailErr}</div>}
+
+              {cloudDetail && (
+                <div style={{ display: 'grid', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+                    <div className="stat-box">
+                      <div className="stat-label">Teams</div>
+                      <div className="stat-value">{(cloudDetail?.teams ?? []).length}</div>
+                    </div>
+                    <div className="stat-box">
+                      <div className="stat-label">Stages</div>
+                      <div className="stat-value">{(cloudDetail?.stages ?? []).length}</div>
+                    </div>
+                    <div className="stat-box">
+                      <div className="stat-label">Matches</div>
+                      <div className="stat-value">{(cloudDetail?.stages ?? []).reduce((n: number, s: any) => n + (s.matches?.length ?? 0), 0)}</div>
+                    </div>
+                    <div className="stat-box">
+                      <div className="stat-label">Players</div>
+                      <div className="stat-value">{(cloudDetail?.playerStats ?? []).length}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'var(--bg-base)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: 10 }}>
+                    <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 6 }}>Raw Cloud Detail</div>
+                    <pre style={{ fontSize: 10, color: 'var(--text-dim)', whiteSpace: 'pre-wrap', maxHeight: 260, overflow: 'auto' }}>
+                      {JSON.stringify(cloudDetail, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div style={{ marginBottom: 20 }}>
           <div className="section-label">Multi-PC Sync</div>
           <div className="card" style={{ borderColor: sync.connected ? 'rgba(109,94,252,0.2)' : undefined }}>

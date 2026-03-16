@@ -94,7 +94,131 @@ export async function POST(req: NextRequest) {
   }
 
   if (!matchId) {
-    return NextResponse.json({ error: 'No match found for tournament' }, { status: 404 });
+    const { data: stageList } = await supabase
+      .from('stages')
+      .select('id, name')
+      .eq('tournament_id', tournament.id)
+      .order('stage_order', { ascending: true })
+      .limit(1);
+    const fallbackStage = stageList?.[0] ?? null;
+
+    const { data: psList } = await supabase
+      .from('point_systems')
+      .select('*')
+      .eq('tournament_id', tournament.id)
+      .limit(1);
+    const ps = psList?.[0];
+    const pointSystem = ps
+      ? { kill_points: Number(ps.kill_points), placement_points: ps.placement_points as Record<string, number> }
+      : {
+          kill_points: 1,
+          placement_points: {
+            '1': 10, '2': 6, '3': 5, '4': 4, '5': 3, '6': 2,
+            '7': 1, '8': 1, '9': 0, '10': 0,
+          },
+        };
+
+    const { data: tournamentTeams } = await supabase
+      .from('tournament_teams')
+      .select('team_id, seed')
+      .eq('tournament_id', tournament.id)
+      .order('seed', { ascending: true, nullsFirst: false });
+
+    const teamIds = (tournamentTeams ?? []).map((tt) => tt.team_id);
+    const { data: teamsData } = teamIds.length > 0
+      ? await supabase
+          .from('teams')
+          .select('*, players(*)')
+          .in('id', teamIds)
+      : { data: [] };
+
+    const teamMap = new Map((teamsData ?? []).map((t) => [t.id, t]));
+    const teamsOrdered = (tournamentTeams ?? [])
+      .map((tt) => ({
+        seed: tt.seed,
+        team: teamMap.get(tt.team_id),
+      }))
+      .filter((t) => t.team);
+
+    const teams: Array<{
+      team_id: string;
+      slot_number: number;
+      name: string;
+      short_name: string;
+      brand_color: string;
+      logo_path: string | null;
+      logo_path_64: string | null;
+      logo_path_128?: string | null;
+      logo_path_256?: string | null;
+      players: Array<{ player_open_id: string; display_name: string }>;
+    }> = [];
+
+    const playerIndex: Record<string, { team_id: string; display_name: string; slot_number: number }> = {};
+    let slot = 1;
+    for (const entry of teamsOrdered) {
+      const team = entry.team as any;
+      if (!team) continue;
+      const slotNum = slot++;
+      const padded = String(slotNum).padStart(3, '0');
+      const logoUrl = team.logo_url ?? null;
+      const teamPlayers = (team.players ?? []).map((p: any) => ({
+        player_open_id: p.player_open_id as string,
+        display_name: p.display_name as string,
+      }));
+
+      teams.push({
+        team_id: team.id,
+        slot_number: slotNum,
+        name: team.name,
+        short_name: team.short_name ?? team.name.substring(0, 4).toUpperCase(),
+        brand_color: team.brand_color,
+        logo_path: logoUrl ?? `c:/logo/${padded}.png`,
+        logo_path_64: logoUrl ?? `c:/logo/${padded}_64.png`,
+        logo_path_128: logoUrl ?? `c:/logo/${padded}_128.png`,
+        logo_path_256: logoUrl ?? `c:/logo/${padded}_256.png`,
+        players: teamPlayers,
+      });
+
+      for (const p of teamPlayers) {
+        playerIndex[p.player_open_id] = {
+          team_id: team.id,
+          display_name: p.display_name,
+          slot_number: slotNum,
+        };
+      }
+    }
+
+    const cloudEndpoint = `${req.nextUrl.origin}/api/match-results`;
+    const rosterMapping = {
+      version: 1,
+      tournament_id: tournament.id,
+      stage_id: fallbackStage?.id ?? tournament.id,
+      match_id: tournament.id,
+      cloud_endpoint: cloudEndpoint,
+      cloud_api_key: tournament.api_key,
+      point_system: pointSystem,
+      org: {
+        id: org.id,
+        name: org.name,
+        brand_color: org.brand_color,
+        logo_path: org.logo_url ?? 'c:/logo/org_logo.png',
+        theme: {
+          bg_color: org.bg_color,
+          accent_color: org.accent_color,
+          font: org.font,
+        },
+      },
+      teams,
+      player_index: playerIndex,
+    };
+
+    return NextResponse.json({
+      ok: true,
+      roster: rosterMapping,
+      tournament: { id: tournament.id, name: tournament.name },
+      match: null,
+      note: 'No matches found. Generated roster from tournament teams.',
+    });
   }
 
   const { data: match } = await supabase
