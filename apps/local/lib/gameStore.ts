@@ -225,7 +225,16 @@ function computeRanks(): void {
   });
 }
 
-export function snapshot() {
+export interface GameSnapshot {
+  gameId: string;
+  phase: GamePhase;
+  teams: TeamState[];
+  players: PlayerState[];
+  kills: KillEvent[];
+  observingUid: string | null;
+}
+
+export function snapshot(): GameSnapshot {
   return {
     gameId: state.gameId,
     phase: state.phase,
@@ -234,4 +243,49 @@ export function snapshot() {
     kills: state.kills.slice(-8),
     observingUid: state.observingUid,
   };
+}
+
+/**
+ * Hydrate local state from a remote snapshot (used by Followers).
+ * Replaces the entire game state and notifies all subscribers.
+ */
+export function hydrateFromSnapshot(snap: GameSnapshot): void {
+  state.gameId = snap.gameId;
+  state.phase = snap.phase;
+  state.observingUid = snap.observingUid;
+
+  state.teams.clear();
+  for (const t of snap.teams) {
+    state.teams.set(t.slot, t);
+  }
+
+  state.players.clear();
+  state.uidToOpenId.clear();
+  for (const p of snap.players) {
+    state.players.set(p.openId, p);
+    state.uidToOpenId.set(p.uId, p.openId);
+  }
+
+  state.kills = snap.kills;
+
+  notify('state', snapshot());
+}
+
+/**
+ * Ingest a single kill event from remote (used by Followers).
+ */
+export function ingestRemoteKill(ev: KillEvent): void {
+  // Avoid duplicates
+  if (state.kills.some(k => k.id === ev.id)) return;
+  state.kills.push(ev);
+  if (state.kills.length > 20) state.kills = state.kills.slice(-20);
+  notify('killfeed', ev);
+}
+
+/**
+ * Ingest a remote playercard update (used by Followers).
+ */
+export function ingestRemotePlayercard(data: { uid: string; openId: string; player: PlayerState | undefined; team: TeamState | undefined }): void {
+  state.observingUid = data.uid;
+  notify('playercard', data);
 }

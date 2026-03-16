@@ -92,6 +92,27 @@ export function subscribeWidgets(fn: Listener): () => void {
   return () => listeners.delete(fn);
 }
 
+/**
+ * Hydrate widget visibility from a remote state (used by sync).
+ * Does NOT notify the sync hook to prevent echo loops.
+ */
+export function hydrateWidgets(state: Record<string, boolean>): void {
+  for (const k of Object.keys(visibility)) {
+    if (k in state) {
+      visibility[k as WidgetKey] = state[k];
+    }
+  }
+  notify();
+}
+
+// Sync hook — called on every local widget change so realtimeSync can broadcast
+let syncHook: ((state: Record<string, boolean>) => void) | null = null;
+
+export function setSyncHook(fn: ((state: Record<string, boolean>) => void) | null): void {
+  syncHook = fn;
+}
+
 function notify() {
   for (const fn of listeners) { try { fn(); } catch { /* */ } }
+  if (syncHook) { try { syncHook(getVisibility()); } catch { /* */ } }
 }

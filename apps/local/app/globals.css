@@ -1,2 +1,20 @@
 @import "tailwindcss";
 
+/* Dashboard pages (non-overlay) base styles */
+:root {
+  --bg-primary: #0b1120;
+  --bg-secondary: #111827;
+  --bg-card: #1a2332;
+  --bg-card-hover: #1f2b3d;
+  --border: rgba(255, 255, 255, 0.06);
+  --border-accent: rgba(255, 255, 255, 0.1);
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --accent: #00ffc3;
+  --accent-dim: rgba(0, 255, 195, 0.15);
+  --danger: #ff4e4e;
+  --danger-dim: rgba(255, 78, 78, 0.15);
+  --warning: #ffb800;
+  --purple: #6d5efc;
+}

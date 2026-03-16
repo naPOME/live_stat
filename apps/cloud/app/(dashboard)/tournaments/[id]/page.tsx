@@ -199,13 +199,16 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     ]);
 
     const allMatches = matchesData ?? [];
+    const groupsRows = Array.isArray((groupsData as { data?: unknown })?.data)
+      ? (groupsData as { data: any[] }).data
+      : (Array.isArray(groupsData) ? groupsData : []);
 
     const enriched: StageWithDetails[] = stagesData.map((s) => {
       const stageMatches = allMatches.filter((m) => m.stage_id === s.id);
       return {
         ...s,
         matches: stageMatches,
-        groups: (groupsData?.data ?? groupsData ?? [])
+        groups: groupsRows
           .filter((g: any) => g.stage_id === s.id)
           .map((g: any) => ({
             id: g.id,
@@ -353,7 +356,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       await supabase.from('matches').insert(allMatchRows);
     }
 
-    await refreshStages();
+    await refreshStages(true);
   }
 
   async function addSingleStage() {
@@ -371,7 +374,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
     setStageName('');
     setAddingStage(false);
-    await refreshStages();
+    await refreshStages(true);
   }
 
   async function deleteStage(stageId: string) {
@@ -380,7 +383,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       onConfirm: async () => {
         setConfirmDialog(null);
         await supabase.from('stages').delete().eq('id', stageId);
-        await refreshStages();
+        await refreshStages(true);
       },
     });
   }
@@ -414,7 +417,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     setMatchName('');
     setMatchMap('');
     setAddingMatchTo(null);
-    await refreshStages();
+    await refreshStages(true);
   }
 
   async function updateMatchMap(matchId: string, mapName: string | null) {
@@ -444,7 +447,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     }));
 
     await supabase.from('matches').insert(rows);
-    await refreshStages();
+    await refreshStages(true);
   }
 
   // ─── Group CRUD ───
@@ -483,18 +486,18 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     setNewGroupCount(3);
     setNewGroupTeamCount(16);
     setNewGroupMatchCount(6);
-    await refreshStages();
+    await refreshStages(true);
   }
 
   async function addTeamToGroup(groupId: string, teamId: string) {
     await supabase.from('group_teams').insert({ group_id: groupId, team_id: teamId });
     setAddingTeamToGroup(null);
-    await refreshStages();
+    await refreshStages(true);
   }
 
   async function removeTeamFromGroup(groupId: string, teamId: string) {
     await supabase.from('group_teams').delete().match({ group_id: groupId, team_id: teamId });
-    await refreshStages();
+    await refreshStages(true);
   }
 
   async function autoDistributeTeams(stageId: string) {
@@ -527,7 +530,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
           showToast('Failed to distribute: ' + String(e));
           return;
         }
-        await refreshStages();
+        await refreshStages(true);
       },
     });
   }
