@@ -353,25 +353,45 @@ export default function Dashboard() {
               </div>
 
               <div style={{ display: 'grid', gap: 10, marginBottom: 10 }}>
-                <div className="section-label" style={{ marginBottom: 4 }}>Organization</div>
-                <div className="flex gap-6">
-                  <input className="input" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="Cloud URL (https://...)" style={{ flex: 1 }} />
-                  <button className="btn btn-accent" onClick={requestDeviceCode} disabled={cloudBusy || !cloudUrl.trim()} style={{ whiteSpace: 'nowrap' }}>
-                    {cloudBusy ? 'Generating\u2026' : 'Get Device Code'}
-                  </button>
-                </div>
-
-                {deviceCode && (
-                  <div className="flex items-center gap-8" style={{ marginTop: 6 }}>
-                    <div className="mono" style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.15em', color: 'var(--accent)' }}>
-                      {deviceCode}
+                {!cloud?.bound && (
+                  <>
+                    <div className="section-label" style={{ marginBottom: 4 }}>Organization</div>
+                    <div className="flex gap-6">
+                      <input className="input" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="Cloud URL (https://...)" style={{ flex: 1 }} />
+                      <button className="btn btn-accent" onClick={requestDeviceCode} disabled={cloudBusy || !cloudUrl.trim()} style={{ whiteSpace: 'nowrap' }}>
+                        {cloudBusy ? 'Generating\u2026' : 'Get Device Code'}
+                      </button>
                     </div>
-                    <button className="btn" onClick={() => pollDeviceStatus(deviceCode)} disabled={cloudBusy || !cloudUrl.trim()} style={{ whiteSpace: 'nowrap' }}>
-                      Check Approval
+
+                    {deviceCode && (
+                      <div className="flex items-center gap-8" style={{ marginTop: 6 }}>
+                        <div className="mono" style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.15em', color: 'var(--accent)' }}>
+                          {deviceCode}
+                        </div>
+                        <button className="btn" onClick={() => pollDeviceStatus(deviceCode)} disabled={cloudBusy || !cloudUrl.trim()} style={{ whiteSpace: 'nowrap' }}>
+                          Check Approval
+                        </button>
+                        <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+                          {deviceStatus === 'waiting' ? 'Waiting for approval' : deviceStatus === 'approved' ? 'Approved' : ''}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                )}
+                {cloud?.bound && (
+                  <div className="flex items-center gap-6" style={{ marginBottom: 4 }}>
+                    <div className="section-label">Organization</div>
+                    <button
+                      className="btn"
+                      onClick={() => {
+                        setCloud(null);
+                        setDeviceCode('');
+                        setDeviceStatus('idle');
+                      }}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      Re-link Org
                     </button>
-                    <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
-                      {deviceStatus === 'waiting' ? 'Waiting for approval' : deviceStatus === 'approved' ? 'Approved' : ''}
-                    </span>
                   </div>
                 )}
 
