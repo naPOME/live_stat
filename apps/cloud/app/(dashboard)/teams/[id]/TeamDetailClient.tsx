@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
+import { useTeamPlayers, useAddPlayer, useDeletePlayer, useUpdateTeam } from '@/lib/hooks/use-teams';
 import type { Team, Player } from '@/lib/types';
 
 type TeamDetailClientProps = {
@@ -15,10 +16,13 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
   const supabase = createClient();
 
   const [team, setTeam] = useState<Team>(initialTeam);
-  const [players, setPlayers] = useState<Player[]>(initialPlayers);
+  const { data: players = [] } = useTeamPlayers(teamId, initialPlayers);
+  const addPlayerMutation = useAddPlayer(teamId);
+  const deletePlayerMutation = useDeletePlayer(teamId);
+  const updateTeamMutation = useUpdateTeam(teamId);
+
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [playerForm, setPlayerForm] = useState({ display_name: '', player_open_id: '' });
-  const [saving, setSaving] = useState(false);
   const [editTeam, setEditTeam] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: initialTeam.name, short_name: initialTeam.short_name ?? '', brand_color: initialTeam.brand_color });
   const [logoUploading, setLogoUploading] = useState(false);
@@ -31,42 +35,21 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
     setTimeout(() => setToast(null), 4000);
   }
 
-  async function addPlayer(e: React.FormEvent) {
+  function handleAddPlayer(e: React.FormEvent) {
     e.preventDefault();
     if (!playerForm.display_name.trim() || !playerForm.player_open_id.trim()) return;
-    setSaving(true);
 
-    // Optimistic: add placeholder immediately
-    const tempId = `temp-${Date.now()}`;
-    const optimistic: Player = {
-      id: tempId,
-      team_id: teamId,
-      display_name: playerForm.display_name.trim(),
-      player_open_id: playerForm.player_open_id.trim(),
-      photo_url: null,
-      created_at: new Date().toISOString(),
-    };
-    setPlayers((prev) => [...prev, optimistic].sort((a, b) => a.display_name.localeCompare(b.display_name)));
-    setPlayerForm({ display_name: '', player_open_id: '' });
-    setAddingPlayer(false);
-
-    const { data: created, error } = await supabase.from('players').insert({
-      team_id: teamId,
-      display_name: optimistic.display_name,
-      player_open_id: optimistic.player_open_id,
-    }).select('id, team_id, display_name, player_open_id, photo_url, created_at').single();
-
-    if (!error && created) {
-      // Replace temp with real
-      setPlayers((prev) => prev.map((p) => p.id === tempId ? created : p));
-      showToast('Player added');
-    } else {
-      // Rollback
-      setPlayers((prev) => prev.filter((p) => p.id !== tempId));
-      showToast(error?.message ?? 'Failed to add player', 'error');
-    }
-
-    setSaving(false);
+    addPlayerMutation.mutate(
+      { display_name: playerForm.display_name.trim(), player_open_id: playerForm.player_open_id.trim() },
+      {
+        onSuccess: () => {
+          setPlayerForm({ display_name: '', player_open_id: '' });
+          setAddingPlayer(false);
+          showToast('Player added');
+        },
+        onError: (err) => showToast(err.message, 'error'),
+      },
+    );
   }
 
   function deletePlayer(playerId: string) {
@@ -74,41 +57,31 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
     setConfirmDialog({
       title: 'Remove Player',
       message: `Remove "${player?.display_name ?? 'this player'}" from the team?`,
-      onConfirm: async () => {
+      onConfirm: () => {
         setConfirmDialog(null);
-        const prev = players;
-        setPlayers((p) => p.filter((x) => x.id !== playerId));
-        const { error } = await supabase.from('players').delete().eq('id', playerId);
-        if (error) {
-          setPlayers(prev);
-          showToast(error.message, 'error');
-          return;
-        }
-        showToast('Player removed');
+        deletePlayerMutation.mutate(playerId, {
+          onSuccess: () => showToast('Player removed'),
+          onError: (err) => showToast(err.message, 'error'),
+        });
       },
     });
   }
 
   async function saveTeam(e: React.FormEvent) {
     e.preventDefault();
-    const nextTeam = { ...team, name: teamForm.name.trim(), short_name: teamForm.short_name.trim() || null, brand_color: teamForm.brand_color };
+    const updates = { name: teamForm.name.trim(), short_name: teamForm.short_name.trim() || null, brand_color: teamForm.brand_color };
     const prevTeam = team;
-    setTeam(nextTeam);
+    setTeam((t) => ({ ...t, ...updates }));
     setEditTeam(false);
 
-    const { error } = await supabase.from('teams').update({
-      name: nextTeam.name,
-      short_name: nextTeam.short_name,
-      brand_color: nextTeam.brand_color,
-    }).eq('id', teamId);
-
-    if (error) {
-      setTeam(prevTeam);
-      setTeamForm({ name: prevTeam.name, short_name: prevTeam.short_name ?? '', brand_color: prevTeam.brand_color });
-      showToast(error.message, 'error');
-    } else {
-      showToast('Team updated');
-    }
+    updateTeamMutation.mutate(updates, {
+      onSuccess: () => showToast('Team updated'),
+      onError: (err) => {
+        setTeam(prevTeam);
+        setTeamForm({ name: prevTeam.name, short_name: prevTeam.short_name ?? '', brand_color: prevTeam.brand_color });
+        showToast(err.message, 'error');
+      },
+    });
   }
 
   async function uploadLogo(e: React.ChangeEvent<HTMLInputElement>) {
@@ -116,7 +89,6 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
     if (!file) return;
     setLogoUploading(true);
 
-    // Optimistic: show local preview instantly
     const prevUrl = team.logo_url;
     const localPreview = URL.createObjectURL(file);
     setTeam((t) => ({ ...t, logo_url: localPreview }));
@@ -148,11 +120,6 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
     if (!file) return;
     setPlayerPhotoUploading(playerId);
 
-    // Optimistic: show local preview instantly
-    const prevPlayers = players;
-    const localPreview = URL.createObjectURL(file);
-    setPlayers((prev) => prev.map((p) => p.id === playerId ? { ...p, photo_url: localPreview } : p));
-
     const ext = file.name.split('.').pop();
     const path = `players/${playerId}/photo.${ext}`;
     const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
@@ -161,15 +128,11 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
       const { error: updateError } = await supabase.from('players').update({ photo_url: publicUrl }).eq('id', playerId);
       if (!updateError) {
-        URL.revokeObjectURL(localPreview);
-        setPlayers((prev) => prev.map((p) => p.id === playerId ? { ...p, photo_url: `${publicUrl}?t=${Date.now()}` } : p));
         showToast('Photo updated');
       } else {
-        setPlayers(prevPlayers);
         showToast(updateError.message, 'error');
       }
     } else {
-      setPlayers(prevPlayers);
       showToast(error.message, 'error');
     }
     setPlayerPhotoUploading(null);
@@ -253,7 +216,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
                   </div>
                 )}
                 <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl opacity-0 group-hover/logo:opacity-100 transition-opacity cursor-pointer text-xs text-white font-medium">
-                  {logoUploading ? 'Uploading…' : 'Upload'}
+                  {logoUploading ? 'Uploading...' : 'Upload'}
                   <input type="file" accept="image/*" onChange={uploadLogo} className="hidden" />
                 </label>
               </div>
@@ -286,7 +249,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
 
         {/* Add player form */}
         {addingPlayer && (
-          <form onSubmit={addPlayer} className="border-b border-[var(--border)] px-5 py-4 bg-[var(--bg-base)] flex items-end gap-3">
+          <form onSubmit={handleAddPlayer} className="border-b border-[var(--border)] px-5 py-4 bg-[var(--bg-base)] flex items-end gap-3">
             <div className="flex-1">
               <label className="label">Display Name</label>
               <input
@@ -312,8 +275,8 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
                 className="input-premium font-mono"
               />
             </div>
-            <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? 'Saving…' : 'Add'}
+            <button type="submit" disabled={addPlayerMutation.isPending} className="btn-primary">
+              {addPlayerMutation.isPending ? 'Saving...' : 'Add'}
             </button>
             <button type="button" onClick={() => setAddingPlayer(false)} className="btn-ghost btn-sm">Cancel</button>
           </form>

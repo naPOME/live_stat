@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
 
 type PlayerStat = {
@@ -48,26 +49,23 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
   const [teams] = useState<TeamRow[]>(initialTeams);
   const [tournaments] = useState<TournamentRow[]>(initialTournaments);
   const [tab, setTab] = useState<Tab>('roster');
-
-  // Stats
-  const [stats, setStats] = useState<PlayerStat[]>([]);
-  const [statsLoading, setStatsLoading] = useState(false);
-  const [matchCount, setMatchCount] = useState(0);
   const [filterTournament, setFilterTournament] = useState<string>('');
+  const [statsEnabled, setStatsEnabled] = useState(false);
 
-  async function fetchStats(tournamentId?: string) {
-    setStatsLoading(true);
-    try {
-      const qs = tournamentId ? `?tournamentId=${tournamentId}` : '';
+  const { data: statsData, isLoading: statsLoading, refetch: refetchStats } = useQuery({
+    queryKey: ['player-stats', filterTournament || 'all'],
+    queryFn: async () => {
+      const qs = filterTournament ? `?tournamentId=${filterTournament}` : '';
       const res = await fetch(`/api/player-stats${qs}`);
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data.players ?? []);
-        setMatchCount(data.matchCount ?? 0);
-      }
-    } catch { /* ignore */ }
-    setStatsLoading(false);
-  }
+      if (!res.ok) throw new Error('Failed to fetch stats');
+      return res.json() as Promise<{ players: PlayerStat[]; matchCount: number }>;
+    },
+    enabled: statsEnabled,
+    staleTime: 30_000,
+  });
+
+  const stats = statsData?.players ?? [];
+  const matchCount = statsData?.matchCount ?? 0;
 
   const teamMap = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
   const rosterCols = '40px 1.5fr 1.5fr 1.2fr';
@@ -89,7 +87,7 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
             key={t}
             onClick={() => {
               setTab(t);
-              if (t === 'leaderboard' && stats.length === 0) fetchStats(filterTournament || undefined);
+              if (t === 'leaderboard' && !statsEnabled) setStatsEnabled(true);
             }}
             className={`px-4 py-2 text-sm font-semibold transition-colors relative ${
               tab === t ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -165,7 +163,7 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
           <div className="flex items-center gap-4">
             <select
               value={filterTournament}
-              onChange={(e) => { setFilterTournament(e.target.value); fetchStats(e.target.value || undefined); }}
+              onChange={(e) => { setFilterTournament(e.target.value); setStatsEnabled(true); }}
               className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)]"
             >
               <option value="">All Tournaments</option>
@@ -173,7 +171,7 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
-            <button onClick={() => fetchStats(filterTournament || undefined)} className="btn-ghost py-2 text-xs">
+            <button onClick={() => refetchStats()} className="btn-ghost py-2 text-xs">
               Refresh
             </button>
             {matchCount > 0 && (

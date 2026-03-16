@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useTeams, useCreateTeam, useDeleteTeam } from '@/lib/hooks/use-teams';
 import { createClient } from '@/lib/supabase/client';
 import type { Team } from '@/lib/types';
 
@@ -20,11 +21,13 @@ type TeamsClientProps = {
 
 export default function TeamsClient({ initialTeams, initialHasTournaments, orgId }: TeamsClientProps) {
   const supabase = createClient();
-  const [teams, setTeams] = useState<Team[]>(initialTeams);
+  const { data: teams = [] } = useTeams(orgId, initialTeams);
+  const createTeamMutation = useCreateTeam(orgId);
+  const deleteTeamMutation = useDeleteTeam();
+
   const [playersByTeam, setPlayersByTeam] = useState<Record<string, Player[]>>({});
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', short_name: '', brand_color: '#00ffc3' });
-  const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
@@ -34,28 +37,21 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, orgId
     setTimeout(() => setToast(null), 4000);
   }
 
-  async function createTeam(e: React.FormEvent) {
+  async function handleCreateTeam(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) return;
-    setSaving(true);
 
-    const { data: created, error } = await supabase.from('teams').insert({
-      org_id: orgId,
-      name: form.name.trim(),
-      short_name: form.short_name.trim() || null,
-      brand_color: form.brand_color,
-    }).select('id, org_id, name, short_name, logo_url, brand_color, created_at').single();
-
-    if (!error && created) {
-      setTeams((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
-      setForm({ name: '', short_name: '', brand_color: '#00ffc3' });
-      setAdding(false);
-      showToast('Team created');
-    } else {
-      showToast(error?.message ?? 'Failed to create team', 'error');
-    }
-
-    setSaving(false);
+    createTeamMutation.mutate(
+      { name: form.name.trim(), short_name: form.short_name.trim() || null, brand_color: form.brand_color },
+      {
+        onSuccess: () => {
+          setForm({ name: '', short_name: '', brand_color: '#00ffc3' });
+          setAdding(false);
+          showToast('Team created');
+        },
+        onError: (err) => showToast(err.message, 'error'),
+      },
+    );
   }
 
   function deleteTeam(teamId: string) {
@@ -63,23 +59,17 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, orgId
     setConfirmDialog({
       title: 'Delete Team',
       message: `Delete "${team?.name ?? 'this team'}"? This will also remove all their players.`,
-      onConfirm: async () => {
+      onConfirm: () => {
         setConfirmDialog(null);
-        const prevTeams = teams;
-        setTeams((t) => t.filter((x) => x.id !== teamId));
         setPlayersByTeam((prev) => {
           const next = { ...prev };
           delete next[teamId];
           return next;
         });
-
-        const { error } = await supabase.from('teams').delete().eq('id', teamId);
-        if (error) {
-          setTeams(prevTeams);
-          showToast(error.message, 'error');
-          return;
-        }
-        showToast('Team deleted');
+        deleteTeamMutation.mutate(teamId, {
+          onSuccess: () => showToast('Team deleted'),
+          onError: (err) => showToast(err.message, 'error'),
+        });
       },
     });
   }
@@ -135,29 +125,29 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, orgId
       {/* New team form */}
       {adding && (
         <div className="surface mb-8 animate-slide-down">
-          <form onSubmit={createTeam} className="p-6 space-y-6">
+          <form onSubmit={handleCreateTeam} className="p-6 space-y-6">
             <div className="font-body text-[14px] font-medium text-[var(--text-primary)] flex items-center gap-2 border-b border-[var(--border)] pb-4">
               <svg width="16" height="16" viewBox="0 0 14 14" fill="none" className="text-[var(--text-muted)]"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               Register New Team
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="label">Team Name *</label>
                 <input autoFocus type="text" value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  required placeholder="e.g. Sentinels" 
+                  required placeholder="e.g. Sentinels"
                   className="input-premium" />
               </div>
-              
+
               <div>
                 <label className="label">Tag (Optional)</label>
                 <input type="text" value={form.short_name}
                   onChange={(e) => setForm((f) => ({ ...f, short_name: e.target.value.toUpperCase().slice(0, 5) }))}
-                  placeholder="SEN" 
+                  placeholder="SEN"
                   className="input-premium uppercase" />
               </div>
-              
+
               <div>
                 <label className="label">Brand Color</label>
                 <div className="flex items-center gap-3">
@@ -174,10 +164,10 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, orgId
                 </div>
               </div>
             </div>
-            
+
             <div className="flex gap-3 pt-2">
-              <button type="submit" disabled={saving} className="btn-primary flex-1 sm:flex-none">
-                {saving ? 'Saving...' : 'Save Team'}
+              <button type="submit" disabled={createTeamMutation.isPending} className="btn-primary flex-1 sm:flex-none">
+                {createTeamMutation.isPending ? 'Saving...' : 'Save Team'}
               </button>
               <button type="button" onClick={() => setAdding(false)} className="btn-ghost flex-1 sm:flex-none">
                 Cancel
