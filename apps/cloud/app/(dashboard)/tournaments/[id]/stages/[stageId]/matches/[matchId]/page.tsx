@@ -37,6 +37,8 @@ export default function MatchPage({
   const [saving, setSaving] = useState(false);
   const [saveMsg, setSaveMsg] = useState('');
   const [autoAssigning, setAutoAssigning] = useState(false);
+  const [copyingPrev, setCopyingPrev] = useState(false);
+  const [siblingMatches, setSiblingMatches] = useState<{ id: string; name: string }[]>([]);
   const [disputeTeamId, setDisputeTeamId] = useState('');
   const [disputeReason, setDisputeReason] = useState('');
   const [disputeEvidenceUrl, setDisputeEvidenceUrl] = useState('');
@@ -67,6 +69,16 @@ export default function MatchPage({
         }
       }
       setSlots(initial);
+
+      // Load sibling matches in same stage (for "copy from" feature)
+      const { data: siblings } = await supabase
+        .from('matches')
+        .select('id, name')
+        .eq('stage_id', stageId)
+        .neq('id', matchId)
+        .order('created_at');
+      setSiblingMatches(siblings ?? []);
+
       await refreshDisputes();
       setLoading(false);
     }
@@ -193,6 +205,38 @@ export default function MatchPage({
       setTimeout(() => setSaveMsg(''), 3000);
     } finally {
       setAutoAssigning(false);
+    }
+  }
+
+  async function copyFromMatch(sourceMatchId: string) {
+    setCopyingPrev(true);
+    setSaveMsg('');
+    try {
+      const { data: sourceSlots } = await supabase
+        .from('match_slots')
+        .select('team_id, slot_number')
+        .eq('match_id', sourceMatchId);
+
+      if (!sourceSlots || sourceSlots.length === 0) {
+        setSaveMsg('Source match has no slot assignments.');
+        setTimeout(() => setSaveMsg(''), 3000);
+        return;
+      }
+
+      const nextSlots: SlotAssignment[] = Array.from({ length: SLOT_COUNT }, () => ({ teamId: null }));
+      for (const s of sourceSlots) {
+        const idx = s.slot_number - 1;
+        if (idx >= 0 && idx < SLOT_COUNT) {
+          nextSlots[idx] = { teamId: s.team_id };
+        }
+      }
+
+      setSlots(nextSlots);
+      const count = sourceSlots.length;
+      setSaveMsg(`Copied ${count} slot${count !== 1 ? 's' : ''} — click Save Roster to apply.`);
+      setTimeout(() => setSaveMsg(''), 5000);
+    } finally {
+      setCopyingPrev(false);
     }
   }
 
@@ -331,6 +375,24 @@ export default function MatchPage({
           <div className="px-5 py-3.5 border-b border-[var(--border)] flex items-center justify-between">
             <span className="text-sm font-semibold text-[var(--text-primary)]">Lobby Slot Assignment</span>
             <div className="flex items-center gap-2">
+              {siblingMatches.length > 0 && (
+                <div className="relative group/copy">
+                  <button className="btn-ghost btn-sm" disabled={copyingPrev}>
+                    {copyingPrev ? 'Copying…' : 'Copy from…'}
+                  </button>
+                  <div className="absolute right-0 top-full mt-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg shadow-lg overflow-hidden z-20 min-w-[180px] hidden group-focus-within/copy:block group-hover/copy:block">
+                    {siblingMatches.map((m) => (
+                      <button
+                        key={m.id}
+                        onClick={() => copyFromMatch(m.id)}
+                        className="w-full text-left px-3 py-2 text-xs text-[var(--text-secondary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition-colors"
+                      >
+                        {m.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
               <button
                 onClick={autoAssignSlots}
                 disabled={autoAssigning}

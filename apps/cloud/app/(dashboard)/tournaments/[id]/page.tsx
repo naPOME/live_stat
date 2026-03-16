@@ -459,6 +459,44 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     await refreshStages(true);
   }
 
+  async function duplicateMatch(sourceMatch: Match, stageId: string, groupId?: string) {
+    // Find match count in this context to auto-name
+    const stage = stages.find((s) => s.id === stageId);
+    const existingMatches = groupId
+      ? stage?.groups.find((g) => g.id === groupId)?.matches ?? []
+      : stage?.matches ?? [];
+    const newName = `Match ${existingMatches.length + 1}`;
+
+    // Create the new match with same map
+    const { data: created, error } = await supabase.from('matches').insert({
+      stage_id: stageId,
+      group_id: groupId ?? null,
+      name: newName,
+      map_name: sourceMatch.map_name,
+      point_system_id: pointSystem?.id ?? null,
+    }).select('id').single();
+
+    if (error || !created) return;
+
+    // Copy slot assignments from source match
+    const { data: sourceSlots } = await supabase
+      .from('match_slots')
+      .select('team_id, slot_number')
+      .eq('match_id', sourceMatch.id);
+
+    if (sourceSlots && sourceSlots.length > 0) {
+      await supabase.from('match_slots').insert(
+        sourceSlots.map((s) => ({
+          match_id: created.id,
+          team_id: s.team_id,
+          slot_number: s.slot_number,
+        })),
+      );
+    }
+
+    await refreshStages(true);
+  }
+
   async function updateMatchMap(matchId: string, mapName: string | null) {
     // Optimistic update — no full refresh needed
     setStages((prev) => prev.map((s) => ({
@@ -1357,6 +1395,13 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                                 })()}
                                               </div>
                                               <div className="flex items-center gap-2 flex-shrink-0 opacity-0 group-hover/match:opacity-100 transition-all">
+                                                <button
+                                                  onClick={() => duplicateMatch(match, stage.id, group.id)}
+                                                  className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                                                  title="Duplicate match with same map & slots"
+                                                >
+                                                  Duplicate
+                                                </button>
                                                 <Link href={`/tournaments/${id}/stages/${stage.id}/matches/${match.id}`}
                                                   className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-white transition-colors">
                                                   View
@@ -1618,6 +1663,13 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                   })()}
                                 </div>
                                 <div className="flex items-center gap-3">
+                                  <button
+                                    onClick={() => duplicateMatch(match, stage.id)}
+                                    className="text-xs text-[#8b8da6] hover:text-[#00ffc3] font-medium transition-colors"
+                                    title="Duplicate match with same map & slots"
+                                  >
+                                    Duplicate
+                                  </button>
                                   <Link href={`/tournaments/${id}/stages/${stage.id}/matches/${match.id}`}
                                     className="text-xs text-[#8b8da6] hover:text-white font-medium transition-colors">
                                     View

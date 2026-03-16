@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import JSZip from 'jszip';
+import { generatePcobIni, addTeamLogos } from '@/lib/export/pcob-ini';
 
 export async function GET(
   request: NextRequest,
@@ -66,6 +67,8 @@ export async function GET(
     brand_color: string;
     logo_path: string;
     logo_path_64: string;
+    logo_path_128: string;
+    logo_path_256: string;
     players: Array<{ player_open_id: string; display_name: string }>;
   }> = [];
 
@@ -90,6 +93,8 @@ export async function GET(
       brand_color: team.brand_color,
       logo_path: `c:/logo/${padded}.png`,
       logo_path_64: `c:/logo/${padded}_64.png`,
+      logo_path_128: `c:/logo/${padded}_128.png`,
+      logo_path_256: `c:/logo/${padded}_256.png`,
       players: teamPlayers,
     });
 
@@ -133,22 +138,13 @@ export async function GET(
 
   const logosFolder = zip.folder('logos')!;
 
-  // Fetch & include team logos
+  // Fetch & include team logos (4 resolution variants per team)
+  const logoUrlMap = new Map<string, string>();
   for (const slot of slots ?? []) {
     const team = slot.team as any;
-    if (!team?.logo_url) continue;
-
-    try {
-      const res = await fetch(team.logo_url);
-      if (!res.ok) continue;
-      const buffer = await res.arrayBuffer();
-      const padded = String(slot.slot_number).padStart(3, '0');
-      logosFolder.file(`${padded}.png`, buffer);
-      logosFolder.file(`${padded}_64.png`, buffer); // Same for now; resize server-side later
-    } catch {
-      // Skip failed logo downloads
-    }
+    if (team?.logo_url) logoUrlMap.set(team.id, team.logo_url);
   }
+  await addTeamLogos(logosFolder, teams, (id) => logoUrlMap.get(id) ?? null);
 
   // Org logo
   if (org.logo_url) {
@@ -160,22 +156,8 @@ export async function GET(
     } catch { /* skip */ }
   }
 
-  // Generate TeamLogoAndColor.ini
-  const iniLines = ['[TeamLogoAndColor]', ''];
-  for (const t of teams) {
-    const padded = String(t.slot_number).padStart(3, '0');
-    const hex = t.brand_color.replace('#', '');
-    const r = parseInt(hex.substring(0, 2), 16) || 0;
-    const g = parseInt(hex.substring(2, 4), 16) || 0;
-    const b = parseInt(hex.substring(4, 6), 16) || 0;
-    iniLines.push(`; Slot ${t.slot_number}`);
-    iniLines.push(`TeamName${t.slot_number}=${t.name}`);
-    iniLines.push(`TeamShortName${t.slot_number}=${t.short_name}`);
-    iniLines.push(`TeamLogo${t.slot_number}=c:/logo/${padded}.png`);
-    iniLines.push(`TeamColor${t.slot_number}=${r},${g},${b}`);
-    iniLines.push('');
-  }
-  zip.file('TeamLogoAndColor.ini', iniLines.join('\n'));
+  // Generate PCOB-compatible TeamLogoAndColor.ini
+  zip.file('TeamLogoAndColor.ini', generatePcobIni(teams));
 
   // README
   zip.file(
