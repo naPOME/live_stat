@@ -383,7 +383,8 @@ export default function Dashboard() {
                     <div className="section-label">Organization</div>
                     <button
                       className="btn"
-                      onClick={() => {
+                      onClick={async () => {
+                        try { await fetch('/api/cloud', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'clear' }) }); } catch {}
                         setCloud(null);
                         setDeviceCode('');
                         setDeviceStatus('idle');
