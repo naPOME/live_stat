@@ -52,6 +52,7 @@ const LINKS = [
   { title: 'Widget Controller', href: '/controller', tag: 'OPERATOR', color: 'var(--red)', desc: 'Toggle overlays with hotkeys during broadcast' },
   { title: 'Overlay Gallery', href: '/overlay/gallery', tag: 'SETUP', color: 'var(--accent)', desc: 'Browse widgets, copy OBS URLs, preview' },
   { title: 'Master Overlay', href: '/overlay/master', tag: 'OBS', color: 'var(--purple)', desc: 'Single browser source for all widgets' },
+  { title: 'Cloud Details', href: '/cloud', tag: 'SYNC', color: 'var(--amber)', desc: 'Full cloud data: teams, matches, players' },
 ];
 
 export default function Dashboard() {
