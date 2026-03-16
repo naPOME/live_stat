@@ -3,225 +3,98 @@
 import { useState } from 'react';
 
 const WIDGETS = [
-  {
-    name: 'Match Ranking',
-    path: '/overlay/leaderboard',
-    description: 'Live leaderboard with teams, player status, points and eliminations. Updates every second.',
-    size: '420×1080',
-    position: 'Right side',
-  },
-  {
-    name: 'Elimination Notification',
-    path: '/overlay/elimination',
-    description: 'Popup notification when a team is eliminated. Shows rank, team name, elims and points.',
-    size: '1920×1080',
-    position: 'Top center',
-  },
-  {
-    name: 'Winner Winner Chicken Dinner',
-    path: '/overlay/wwcd',
-    description: 'WWCD screen with player silhouettes, team stats. Shows when match phase is "finished".',
-    size: '1920×1080',
-    position: 'Full screen',
-  },
-  {
-    name: 'Top Fraggers',
-    path: '/overlay/fraggers',
-    description: 'Top 5 players by eliminations with MVP badge. Updates live.',
-    size: '1920×1080',
-    position: 'Bottom center',
-  },
-  {
-    name: 'After Match Score',
-    path: '/overlay/results',
-    description: 'Two-column match results table with all teams ranked by points.',
-    size: '1920×1080',
-    position: 'Center',
-  },
-  {
-    name: 'Point Table',
-    path: '/overlay/pointtable',
-    description: 'Visual PUBG Mobile standard point system display. Static widget.',
-    size: '1920×1080',
-    position: 'Center',
-  },
-  {
-    name: 'Team List',
-    path: '/overlay/teamlist',
-    description: 'Two-column grid of all teams with logos. Good for pre-match display.',
-    size: '1920×1080',
-    position: 'Center',
-  },
-  {
-    name: 'MVP',
-    path: '/overlay/mvp',
-    description: 'Match MVP display with player stats: eliminations, damage, assists, knockouts, throwables, heals, survival time.',
-    size: '1920×1080',
-    position: 'Center',
-  },
-  {
-    name: 'Match Schedule',
-    path: '/overlay/schedule',
-    description: 'Bottom bar showing match schedule with map names, live/finished indicators. Configurable via query params.',
-    size: '1920×1080',
-    position: 'Bottom',
-    params: '?matches=MATCH 1:ERANGEL:finished,MATCH 2:MIRAMAR:live,MATCH 3:SANHOK:upcoming',
-  },
-  {
-    name: 'Match Info',
-    path: '/overlay/matchinfo',
-    description: 'Match started notification with stage, game number, and map name.',
-    size: '1920×1080',
-    position: 'Center',
-    params: '?stage=Groups&game=Game 1&map=Erangel',
-  },
-  {
-    name: 'Kill Feed',
-    path: '/overlay/killfeed',
-    description: 'Real-time kill feed showing killer, victim, and distance. Auto-fades after 5s.',
-    size: '1920×1080',
-    position: 'Top left',
-  },
-  {
-    name: 'Player Card',
-    path: '/overlay/playercard',
-    description: 'Currently observed player stats: health, kills, team info.',
-    size: '1920×1080',
-    position: 'Bottom left',
-  },
+  { name: 'Match Ranking',        path: '/overlay/leaderboard', size: '420\u00D71080',  position: 'Right side',    desc: 'Live leaderboard with teams, status, points and eliminations.' },
+  { name: 'Kill Feed',            path: '/overlay/killfeed',    size: '1920\u00D71080', position: 'Top left',      desc: 'Real-time kill feed. Auto-fades after 5s.' },
+  { name: 'Player Card',          path: '/overlay/playercard',  size: '1920\u00D71080', position: 'Bottom left',   desc: 'Currently observed player stats: health, kills, team.' },
+  { name: 'Elimination Alert',    path: '/overlay/elimination', size: '1920\u00D71080', position: 'Top center',    desc: 'Popup when a team is eliminated with rank and stats.' },
+  { name: 'WWCD',                 path: '/overlay/wwcd',        size: '1920\u00D71080', position: 'Full screen',   desc: 'Winner screen with player silhouettes and team stats.' },
+  { name: 'Top Fraggers',         path: '/overlay/fraggers',    size: '1920\u00D71080', position: 'Bottom center', desc: 'Top 5 players by eliminations with MVP badge.' },
+  { name: 'After Match Score',    path: '/overlay/results',     size: '1920\u00D71080', position: 'Center',        desc: 'Two-column match results table, all teams ranked.' },
+  { name: 'MVP',                  path: '/overlay/mvp',         size: '1920\u00D71080', position: 'Center',        desc: 'Match MVP with detailed player stats.' },
+  { name: 'Point Table',          path: '/overlay/pointtable',  size: '1920\u00D71080', position: 'Center',        desc: 'PUBG Mobile standard point system display.' },
+  { name: 'Team List',            path: '/overlay/teamlist',    size: '1920\u00D71080', position: 'Center',        desc: 'Grid of all teams with logos. Pre-match display.' },
+  { name: 'Match Info',           path: '/overlay/matchinfo',   size: '1920\u00D71080', position: 'Center',        desc: 'Match start notification with stage, game, map.', params: '?stage=Groups&game=Game 1&map=Erangel' },
+  { name: 'Schedule',             path: '/overlay/schedule',    size: '1920\u00D71080', position: 'Bottom',        desc: 'Bottom bar with match schedule and status indicators.', params: '?matches=MATCH 1:ERANGEL:finished,MATCH 2:MIRAMAR:live,MATCH 3:SANHOK:upcoming' },
 ];
 
 export default function GalleryPage() {
   const [copied, setCopied] = useState<string | null>(null);
+  const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
 
-  const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-
-  function copyUrl(path: string, params?: string) {
-    const url = `${baseUrl}${path}${params || ''}`;
-    navigator.clipboard.writeText(url);
+  function copy(path: string, params?: string) {
+    navigator.clipboard.writeText(`${base}${path}${params || ''}`);
     setCopied(path);
-    setTimeout(() => setCopied(null), 2000);
+    setTimeout(() => setCopied(null), 1500);
   }
 
   return (
-    <div style={{ fontFamily: 'Inter, sans-serif', background: '#0e1621', minHeight: '100vh', color: '#fff' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '40px 24px' }}>
-        <h1 style={{ fontSize: 28, fontWeight: 900, marginBottom: 8 }}>OBS Overlay Widgets</h1>
-        <p style={{ color: '#8b8da6', fontSize: 14, marginBottom: 16 }}>
-          Add these as Browser Sources in OBS Studio. Set width/height to 1920x1080 with transparent background.
-        </p>
+    <div className="page">
+      <header className="topbar">
+        <div className="flex items-center gap-8">
+          <a href="/" className="topbar-brand">
+            <div className="topbar-logo">LS</div>
+            <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>Live Stat</span>
+          </a>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.15 }}><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" /></svg>
+          <span style={{ fontSize: 14, fontWeight: 700 }}>Overlay Gallery</span>
+        </div>
+        <div className="topbar-right">
+          <a href="/controller" className="btn" style={{ textDecoration: 'none' }}>Controller</a>
+        </div>
+      </header>
 
-        {/* Master overlay + Controller banner */}
-        <div style={{
-          display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24,
-        }}>
-          <div style={{
-            background: 'linear-gradient(135deg, #00ffc322, #0e1621)',
-            border: '1px solid #00ffc333', borderRadius: 14, padding: 20,
-          }}>
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#00ffc3', letterSpacing: '0.1em', marginBottom: 6 }}>RECOMMENDED</div>
-            <h3 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 4px', color: '#fff' }}>Master Overlay</h3>
-            <p style={{ fontSize: 12, color: '#8b8da6', margin: '0 0 12px' }}>
-              Single OBS source that composites ALL widgets. Toggle them from the Controller page.
-            </p>
-            <code style={{
-              display: 'block', fontSize: 11, background: 'rgba(0,0,0,0.4)',
-              border: '1px solid rgba(0,255,195,0.2)', borderRadius: 8, padding: '8px 12px',
-              color: '#00ffc3', fontFamily: 'monospace',
-            }}>
-              {baseUrl}/overlay/master
+      <div style={{ maxWidth: 1080, margin: '0 auto', padding: '24px' }}>
+        {/* Hero cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+          <div className="card" style={{ borderColor: 'rgba(0,255,195,0.15)' }}>
+            <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.1em' }}>RECOMMENDED</span>
+            <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>Master Overlay</div>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', margin: '4px 0 10px' }}>Single OBS source that composites all widgets. Toggle from Controller.</div>
+            <code className="mono" style={{ display: 'block', fontSize: 11, padding: '6px 10px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-base)', border: '1px solid rgba(0,255,195,0.15)', color: 'var(--accent)' }}>
+              {base}/overlay/master
             </code>
           </div>
-          <a
-            href="/controller"
-            style={{
-              background: '#1a2a3a', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 14, padding: 20, textDecoration: 'none',
-              display: 'flex', flexDirection: 'column', justifyContent: 'center',
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 800, color: '#ff4e4e', letterSpacing: '0.1em', marginBottom: 6 }}>OBSERVER TOOL</div>
-            <h3 style={{ fontSize: 16, fontWeight: 800, margin: '0 0 4px', color: '#fff' }}>Widget Controller</h3>
-            <p style={{ fontSize: 12, color: '#8b8da6', margin: 0 }}>
-              Toggle widgets with hotkeys (F1-F12) during broadcast. Quick presets for match phases.
-            </p>
+          <a href="/controller" className="nav-link" style={{ flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
+            <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--red)', letterSpacing: '0.1em' }}>OPERATOR</span>
+            <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>Widget Controller</div>
+            <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 4 }}>Toggle overlays with hotkeys (F1-F12) during broadcast.</div>
           </a>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 16 }}>
-          {WIDGETS.map((w) => (
-            <div
-              key={w.path}
-              style={{
-                background: '#213448',
-                border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 16,
-                padding: 20,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 12,
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div className="section-label">All Widgets</div>
+        <p style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: -6, marginBottom: 14 }}>
+          Add as Browser Sources in OBS \u00B7 1920\u00D71080 \u00B7 Transparent background
+        </p>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 10 }}>
+          {WIDGETS.map(w => (
+            <div key={w.path} className="card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="flex items-center" style={{ justifyContent: 'space-between' }}>
                 <div>
-                  <h3 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>{w.name}</h3>
-                  <span style={{ fontSize: 11, color: '#8b8da6' }}>{w.size} — {w.position}</span>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>{w.name}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{w.size} \u00B7 {w.position}</div>
                 </div>
-                <a
-                  href={w.path + (w.params || '')}
-                  target="_blank"
-                  rel="noopener"
-                  style={{
-                    fontSize: 11,
-                    color: '#00ffc3',
-                    textDecoration: 'none',
-                    border: '1px solid rgba(0,255,195,0.3)',
-                    padding: '4px 10px',
-                    borderRadius: 8,
-                  }}
-                >
-                  Preview
-                </a>
+                <a href={w.path + (w.params || '')} target="_blank" rel="noopener" className="btn" style={{ fontSize: 10, padding: '4px 8px' }}>Preview</a>
               </div>
-
-              <p style={{ fontSize: 12, color: '#8b8da6', margin: 0, lineHeight: 1.5 }}>{w.description}</p>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <code
-                  style={{
-                    flex: 1,
-                    fontSize: 11,
-                    background: 'rgba(0,0,0,0.3)',
-                    border: '1px solid rgba(255,255,255,0.05)',
-                    borderRadius: 8,
-                    padding: '6px 10px',
-                    color: '#00ffc3',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {baseUrl}{w.path}{w.params || ''}
+              <div style={{ fontSize: 11, color: 'var(--text-dim)', lineHeight: 1.5 }}>{w.desc}</div>
+              <div className="flex items-center gap-6">
+                <code className="mono" style={{ flex: 1, fontSize: 10, padding: '5px 8px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-base)', border: '1px solid var(--border)', color: 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {base}{w.path}{w.params || ''}
                 </code>
-                <button
-                  onClick={() => copyUrl(w.path, w.params)}
-                  style={{
-                    fontSize: 11,
-                    padding: '6px 12px',
-                    borderRadius: 8,
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    background: copied === w.path ? '#00ffc3' : 'transparent',
-                    color: copied === w.path ? '#000' : '#8b8da6',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {copied === w.path ? 'Copied!' : 'Copy URL'}
+                <button onClick={() => copy(w.path, w.params)} className={copied === w.path ? 'btn btn-accent' : 'btn'} style={{ fontSize: 10, padding: '4px 10px', whiteSpace: 'nowrap' }}>
+                  {copied === w.path ? 'Copied!' : 'Copy'}
                 </button>
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="flex items-center" style={{ justifyContent: 'space-between', marginTop: 28, paddingTop: 14, borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-faint)' }}>
+          <span>Live Stat Local Engine</span>
+          <div className="flex gap-10">
+            <a href="/" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Dashboard</a>
+            <a href="/controller" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Controller</a>
+          </div>
         </div>
       </div>
     </div>

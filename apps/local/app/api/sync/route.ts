@@ -3,55 +3,50 @@ import {
   startSync,
   stopSync,
   getSyncStatus,
-  getRole,
   subscribeStatus,
   type SyncConfig,
-  type SyncRole,
 } from '@/lib/realtimeSync';
+import { getRoster } from '@/lib/rosterStore';
 
 export const runtime = 'nodejs';
 
+// Store the sync code so the dashboard can show it
+let currentSyncCode: string | null = null;
+
+export function getSyncCode(): string | null {
+  return currentSyncCode;
+}
+
 /**
- * GET /api/sync — Get current sync status
- *
- * Optional: ?stream=1 for SSE
+ * GET /api/sync — Current sync status (or SSE with ?stream=1)
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const stream = searchParams.get('stream') === '1';
 
+  const status = { ...getSyncStatus(), syncCode: currentSyncCode };
+
   if (!stream) {
-    return NextResponse.json(getSyncStatus());
+    return NextResponse.json(status);
   }
 
-  // SSE stream for real-time status updates
   const encoder = new TextEncoder();
   const readable = new ReadableStream({
     start(controller) {
-      // Send initial status
-      const initial = JSON.stringify(getSyncStatus());
+      const initial = JSON.stringify({ ...getSyncStatus(), syncCode: currentSyncCode });
       controller.enqueue(encoder.encode(`data: ${initial}\n\n`));
 
-      // Subscribe to status changes
-      const unsub = subscribeStatus((status) => {
+      const unsub = subscribeStatus((s) => {
         try {
-          const data = JSON.stringify(status);
+          const data = JSON.stringify({ ...s, syncCode: currentSyncCode });
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        } catch {
-          // Stream closed
-        }
+        } catch { /* */ }
       });
 
-      // Ping every 10s
       const pingId = setInterval(() => {
-        try {
-          controller.enqueue(encoder.encode(`: ping\n\n`));
-        } catch {
-          clearInterval(pingId);
-        }
+        try { controller.enqueue(encoder.encode(`: ping\n\n`)); } catch { clearInterval(pingId); }
       }, 10000);
 
-      // Cleanup on close
       request.signal.addEventListener('abort', () => {
         unsub();
         clearInterval(pingId);
@@ -72,9 +67,17 @@ export async function GET(request: Request) {
 /**
  * POST /api/sync — Control sync mode
  *
- * Body:
- *   { action: "start", role: "leader"|"follower", matchId: "...", supabaseUrl: "...", supabaseAnonKey: "..." }
+ * Actions:
+ *   { action: "start-leader" }
+ *     — Uses roster's cloud_endpoint + api_key to register with cloud,
+ *       gets sync_code + supabase credentials, connects as leader.
+ *
+ *   { action: "join", code: "ABCDEF", cloudUrl: "https://..." }
+ *     — Calls cloud /api/local/join?code=ABCDEF to get credentials,
+ *       connects as follower.
+ *
  *   { action: "stop" }
+ *     — Disconnects.
  */
 export async function POST(request: Request) {
   let body: Record<string, unknown>;
@@ -86,45 +89,125 @@ export async function POST(request: Request) {
 
   const action = body.action as string;
 
+  // ── STOP ──────────────────────────────────────────────────────────────────────
   if (action === 'stop') {
     stopSync();
-    return NextResponse.json({ ok: true, status: getSyncStatus() });
+    currentSyncCode = null;
+    return NextResponse.json({ ok: true, status: { ...getSyncStatus(), syncCode: null } });
   }
 
-  if (action === 'start') {
-    const role = body.role as SyncRole;
-    if (!role || !['leader', 'follower'].includes(role)) {
-      return NextResponse.json({ ok: false, error: 'role must be "leader" or "follower"' }, { status: 400 });
-    }
-
-    const matchId = body.matchId as string;
-    if (!matchId?.trim()) {
-      return NextResponse.json({ ok: false, error: 'matchId is required' }, { status: 400 });
-    }
-
-    const supabaseUrl = body.supabaseUrl as string;
-    const supabaseAnonKey = body.supabaseAnonKey as string;
-
-    if (!supabaseUrl?.trim() || !supabaseAnonKey?.trim()) {
+  // ── START LEADER ──────────────────────────────────────────────────────────────
+  if (action === 'start-leader') {
+    const roster = getRoster();
+    if (!roster?.cloud_endpoint || !roster?.cloud_api_key) {
       return NextResponse.json({
         ok: false,
-        error: 'supabaseUrl and supabaseAnonKey are required',
+        error: 'Roster not loaded or missing cloud_endpoint/cloud_api_key. Load a roster first.',
       }, { status: 400 });
     }
 
-    const config: SyncConfig = {
-      supabaseUrl: supabaseUrl.trim(),
-      supabaseAnonKey: supabaseAnonKey.trim(),
-      matchId: matchId.trim(),
-      role,
-    };
+    // Call cloud to create sync session
+    const cloudUrl = roster.cloud_endpoint.replace(/\/api\/match-results\/?$/, '');
+    try {
+      const res = await fetch(`${cloudUrl}/api/local/connect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${roster.cloud_api_key}`,
+        },
+        body: JSON.stringify({ match_id: roster.match_id }),
+      });
 
-    startSync(config);
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        return NextResponse.json({
+          ok: false,
+          error: `Cloud rejected: ${err.error || res.statusText}`,
+        }, { status: 400 });
+      }
 
-    // Give the connection a moment to establish
-    await new Promise(r => setTimeout(r, 1500));
+      const data = await res.json();
 
-    return NextResponse.json({ ok: true, status: getSyncStatus() });
+      currentSyncCode = data.sync_code;
+
+      // Connect to Supabase Realtime as leader
+      const config: SyncConfig = {
+        supabaseUrl: data.supabase_url,
+        supabaseAnonKey: data.supabase_anon_key,
+        matchId: data.match_id,
+        role: 'leader',
+      };
+
+      startSync(config);
+
+      // Give connection a moment
+      await new Promise(r => setTimeout(r, 1500));
+
+      return NextResponse.json({
+        ok: true,
+        syncCode: data.sync_code,
+        tournament: data.tournament,
+        status: { ...getSyncStatus(), syncCode: data.sync_code },
+      });
+    } catch (err) {
+      return NextResponse.json({
+        ok: false,
+        error: `Failed to reach cloud: ${err instanceof Error ? err.message : 'Network error'}`,
+      }, { status: 502 });
+    }
+  }
+
+  // ── JOIN (FOLLOWER) ───────────────────────────────────────────────────────────
+  if (action === 'join') {
+    const code = (body.code as string)?.trim().toUpperCase();
+    const cloudUrl = (body.cloudUrl as string)?.trim().replace(/\/$/, '');
+
+    if (!code || code.length !== 6) {
+      return NextResponse.json({ ok: false, error: 'Sync code must be 6 characters' }, { status: 400 });
+    }
+
+    if (!cloudUrl) {
+      return NextResponse.json({ ok: false, error: 'Cloud URL is required' }, { status: 400 });
+    }
+
+    try {
+      const res = await fetch(`${cloudUrl}/api/local/join?code=${code}`);
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        return NextResponse.json({
+          ok: false,
+          error: err.error || `Cloud returned ${res.status}`,
+        }, { status: 400 });
+      }
+
+      const data = await res.json();
+
+      currentSyncCode = code;
+
+      const config: SyncConfig = {
+        supabaseUrl: data.supabase_url,
+        supabaseAnonKey: data.supabase_anon_key,
+        matchId: data.match_id,
+        role: 'follower',
+      };
+
+      startSync(config);
+
+      await new Promise(r => setTimeout(r, 1500));
+
+      return NextResponse.json({
+        ok: true,
+        syncCode: code,
+        tournament: data.tournament,
+        status: { ...getSyncStatus(), syncCode: code },
+      });
+    } catch (err) {
+      return NextResponse.json({
+        ok: false,
+        error: `Failed to reach cloud: ${err instanceof Error ? err.message : 'Network error'}`,
+      }, { status: 502 });
+    }
   }
 
   return NextResponse.json({ ok: false, error: `Unknown action: ${action}` }, { status: 400 });

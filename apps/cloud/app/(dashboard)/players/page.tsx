@@ -12,7 +12,7 @@ export default async function PlayersPage() {
   if (!profile?.org_id) return <SetupOrgPrompt />;
 
   const [{ data: teams }, { data: tournaments }] = await Promise.all([
-    supabase.from('teams').select('id, name, short_name, brand_color').eq('org_id', profile.org_id),
+    supabase.from('teams').select('id, name, short_name, brand_color, logo_url').eq('org_id', profile.org_id),
     supabase.from('tournaments').select('id, name').eq('org_id', profile.org_id).order('name'),
   ]);
 

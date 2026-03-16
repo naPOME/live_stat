@@ -31,6 +31,7 @@ type TeamRow = {
   name: string;
   short_name: string | null;
   brand_color: string;
+  logo_url: string | null;
 };
 
 type TournamentRow = { id: string; name: string };
@@ -69,7 +70,7 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
   }
 
   const teamMap = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
-  const rosterCols = '40px 1.5fr 1.5fr 1fr';
+  const rosterCols = '40px 1.5fr 1.5fr 1.2fr';
   const statsCols = '36px 1.2fr 1fr 70px 80px 60px 70px 80px 60px';
 
   return (
@@ -138,7 +139,14 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
                       <span className="text-[14px] font-medium text-[var(--text-primary)] truncate group-hover:text-white transition-colors">{player.display_name}</span>
                       <span className="text-[13px] font-mono text-[var(--text-muted)] truncate">{player.player_open_id}</span>
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}44` }} />
+                        {team?.logo_url ? (
+                          <img src={team.logo_url} alt="" className="w-5 h-5 rounded object-cover flex-shrink-0 border border-[var(--border)]" />
+                        ) : (
+                          <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-[8px] font-bold"
+                            style={{ background: color + '20', color }}>
+                            {(team?.short_name ?? team?.name ?? '?').substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
                         <span className="text-[13px] text-[var(--text-secondary)] truncate">{team?.name ?? 'Unknown'}</span>
                       </div>
                     </Link>
@@ -227,7 +235,14 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
                         <div className="text-[10px] font-mono text-[var(--text-muted)] truncate">{p.matches_played} match{p.matches_played !== 1 ? 'es' : ''}</div>
                       </div>
                       <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: color, boxShadow: `0 0 6px ${color}44` }} />
+                        {p.team?.logo_url ? (
+                          <img src={p.team.logo_url} alt="" className="w-5 h-5 rounded object-cover flex-shrink-0 border border-[var(--border)]" />
+                        ) : (
+                          <div className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0 text-[8px] font-bold"
+                            style={{ background: color + '20', color }}>
+                            {(p.team?.short_name ?? p.team?.name ?? '?').substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
                         <span className="text-[13px] text-[var(--text-secondary)] truncate">{p.team?.short_name ?? p.team?.name ?? '—'}</span>
                       </div>
                       <span className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{p.total_kills}</span>

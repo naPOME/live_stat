@@ -363,17 +363,39 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
     if (!stageName.trim()) return;
     const existingCount = stages.length;
     const hasActiveStage = stages.some((s) => s.status === 'active');
+    const name = stageName.trim();
+    const status = (hasActiveStage || existingCount > 0 ? 'pending' : 'active') as Stage['status'];
+
+    // Optimistic: add to local state immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimisticStage: StageWithDetails = {
+      id: tempId,
+      tournament_id: id,
+      name,
+      stage_order: existingCount + 1,
+      status,
+      auto_advance: false,
+      teams_expected: null,
+      map_rotation: null,
+      stage_type: 'group',
+      advancing_count: null,
+      invitational_count: 0,
+      match_count: null,
+      created_at: new Date().toISOString(),
+      matches: [],
+      groups: [],
+    };
+    setStages((prev) => [...prev, optimisticStage]);
+    setStageName('');
+    setAddingStage(false);
 
     await supabase.from('stages').insert({
       tournament_id: id,
-      name: stageName.trim(),
+      name,
       stage_order: existingCount + 1,
-      status: hasActiveStage || existingCount > 0 ? 'pending' : 'active',
+      status,
       stage_type: 'group',
     });
-
-    setStageName('');
-    setAddingStage(false);
     await refreshStages(true);
   }
 
@@ -382,8 +404,16 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       message: 'Delete this stage and all its matches?',
       onConfirm: async () => {
         setConfirmDialog(null);
-        await supabase.from('stages').delete().eq('id', stageId);
-        await refreshStages(true);
+        // Optimistic: remove from UI immediately
+        const prevStages = stages;
+        setStages((prev) => prev.filter((s) => s.id !== stageId));
+        const { error } = await supabase.from('stages').delete().eq('id', stageId);
+        if (error) {
+          setStages(prevStages);
+          showToast(error.message, 'error');
+        } else {
+          await refreshStages(true);
+        }
       },
     });
   }
@@ -407,16 +437,40 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
   async function addMatch(stageId: string, groupId?: string) {
     if (!matchName.trim()) return;
-    await supabase.from('matches').insert({
+    const name = matchName.trim();
+    const map = matchMap || null;
+
+    // Optimistic: add match to local state immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMatch: Match = {
+      id: tempId,
       stage_id: stageId,
       group_id: groupId ?? null,
-      name: matchName.trim(),
-      map_name: matchMap || null,
+      name,
+      map_name: map,
+      status: 'pending',
       point_system_id: pointSystem?.id ?? null,
-    });
+      scheduled_at: null,
+      created_at: new Date().toISOString(),
+    };
+    setStages((prev) => prev.map((s) => {
+      if (s.id !== stageId) return s;
+      if (groupId) {
+        return { ...s, groups: s.groups.map((g) => g.id === groupId ? { ...g, matches: [...g.matches, optimisticMatch] } : g) };
+      }
+      return { ...s, matches: [...s.matches, optimisticMatch] };
+    }));
     setMatchName('');
     setMatchMap('');
     setAddingMatchTo(null);
+
+    await supabase.from('matches').insert({
+      stage_id: stageId,
+      group_id: groupId ?? null,
+      name,
+      map_name: map,
+      point_system_id: pointSystem?.id ?? null,
+    });
     await refreshStages(true);
   }
 
@@ -612,8 +666,9 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   }
 
   async function rejectApplication(appId: string) {
+    // Optimistic: mark rejected immediately
+    setApplications((prev) => prev.map((a) => a.id === appId ? { ...a, status: 'rejected' as const } : a));
     await supabase.from('team_applications').update({ status: 'rejected' }).eq('id', appId);
-    await refreshApplications();
   }
 
   function copyRegistrationLink() {

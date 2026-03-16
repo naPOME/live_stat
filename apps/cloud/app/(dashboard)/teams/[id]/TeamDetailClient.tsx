@@ -36,18 +36,33 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
     if (!playerForm.display_name.trim() || !playerForm.player_open_id.trim()) return;
     setSaving(true);
 
-    const { data: created, error } = await supabase.from('players').insert({
+    // Optimistic: add placeholder immediately
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: Player = {
+      id: tempId,
       team_id: teamId,
       display_name: playerForm.display_name.trim(),
       player_open_id: playerForm.player_open_id.trim(),
+      photo_url: null,
+      created_at: new Date().toISOString(),
+    };
+    setPlayers((prev) => [...prev, optimistic].sort((a, b) => a.display_name.localeCompare(b.display_name)));
+    setPlayerForm({ display_name: '', player_open_id: '' });
+    setAddingPlayer(false);
+
+    const { data: created, error } = await supabase.from('players').insert({
+      team_id: teamId,
+      display_name: optimistic.display_name,
+      player_open_id: optimistic.player_open_id,
     }).select('id, team_id, display_name, player_open_id, photo_url, created_at').single();
 
     if (!error && created) {
-      setPlayers((prev) => [...prev, created].sort((a, b) => a.display_name.localeCompare(b.display_name)));
-      setPlayerForm({ display_name: '', player_open_id: '' });
-      setAddingPlayer(false);
+      // Replace temp with real
+      setPlayers((prev) => prev.map((p) => p.id === tempId ? created : p));
       showToast('Player added');
     } else {
+      // Rollback
+      setPlayers((prev) => prev.filter((p) => p.id !== tempId));
       showToast(error?.message ?? 'Failed to add player', 'error');
     }
 
@@ -101,6 +116,11 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
     if (!file) return;
     setLogoUploading(true);
 
+    // Optimistic: show local preview instantly
+    const prevUrl = team.logo_url;
+    const localPreview = URL.createObjectURL(file);
+    setTeam((t) => ({ ...t, logo_url: localPreview }));
+
     const ext = file.name.split('.').pop();
     const path = `teams/${teamId}/logo.${ext}`;
     const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
@@ -109,12 +129,15 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
       const { error: updateError } = await supabase.from('teams').update({ logo_url: publicUrl }).eq('id', teamId);
       if (!updateError) {
-        setTeam((t) => ({ ...t, logo_url: publicUrl }));
+        URL.revokeObjectURL(localPreview);
+        setTeam((t) => ({ ...t, logo_url: `${publicUrl}?t=${Date.now()}` }));
         showToast('Logo updated');
       } else {
+        setTeam((t) => ({ ...t, logo_url: prevUrl }));
         showToast(updateError.message, 'error');
       }
     } else {
+      setTeam((t) => ({ ...t, logo_url: prevUrl }));
       showToast(error.message, 'error');
     }
     setLogoUploading(false);
@@ -125,6 +148,11 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
     if (!file) return;
     setPlayerPhotoUploading(playerId);
 
+    // Optimistic: show local preview instantly
+    const prevPlayers = players;
+    const localPreview = URL.createObjectURL(file);
+    setPlayers((prev) => prev.map((p) => p.id === playerId ? { ...p, photo_url: localPreview } : p));
+
     const ext = file.name.split('.').pop();
     const path = `players/${playerId}/photo.${ext}`;
     const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
@@ -133,12 +161,15 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
       const { error: updateError } = await supabase.from('players').update({ photo_url: publicUrl }).eq('id', playerId);
       if (!updateError) {
-        setPlayers((prev) => prev.map((p) => p.id === playerId ? { ...p, photo_url: publicUrl } : p));
+        URL.revokeObjectURL(localPreview);
+        setPlayers((prev) => prev.map((p) => p.id === playerId ? { ...p, photo_url: `${publicUrl}?t=${Date.now()}` } : p));
         showToast('Photo updated');
       } else {
+        setPlayers(prevPlayers);
         showToast(updateError.message, 'error');
       }
     } else {
+      setPlayers(prevPlayers);
       showToast(error.message, 'error');
     }
     setPlayerPhotoUploading(null);

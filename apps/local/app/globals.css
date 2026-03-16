@@ -1,20 +1,327 @@
 @import "tailwindcss";
 
-/* Dashboard pages (non-overlay) base styles */
 :root {
-  --bg-primary: #0b1120;
-  --bg-secondary: #111827;
-  --bg-card: #1a2332;
-  --bg-card-hover: #1f2b3d;
-  --border: rgba(255, 255, 255, 0.06);
-  --border-accent: rgba(255, 255, 255, 0.1);
-  --text-primary: #f1f5f9;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --bg-base: #060a13;
+  --bg-raised: #0c1220;
+  --bg-surface: #111827;
+  --bg-hover: #161f30;
+  --border: rgba(255, 255, 255, 0.05);
+  --border-hi: rgba(255, 255, 255, 0.1);
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --text-faint: #475569;
   --accent: #00ffc3;
-  --accent-dim: rgba(0, 255, 195, 0.15);
-  --danger: #ff4e4e;
-  --danger-dim: rgba(255, 78, 78, 0.15);
-  --warning: #ffb800;
+  --red: #ff4e4e;
   --purple: #6d5efc;
+  --amber: #ffb800;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --mono: var(--font-geist-mono), ui-monospace, monospace;
+  --sans: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+/* ── Page shell ─────────────────────────────────── */
+.page {
+  font-family: var(--sans);
+  background: var(--bg-base);
+  min-height: 100vh;
+  color: var(--text);
+}
+
+/* ── Top bar ────────────────────────────────────── */
+.topbar {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+  gap: 12px;
+}
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  color: inherit;
+}
+.topbar-logo {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--accent), var(--purple));
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 900;
+  color: #000;
+}
+.topbar-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+.topbar-sub {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* ── Badges / pills ─────────────────────────────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  border: 1px solid transparent;
+}
+.pill-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* ── Cards ──────────────────────────────────────── */
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+.card:hover {
+  border-color: var(--border-hi);
+}
+
+/* ── Section labels ─────────────────────────────── */
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
+}
+
+/* ── Stat boxes ─────────────────────────────────── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.stat-box {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.stat-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 4px;
+}
+.stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 1;
+}
+.stat-sub {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+/* ── Buttons ────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--border-hi);
+  background: transparent;
+  color: var(--text-dim);
+  transition: background 80ms, border-color 80ms, opacity 80ms;
+}
+.btn:hover { background: var(--bg-hover); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn:disabled:hover { background: transparent; }
+.btn-accent {
+  background: var(--accent);
+  color: #000;
+  border-color: transparent;
+}
+.btn-accent:hover { opacity: 0.85; background: var(--accent); }
+.btn-red {
+  background: rgba(255,78,78,0.1);
+  color: var(--red);
+  border-color: rgba(255,78,78,0.2);
+}
+.btn-red:hover { background: rgba(255,78,78,0.18); }
+
+/* ── Inputs ─────────────────────────────────────── */
+.input {
+  background: var(--bg-base);
+  border: 1px solid var(--border-hi);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: var(--mono);
+  outline: none;
+  transition: border-color 100ms;
+  width: 100%;
+}
+.input:focus { border-color: rgba(0,255,195,0.3); }
+.input::placeholder { color: var(--text-faint); }
+
+/* ── Toggle switch ──────────────────────────────── */
+.toggle {
+  width: 30px; height: 16px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  position: relative;
+  transition: background 120ms;
+  flex-shrink: 0;
+}
+.toggle.on { background: var(--accent); }
+.toggle-knob {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.3);
+  position: absolute;
+  top: 2px; left: 2px;
+  transition: left 120ms, background 120ms;
+}
+.toggle.on .toggle-knob {
+  left: 16px;
+  background: #fff;
+}
+
+/* ── Widget card (controller) ───────────────────── */
+.widget-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  cursor: pointer;
+  transition: border-color 100ms, background 100ms;
+  position: relative;
+  user-select: none;
+}
+.widget-card:hover {
+  background: var(--bg-hover);
+}
+.widget-card.active {
+  border-color: var(--accent-border, rgba(0,255,195,0.25));
+  background: rgba(0,255,195,0.03);
+}
+.widget-card.active::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--group-color, var(--accent));
+}
+
+/* ── Preset button ──────────────────────────────── */
+.preset-btn {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 100ms;
+}
+.preset-btn:hover { border-color: var(--border-hi); background: var(--bg-hover); }
+.preset-btn.active {
+  border-color: rgba(0,255,195,0.3);
+  background: rgba(0,255,195,0.05);
+}
+
+/* ── Nav link ───────────────────────────────────── */
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: inherit;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  transition: all 100ms;
+}
+.nav-link:hover { border-color: var(--border-hi); background: var(--bg-hover); }
+
+/* ── Table ──────────────────────────────────────── */
+.table-header {
+  display: grid;
+  padding: 8px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--border);
+}
+.table-row {
+  display: grid;
+  padding: 8px 14px;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  transition: background 60ms;
+}
+.table-row:hover { background: var(--bg-hover); }
+
+/* ── Utility ────────────────────────────────────── */
+.mono { font-family: var(--mono); }
+.flex { display: flex; }
+.gap-6 { gap: 6px; }
+.gap-8 { gap: 8px; }
+.gap-10 { gap: 10px; }
+.items-center { align-items: center; }
+
+/* ── Animations ─────────────────────────────────── */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fade-in 200ms ease-out;
+}
+.pulse { animation: pulse-glow 1.5s infinite; }
+
+/* ── Kbd ────────────────────────────────────────── */
+kbd {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border-hi);
+  color: var(--text-dim);
 }

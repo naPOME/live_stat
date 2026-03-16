@@ -16,6 +16,7 @@ export async function GET() {
       name: t.name,
       short_name: t.short_name,
     })) ?? [],
+    has_cloud_config: Boolean(roster?.cloud_endpoint && roster?.cloud_api_key),
     error: getRosterError(),
   });
 }
@@ -57,6 +58,7 @@ export async function POST(request: Request) {
       name: t.name,
       short_name: t.short_name,
     })) ?? [],
+    has_cloud_config: Boolean(roster?.cloud_endpoint && roster?.cloud_api_key),
     error: getRosterError(),
   });
 }
