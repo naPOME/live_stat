@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
-import { getRoster, getRosterPathValue, reloadRoster, setRosterPathOverride, getRosterError } from '@/lib/rosterStore';
+import { getRoster, getRosterPathValue, reloadRoster, setRosterPathOverride, getRosterError, getRosterSource } from '@/lib/rosterStore';
 
 export async function GET() {
   const roster = getRoster();
   return NextResponse.json({
     roster_loaded: Boolean(roster),
     roster_path: getRosterPathValue(),
+    roster_source: getRosterSource(),
     team_count: roster?.teams?.length ?? 0,
     player_count: roster ? Object.keys(roster.player_index ?? {}).length : 0,
     tournament_id: roster?.tournament_id ?? null,
@@ -49,6 +50,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     roster_loaded: Boolean(roster),
     roster_path: getRosterPathValue(),
+    roster_source: getRosterSource(),
     team_count: roster?.teams?.length ?? 0,
     player_count: roster ? Object.keys(roster.player_index ?? {}).length : 0,
     tournament_id: roster?.tournament_id ?? null,

@@ -7,10 +7,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="absolute bottom-[-25%] right-[-10%] w-[500px] h-[500px] rounded-full opacity-[0.04] blur-[120px] animate-gradient"
         style={{ background: 'linear-gradient(135deg, var(--red), var(--purple), var(--red))', backgroundSize: '200% 200%', animationDelay: '3s' }} />
 
-      {/* Grid overlay */}
       <div className="absolute inset-0 auth-grid-overlay" />
 
-      {/* Diagonal accent line */}
+   
       <div className="absolute top-0 right-[30%] w-px h-[40%] opacity-[0.06] origin-top auth-accent-line" />
 
       <div className="relative z-10 w-full max-w-[420px] animate-scale-in">{children}</div>

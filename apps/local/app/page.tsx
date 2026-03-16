@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 interface RosterInfo {
   roster_loaded: boolean;
   roster_path?: string | null;
+  roster_source?: 'file' | 'cloud' | 'none' | null;
   team_count: number;
   player_count: number;
   tournament_id?: string | null;
@@ -12,6 +13,14 @@ interface RosterInfo {
   teams_preview?: { slot_number: number; name: string; short_name: string }[];
   has_cloud_config?: boolean;
   error?: string | null;
+}
+
+interface CloudStatus {
+  bound: boolean;
+  cloud_url?: string | null;
+  org?: { id: string; name: string } | null;
+  tournament?: { id: string; name: string } | null;
+  match_id?: string | null;
 }
 
 interface GameData {
@@ -49,9 +58,15 @@ export default function Dashboard() {
   const [roster, setRoster] = useState<RosterInfo | null>(null);
   const [game, setGame] = useState<GameData | null>(null);
   const [widgets, setWidgets] = useState<Record<string, boolean>>({});
-  const [rosterPath, setRosterPath] = useState('');
   const [rosterMsg, setRosterMsg] = useState('');
-  const [rosterLoading, setRosterLoading] = useState(false);
+  const [cloud, setCloud] = useState<CloudStatus | null>(null);
+  const [cloudUrl, setCloudUrl] = useState('');
+  const [deviceCode, setDeviceCode] = useState('');
+  const [deviceStatus, setDeviceStatus] = useState<'idle' | 'waiting' | 'approved' | 'expired'>('idle');
+  const [cloudBusy, setCloudBusy] = useState(false);
+  const [cloudErr, setCloudErr] = useState('');
+  const [tournaments, setTournaments] = useState<{ id: string; name: string; status: string }[]>([]);
+  const [selectedTournament, setSelectedTournament] = useState('');
 
   const [sync, setSync] = useState<SyncStatus>({ role: 'standalone', connected: false, matchId: null, peerCount: 0, lastSyncAt: null, error: null, syncCode: null });
   const [joinCode, setJoinCode] = useState('');
@@ -63,7 +78,14 @@ export default function Dashboard() {
   useEffect(() => {
     fetch('/api/roster').then(r => r.json()).then((d: RosterInfo) => {
       setRoster(d);
-      if (d?.roster_path) setRosterPath(d.roster_path);
+    }).catch(() => {});
+    fetch('/api/cloud').then(r => r.json()).then((d) => {
+      if (d?.ok) {
+        setCloud(d);
+        if (d.cloud_url) setCloudUrl(d.cloud_url);
+        if (d.tournament?.id) setSelectedTournament(d.tournament.id);
+        if (d.bound) refreshTournaments();
+      }
     }).catch(() => {});
   }, []);
 
@@ -88,22 +110,95 @@ export default function Dashboard() {
     return () => es.close();
   }, []);
 
+  useEffect(() => {
+    if (deviceStatus !== 'waiting' || !deviceCode || !cloudUrl.trim()) return;
+    const id = setInterval(() => { pollDeviceStatus(deviceCode); }, 3000);
+    return () => clearInterval(id);
+  }, [deviceStatus, deviceCode, cloudUrl]);
+
   // ── Actions ───────────────────────────────────────
-  const loadRoster = async () => {
-    setRosterLoading(true);
-    setRosterMsg('');
+  async function refreshTournaments() {
     try {
-      const res = await fetch('/api/roster', {
+      const res = await fetch('/api/cloud/tournaments');
+      const d = await res.json();
+      if (d.ok) {
+        setTournaments(d.tournaments ?? []);
+        if (!selectedTournament && d.tournaments?.length) {
+          setSelectedTournament(d.tournaments[0].id);
+        }
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function requestDeviceCode() {
+    setCloudBusy(true);
+    setCloudErr('');
+    try {
+      const res = await fetch('/api/cloud', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ roster_path: rosterPath || null }),
+        body: JSON.stringify({ action: 'device-code', cloud_url: cloudUrl }),
       });
       const d = await res.json();
-      setRoster(d);
-      setRosterMsg(d.roster_loaded ? 'Loaded' : 'Failed');
-    } catch { setRosterMsg('Error'); }
-    finally { setRosterLoading(false); setTimeout(() => setRosterMsg(''), 3000); }
-  };
+      if (!d.ok) {
+        setCloudErr(d.error || 'Failed to generate code');
+        return;
+      }
+      setDeviceCode(d.code || '');
+      setDeviceStatus('waiting');
+    } catch { setCloudErr('Network error'); }
+    finally {
+      setCloudBusy(false);
+    }
+  }
+
+  async function pollDeviceStatus(code: string) {
+    try {
+      const res = await fetch('/api/cloud', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'device-status', cloud_url: cloudUrl, code }),
+      });
+      const d = await res.json();
+      if (d.ok && d.approved) {
+        setDeviceStatus('approved');
+        setRosterMsg('Organization linked');
+        const statusRes = await fetch('/api/cloud');
+        const statusData = await statusRes.json();
+        if (statusData?.ok) setCloud(statusData);
+        refreshTournaments();
+      }
+    } catch { /* ignore */ }
+  }
+
+  async function selectTournament() {
+    if (!selectedTournament) return;
+    setCloudBusy(true);
+    setCloudErr('');
+    try {
+      const res = await fetch('/api/cloud', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'select-tournament', tournament_id: selectedTournament }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        setRosterMsg('Tournament linked');
+        const rosterRes = await fetch('/api/roster');
+        const rosterData = await rosterRes.json();
+        setRoster(rosterData);
+        const statusRes = await fetch('/api/cloud');
+        const statusData = await statusRes.json();
+        if (statusData?.ok) setCloud(statusData);
+      } else {
+        setCloudErr(d.error || 'Failed to link tournament');
+      }
+    } catch { setCloudErr('Network error'); }
+    finally {
+      setCloudBusy(false);
+      setTimeout(() => setRosterMsg(''), 3000);
+    }
+  }
 
   const startLeader = async () => {
     setSyncBusy(true); setSyncErr('');
@@ -219,7 +314,7 @@ export default function Dashboard() {
             <div className="section-label">Roster</div>
             <div className="card">
               <div className="flex items-center" style={{ justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 12, fontWeight: 700 }}>Mapping File</span>
+                <span style={{ fontSize: 12, fontWeight: 700 }}>Cloud Link</span>
                 <span className="pill" style={{
                   color: roster?.roster_loaded ? 'var(--accent)' : 'var(--red)',
                   background: roster?.roster_loaded ? 'rgba(0,255,195,0.1)' : 'rgba(255,78,78,0.1)',
@@ -229,16 +324,59 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              <div className="flex gap-6" style={{ marginBottom: 10 }}>
-                <input className="input" value={rosterPath} onChange={e => setRosterPath(e.target.value)} placeholder="C:\path\to\roster_mapping.json" />
-                <button className="btn btn-accent" onClick={loadRoster} disabled={rosterLoading} style={{ whiteSpace: 'nowrap' }}>
-                  {rosterLoading ? 'Loading\u2026' : 'Load'}
-                </button>
+              <div style={{ display: 'grid', gap: 10, marginBottom: 10 }}>
+                <div className="section-label" style={{ marginBottom: 4 }}>Organization</div>
+                <div className="flex gap-6">
+                  <input className="input" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="Cloud URL (https://...)" style={{ flex: 1 }} />
+                  <button className="btn btn-accent" onClick={requestDeviceCode} disabled={cloudBusy || !cloudUrl.trim()} style={{ whiteSpace: 'nowrap' }}>
+                    {cloudBusy ? 'Generating\u2026' : 'Get Device Code'}
+                  </button>
+                </div>
+
+                {deviceCode && (
+                  <div className="flex items-center gap-8" style={{ marginTop: 6 }}>
+                    <div className="mono" style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.15em', color: 'var(--accent)' }}>
+                      {deviceCode}
+                    </div>
+                    <button className="btn" onClick={() => pollDeviceStatus(deviceCode)} disabled={cloudBusy || !cloudUrl.trim()} style={{ whiteSpace: 'nowrap' }}>
+                      Check Approval
+                    </button>
+                    <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>
+                      {deviceStatus === 'waiting' ? 'Waiting for approval' : deviceStatus === 'approved' ? 'Approved' : ''}
+                    </span>
+                  </div>
+                )}
+
+                <div className="section-label" style={{ marginBottom: 4 }}>Tournament</div>
+                <div className="flex gap-6">
+                  <select className="input" value={selectedTournament} onChange={e => setSelectedTournament(e.target.value)} style={{ flex: 1 }}>
+                    {(tournaments.length ? tournaments : [{ id: '', name: 'No tournaments available', status: '' }]).map(t => (
+                      <option key={t.id || 'none'} value={t.id}>{t.name || 'No tournaments available'}</option>
+                    ))}
+                  </select>
+                  <button className="btn" onClick={refreshTournaments} disabled={cloudBusy || !cloud?.bound} style={{ whiteSpace: 'nowrap' }}>
+                    Refresh
+                  </button>
+                  <button className="btn btn-accent" onClick={selectTournament} disabled={cloudBusy || !cloud?.bound || !selectedTournament} style={{ whiteSpace: 'nowrap' }}>
+                    {cloudBusy ? 'Linking\u2026' : 'Link Tournament'}
+                  </button>
+                </div>
               </div>
 
               {rosterMsg && (
-                <div style={{ fontSize: 11, padding: '6px 10px', borderRadius: 'var(--radius-sm)', marginBottom: 10, background: rosterMsg === 'Loaded' ? 'rgba(0,255,195,0.1)' : 'rgba(255,78,78,0.1)', color: rosterMsg === 'Loaded' ? 'var(--accent)' : 'var(--red)' }}>
-                  {rosterMsg === 'Loaded' ? 'Roster loaded successfully' : 'Failed to load roster'}
+                <div style={{ fontSize: 11, padding: '6px 10px', borderRadius: 'var(--radius-sm)', marginBottom: 10, background: 'rgba(0,255,195,0.1)', color: 'var(--accent)' }}>
+                  {rosterMsg}
+                </div>
+              )}
+
+              {cloudErr && <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 8 }}>{cloudErr}</div>}
+
+              {cloud?.bound && (
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 8 }}>
+                  Org: <strong style={{ color: 'var(--text-primary)' }}>{cloud.org?.name || 'Linked'}</strong>
+                  {cloud.tournament?.name && (
+                    <span> - Tournament: <strong style={{ color: 'var(--text-primary)' }}>{cloud.tournament.name}</strong></span>
+                  )}
                 </div>
               )}
 
@@ -284,7 +422,7 @@ export default function Dashboard() {
                   <button className="btn" onClick={startLeader} disabled={syncBusy || !roster?.has_cloud_config} style={{
                     width: '100%', borderColor: 'rgba(255,78,78,0.2)', color: roster?.has_cloud_config ? 'var(--red)' : 'var(--text-faint)',
                   }}>
-                    {syncBusy ? 'Connecting\u2026' : !roster?.has_cloud_config ? 'Load roster with cloud config' : 'Start as Leader'}
+                    {syncBusy ? 'Connecting\u2026' : !roster?.has_cloud_config ? 'Link tournament to enable' : 'Start as Leader'}
                   </button>
                 </div>
                 {/* Follower */}

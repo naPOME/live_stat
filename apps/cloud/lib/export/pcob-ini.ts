@@ -11,21 +11,14 @@ type ExportTeam = {
   players: Array<{ player_open_id: string; display_name: string }>;
 };
 
-/**
- * Generate PCOB-compatible TeamLogoAndColor.ini content.
- *
- * Format required by PUBG Mobile PC Observer:
- *   [/Script/ShadowTrackerExtra.FCustomTeamLogoAndColor]
- *   EnableTeamLogoAndColor=1
- *   TeamLogoAndColor=(TeamNo=1,TeamName=AAA,TeamLogoPath=c:/logo/001.png,...)
- */
+
 export function generatePcobIni(teams: ExportTeam[]): string {
   const lines: string[] = [
     '[/Script/ShadowTrackerExtra.FCustomTeamLogoAndColor]',
     'EnableTeamLogoAndColor=1',
   ];
 
-  // Build a map of slot → team for quick lookup
+
   const slotMap = new Map<number, ExportTeam>();
   for (const t of teams) {
     slotMap.set(t.slot_number, t);

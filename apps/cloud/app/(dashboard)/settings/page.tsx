@@ -139,6 +139,10 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [pairCode, setPairCode] = useState('');
+  const [pairName, setPairName] = useState('');
+  const [pairMsg, setPairMsg] = useState('');
+  const [pairing, setPairing] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -224,6 +228,32 @@ export default function SettingsPage() {
     );
   }
 
+  async function approveDevice() {
+    if (!pairCode.trim()) return;
+    setPairing(true);
+    setPairMsg('');
+    try {
+      const res = await fetch('/api/device-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: pairCode.trim().toUpperCase(), device_name: pairName.trim() || null }),
+      });
+      const d = await res.json();
+      if (d.ok) {
+        setPairMsg('Device approved');
+        setPairCode('');
+        setPairName('');
+      } else {
+        setPairMsg(d.error || 'Approval failed');
+      }
+    } catch {
+      setPairMsg('Network error');
+    } finally {
+      setPairing(false);
+      setTimeout(() => setPairMsg(''), 4000);
+    }
+  }
+
   const tabs: { id: SettingsTab; label: string }[] = [
     { id: 'branding', label: 'Logo & Branding' },
     { id: 'theme', label: 'Overlay Theme' },
@@ -293,6 +323,58 @@ export default function SettingsPage() {
                   className="input-premium"
                 />
               </div>
+
+              {org?.api_key && (
+                <div className="max-w-md mt-6">
+                  <label className="label">Organization API Key</label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="text"
+                      readOnly
+                      value={org.api_key}
+                      className="input-premium font-mono"
+                    />
+                    <button
+                      type="button"
+                      className="btn-ghost"
+                      onClick={() => navigator.clipboard.writeText(org.api_key)}
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <div className="text-[11px] text-[var(--text-secondary)] mt-2">
+                    Use this key to link local production PCs at the organization level.
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="surface p-6">
+              <div className="mb-6 pb-4 border-b border-[var(--border)]">
+                <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-1">Pair Device</h2>
+                <div className="text-[13px] text-[var(--text-secondary)]">Approve a local device using its 6-digit code</div>
+              </div>
+
+              <div className="flex items-center gap-4 max-w-md">
+                <input
+                  type="text"
+                  value={pairCode}
+                  onChange={(e) => setPairCode(e.target.value.toUpperCase().slice(0, 6))}
+                  className="input-premium font-mono tracking-[0.2em] text-center"
+                  placeholder="CODE"
+                />
+                <input
+                  type="text"
+                  value={pairName}
+                  onChange={(e) => setPairName(e.target.value)}
+                  className="input-premium"
+                  placeholder="Device name (optional)"
+                />
+                <button type="button" className="btn" onClick={approveDevice} disabled={pairing || pairCode.length !== 6}>
+                  {pairing ? 'Approving…' : 'Approve'}
+                </button>
+              </div>
+              {pairMsg && <div className="text-[11px] text-[var(--text-secondary)] mt-3">{pairMsg}</div>}
             </div>
 
             {/* Sponsor Logos */}

@@ -1,6 +1,7 @@
 export type Organization = {
   id: string;
   name: string;
+  api_key?: string;
   logo_url: string | null;
   brand_color: string;
   accent_color: string;

@@ -60,16 +60,21 @@ export interface RosterMapping {
 
 // ─── Module State ──────────────────────────────────────────────────────────────
 
+export type RosterSource = 'file' | 'cloud' | 'none';
+
 let roster: RosterMapping | null = null;
 let rosterPathOverride: string | null = null;
 let watchedPath: string | null = null;
 let lastRosterError: string | null = null;
+let rosterSource: RosterSource = 'none';
+let fileMode = true;
 
 function getRosterPath(): string | null {
   return rosterPathOverride ?? process.env.ROSTER_MAPPING_PATH ?? null;
 }
 
 function load(): void {
+  if (!fileMode) return;
   const filePath = getRosterPath();
   if (!filePath) return;
 
@@ -78,6 +83,7 @@ function load(): void {
     roster = JSON.parse(raw) as RosterMapping;
     setRoster(roster);
     lastRosterError = null;
+    rosterSource = 'file';
     console.log('[RosterStore] Loaded roster:', filePath);
   } catch (err) {
     lastRosterError = err instanceof Error ? err.message : String(err);
@@ -86,6 +92,7 @@ function load(): void {
 }
 
 function watch(filePath?: string | null): void {
+  if (!fileMode) return;
   const nextPath = filePath ?? getRosterPath();
   if (!nextPath) return;
   if (watchedPath === nextPath) return;
@@ -110,12 +117,17 @@ export function getRoster(): RosterMapping | null {
   return roster;
 }
 
+export function getRosterSource(): RosterSource {
+  return rosterSource;
+}
+
 export function getRosterPathValue(): string | null {
+  if (!fileMode) return null;
   return getRosterPath();
 }
 
 export function reloadRoster(): RosterMapping | null {
-  load();
+  if (fileMode) load();
   return roster;
 }
 
@@ -124,10 +136,26 @@ export function getRosterError(): string | null {
 }
 
 export function setRosterPathOverride(nextPath: string | null): string | null {
+  fileMode = true;
   rosterPathOverride = nextPath?.trim() || null;
   load();
   watch(rosterPathOverride);
+  if (!roster) {
+    rosterSource = 'none';
+  }
   return rosterPathOverride;
+}
+
+export function setRosterFromCloud(next: RosterMapping | null): void {
+  fileMode = false;
+  if (watchedPath) {
+    fs.unwatchFile(watchedPath);
+    watchedPath = null;
+  }
+  roster = next;
+  setRoster(next);
+  lastRosterError = null;
+  rosterSource = next ? 'cloud' : 'none';
 }
 
 export function getPointSystem(): PointSystem {

@@ -6,6 +6,7 @@ create extension if not exists "pgcrypto";
 create table organizations (
   id              uuid primary key default gen_random_uuid(),
   name            text not null,
+  api_key         uuid not null default gen_random_uuid(),
   logo_url        text,
   brand_color     text not null default '#00ffc3',
   accent_color    text not null default '#00ffc3',
@@ -223,6 +224,26 @@ create table team_applications (
   created_at    timestamptz not null default now()
 );
 
+create table org_devices (
+  id uuid primary key default gen_random_uuid(),
+  org_id uuid not null references organizations(id) on delete cascade,
+  name text,
+  device_token uuid not null default gen_random_uuid(),
+  revoked boolean not null default false,
+  created_at timestamptz not null default now(),
+  last_seen timestamptz
+);
+
+create table device_pairings (
+  code text primary key,
+  org_id uuid references organizations(id) on delete cascade,
+  device_token uuid,
+  device_name text,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  approved_at timestamptz
+);
+
 -- ─── Indexes ───────────────────────────────────────────────────────────────
 create index if not exists idx_tournaments_org_id on tournaments(org_id);
 create index if not exists idx_stages_tournament_id on stages(tournament_id);
@@ -231,6 +252,10 @@ create index if not exists idx_stage_groups_stage_id on stage_groups(stage_id);
 create index if not exists idx_group_teams_group_id on group_teams(group_id);
 create index if not exists idx_tournament_teams_tournament_id on tournament_teams(tournament_id);
 create index if not exists idx_teams_org_id on teams(org_id);
+create unique index if not exists idx_organizations_api_key on organizations(api_key);
+create unique index if not exists idx_org_devices_token on org_devices(device_token);
+create index if not exists idx_org_devices_org_id on org_devices(org_id);
+create index if not exists idx_device_pairings_org_id on device_pairings(org_id);
 create index if not exists idx_players_team_id on players(team_id);
 create index if not exists idx_players_player_open_id on players(player_open_id);
 create index if not exists idx_match_slots_match_id on match_slots(match_id);
