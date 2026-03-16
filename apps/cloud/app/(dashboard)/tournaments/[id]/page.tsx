@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { MatchResultFlag, MatchDispute, Stage, Match, PointSystem, TeamApplication, TournamentTemplate, Team, StageGroup } from '@/lib/types';
+import { MAP_NAMES, DEFAULT_FINALS_ROTATION, generateRotation, GAME_MAPS, type GameMap } from '@/lib/config/maps';
+import { STAGE_PRESETS, STAGE_PRESET_MAP } from '@/lib/config/tournament';
 
 type GroupWithTeams = StageGroup & { teams: Team[]; matches: Match[] };
 type StageWithDetails = Stage & { matches: Match[]; groups: GroupWithTeams[] };
@@ -21,23 +23,6 @@ type StandingEntry = {
   team: { id: string; name: string; short_name: string | null; logo_url: string | null; brand_color: string } | null;
 };
 type StageStandings = { id: string; name: string; stage_order: number; matchCount: number; standings: StandingEntry[] };
-
-const MAPS = ['Erangel', 'Miramar', 'Vikendi', 'Sanhok', 'Rondo', 'Deston', 'Nusa', 'Taego'];
-const STAGE_PRESETS: Record<string, { name: string; type: Stage['stage_type'] }[]> = {
-  groups_semis_finals: [
-    { name: 'Groups', type: 'group' },
-    { name: 'Semi-Finals', type: 'group' },
-    { name: 'Grand Finals', type: 'finals' },
-  ],
-  groups_finals: [
-    { name: 'Groups', type: 'group' },
-    { name: 'Grand Finals', type: 'finals' },
-  ],
-  swiss_playoffs: [
-    { name: 'Swiss', type: 'group' },
-    { name: 'Playoffs', type: 'finals' },
-  ],
-};
 
 export default function TournamentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -84,7 +69,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
   const [linkingTeams, setLinkingTeams] = useState(false);
 
   // Stage creation
-  const [stagePreset, setStagePreset] = useState<'groups_semis_finals' | 'groups_finals' | 'swiss_playoffs' | 'custom'>('groups_semis_finals');
+  const [stagePreset, setStagePreset] = useState<string>('groups_semis_finals');
   const [customStageNames, setCustomStageNames] = useState('');
   const [matchesPerStageInput, setMatchesPerStageInput] = useState('6,4,6');
   const [addingStage, setAddingStage] = useState(false);
@@ -288,7 +273,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
         .filter(Boolean)
         .map((name) => ({ name, type: 'group' as const }));
     } else {
-      stageConfigs = STAGE_PRESETS[stagePreset] ?? [];
+      stageConfigs = STAGE_PRESET_MAP[stagePreset]?.stages ?? [];
     }
 
     if (stageConfigs.length === 0) { showToast('Please provide at least one stage name.'); return; }
@@ -344,7 +329,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       if (cfg.type !== 'finals') return [];
       const perStage = matchCounts[i] ?? 0;
       if (perStage <= 0) return [];
-      const rotation = ['Erangel', 'Erangel', 'Erangel', 'Rondo', 'Miramar', 'Miramar'];
+      const rotation = DEFAULT_FINALS_ROTATION;
       return Array.from({ length: perStage }).map((_, idx) => ({
         stage_id: created.id,
         name: `Match ${idx + 1}`,
@@ -489,7 +474,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
 
   async function generateFinalsRotation(stage: StageWithDetails, sets: number) {
     if (sets <= 0) return;
-    const rotation = ['Erangel', 'Erangel', 'Erangel', 'Rondo', 'Miramar', 'Miramar'];
+    const rotation = DEFAULT_FINALS_ROTATION;
     const startIndex = stage.matches.length;
     const count = rotation.length * sets;
 
@@ -1056,12 +1041,12 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
               <div className="flex flex-wrap items-center gap-4">
                 <select
                   value={stagePreset}
-                  onChange={(e) => setStagePreset(e.target.value as typeof stagePreset)}
+                  onChange={(e) => setStagePreset(e.target.value)}
                   className="input-premium py-2.5 w-auto"
                 >
-                  <option value="groups_semis_finals">Groups &rarr; Semi-Finals &rarr; Grand Finals</option>
-                  <option value="groups_finals">Groups &rarr; Grand Finals</option>
-                  <option value="swiss_playoffs">Swiss &rarr; Playoffs</option>
+                  {STAGE_PRESETS.map((p) => (
+                    <option key={p.id} value={p.id}>{p.label}</option>
+                  ))}
                   <option value="custom">Custom (comma-separated)</option>
                 </select>
                 {stagePreset === 'custom' && (
@@ -1097,12 +1082,12 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
               <span className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] mr-2">Pipeline Builder</span>
               <select
                 value={stagePreset}
-                onChange={(e) => setStagePreset(e.target.value as typeof stagePreset)}
+                onChange={(e) => setStagePreset(e.target.value)}
                 className="input-premium w-auto text-sm"
               >
-                <option value="groups_semis_finals">Groups &rarr; Semis &rarr; Finals</option>
-                <option value="groups_finals">Groups &rarr; Finals</option>
-                <option value="swiss_playoffs">Swiss &rarr; Playoffs</option>
+                {STAGE_PRESETS.map((p) => (
+                  <option key={p.id} value={p.id}>{p.label}</option>
+                ))}
                 <option value="custom">Custom</option>
               </select>
               {stagePreset === 'custom' && (
@@ -1356,7 +1341,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                                   className="input-premium py-0.5 px-1.5 text-[10px]"
                                                 >
                                                   <option value="">No map</option>
-                                                  {MAPS.map((m) => <option key={m} value={m}>{m}</option>)}
+                                                  {MAP_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
                                                 </select>
                                                 <span className={`text-[9px] font-display font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
                                                   match.status === 'finished' ? 'bg-[var(--accent)]/10 text-[var(--accent)] border-[var(--accent)]/30'
@@ -1391,7 +1376,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                           <select value={matchMap} onChange={(e) => setMatchMap(e.target.value)}
                                             className="input-premium py-1 px-2 text-xs">
                                             <option value="">Map</option>
-                                            {MAPS.map((m) => <option key={m} value={m}>{m}</option>)}
+                                            {MAP_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
                                           </select>
                                           <button onClick={() => addMatch(stage.id, group.id)}
                                             className="btn-primary py-1 px-3 text-[10px]">Add</button>
@@ -1496,6 +1481,76 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                         );
                       })()}
 
+                      {/* ─── Map Pool ─── */}
+                      <div className="border-b border-white/5">
+                        <div className="flex items-center justify-between px-5 py-2.5 bg-black/10 border-b border-white/5">
+                          <span className="text-xs font-semibold text-[#8b8da6] uppercase tracking-wider">Map Pool</span>
+                          <button
+                            onClick={async () => {
+                              const pool = (stage.map_rotation as string[] | null) ?? [];
+                              const competitive = GAME_MAPS.filter(m => m.competitive).map(m => m.name);
+                              const allEnabled = competitive.every(n => pool.includes(n));
+                              const next = allEnabled ? [] : competitive;
+                              setStages(prev => prev.map(s => s.id === stage.id ? { ...s, map_rotation: next } : s));
+                              await supabase.from('stages').update({ map_rotation: next }).eq('id', stage.id);
+                            }}
+                            className="text-[10px] text-[#00ffc3] hover:text-[#8b7ffe] font-semibold transition-colors uppercase tracking-wider"
+                          >
+                            {((stage.map_rotation as string[] | null) ?? []).length === GAME_MAPS.filter(m => m.competitive).length ? 'Clear All' : 'Select All'}
+                          </button>
+                        </div>
+                        <div className="px-5 py-3 flex flex-wrap gap-2">
+                          {GAME_MAPS.map((gm) => {
+                            const pool = (stage.map_rotation as string[] | null) ?? [];
+                            const enabled = pool.includes(gm.name);
+                            return (
+                              <button
+                                key={gm.id}
+                                onClick={async () => {
+                                  const next = enabled ? pool.filter(n => n !== gm.name) : [...pool, gm.name];
+                                  setStages(prev => prev.map(s => s.id === stage.id ? { ...s, map_rotation: next } : s));
+                                  await supabase.from('stages').update({ map_rotation: next }).eq('id', stage.id);
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                                  enabled
+                                    ? 'border-transparent text-black'
+                                    : 'border-white/10 text-[#8b8da6] hover:border-white/20 hover:text-white bg-transparent'
+                                }`}
+                                style={enabled ? { background: gm.color } : undefined}
+                              >
+                                {gm.name}
+                                {gm.size && <span className="ml-1 opacity-60 text-[9px]">{gm.size}</span>}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {stage.stage_type === 'finals' && ((stage.map_rotation as string[] | null) ?? []).length > 0 && (
+                          <div className="px-5 pb-3 flex items-center gap-2">
+                            <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Generate Random Rotation</span>
+                            {[6, 12, 18].map(n => (
+                              <button key={n}
+                                onClick={async () => {
+                                  const pool = GAME_MAPS.filter(m => ((stage.map_rotation as string[] | null) ?? []).includes(m.name));
+                                  const rotation = generateRotation(n, pool);
+                                  const startIndex = stage.matches.length;
+                                  const rows = rotation.map((mapName, idx) => ({
+                                    stage_id: stage.id,
+                                    name: `Match ${startIndex + idx + 1}`,
+                                    map_name: mapName,
+                                    point_system_id: pointSystem?.id ?? null,
+                                  }));
+                                  await supabase.from('matches').insert(rows);
+                                  await refreshStages(true);
+                                }}
+                                className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors"
+                              >
+                                +{n}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       {/* ─── Matches list (finals only) ─── */}
                       {stage.stage_type === 'finals' && (
                         <div>
@@ -1503,7 +1558,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                             <span className="text-xs font-semibold text-[#8b8da6] uppercase tracking-wider">Matches</span>
                             <div className="flex items-center gap-2">
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Rotation set</span>
+                                <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Default set</span>
                                 <button
                                   onClick={() => generateFinalsRotation(stage, 1)}
                                   className="text-xs text-[#00ffc3] hover:text-[#8b7ffe] font-medium transition-colors"
@@ -1547,7 +1602,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                     className="bg-[#0e1621] border border-white/10 rounded px-2 py-1 text-xs text-[#8b8da6] hover:text-white cursor-pointer focus:outline-none focus:border-[#00ffc3]/60 [&>option]:bg-[#0e1621] [&>option]:text-white"
                                   >
                                     <option value="">No map</option>
-                                    {MAPS.map((m) => <option key={m} value={m}>{m}</option>)}
+                                    {MAP_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
                                   </select>
                                   <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                                     match.status === 'finished' ? 'bg-[#00ffc3]/10 text-[#00ffc3]'
@@ -1589,7 +1644,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                               <select value={matchMap} onChange={(e) => setMatchMap(e.target.value)}
                                 className="bg-[#0e1621] border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#00ffc3]/60 [&>option]:bg-[#0e1621] [&>option]:text-white">
                                 <option value="">Map (optional)</option>
-                                {MAPS.map((m) => <option key={m} value={m}>{m}</option>)}
+                                {MAP_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
                               </select>
                               <button onClick={() => addMatch(stage.id)}
                                 className="bg-[#00ffc3]/15 hover:bg-[#00ffc3]/25 text-[#00ffc3] text-sm font-semibold px-3 py-2 rounded-lg transition-colors">
