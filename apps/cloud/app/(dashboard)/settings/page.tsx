@@ -331,13 +331,13 @@ export default function SettingsPage() {
                     <input
                       type="text"
                       readOnly
-                      value={org.api_key}
+                      value={org.api_key ?? ''}
                       className="input-premium font-mono"
                     />
                     <button
                       type="button"
                       className="btn-ghost"
-                      onClick={() => navigator.clipboard.writeText(org.api_key)}
+                      onClick={() => { if (org.api_key) navigator.clipboard.writeText(org.api_key); }}
                     >
                       Copy
                     </button>
