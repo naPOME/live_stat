@@ -254,7 +254,7 @@ export default function Dashboard() {
             ].map(s => (
               <div key={s.n} style={{
                 padding: '12px 14px', borderRadius: 'var(--radius-sm)',
-                background: s.done ? 'rgba(0,255,195,0.04)' : 'rgba(255,255,255,0.02)',
+                background: s.done ? 'rgba(96,165,250,0.04)' : 'rgba(255,255,255,0.02)',
                 border: `1px solid ${s.done ? 'rgba(0,255,195,0.12)' : 'var(--border)'}`,
               }}>
                 <div className="flex items-center gap-6" style={{ marginBottom: 4 }}>
@@ -519,7 +519,7 @@ export default function Dashboard() {
             )}
 
             {/* Cloud sync indicator */}
-            <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(0,255,195,0.04)', border: '1px solid rgba(0,255,195,0.08)', fontSize: 11, color: 'var(--text-dim)' }}>
+            <div style={{ marginTop: 12, padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(96,165,250,0.04)', border: '1px solid rgba(0,255,195,0.08)', fontSize: 11, color: 'var(--text-dim)' }}>
               Results auto-synced to cloud
             </div>
           </div>

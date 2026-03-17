@@ -1,96 +1,18 @@
 import type { RosterMapping } from './rosterStore';
+import type {
+  PlayerState, TeamState, KillEvent, GamePhase,
+  CircleInfo, MatchTimestamps, PostMatchWeaponDetail,
+} from '@shared/types';
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+// Re-export shared types so existing imports from '@/lib/gameStore' still work
+export type { PlayerState, TeamState, KillEvent, GamePhase, CircleInfo, MatchTimestamps, PostMatchWeaponDetail };
 
-export interface PlayerState {
-  openId: string;
-  uId: string;
-  playerName: string;
-  teamSlot: number;
-  teamName: string;
-  health: number;
-  healthMax: number;
-  liveState: number; // 0=alive, 5=dead
-  killNum: number;
-  killNumBeforeDie: number;
-  damage: number;
-  inDamage: number;
-  heal: number;
-  headShotNum: number;
-  assists: number;
-  knockouts: number;
-  rescueTimes: number;
-  survivalTime: number;
-  marchDistance: number;
-  driveDistance: number;
-  rank: number;        // game-provided placement (0=not placed yet)
-  bHasDied: boolean;
-  displayName?: string;
-  registeredTeamId?: string;
-}
-
-export interface TeamState {
-  slot: number;
-  inGameName: string;
-  killNum: number;
-  liveMemberNum: number;
-  rank: number;
-  registeredTeamId?: string;
-  displayName?: string;
-  shortName?: string;
-  brandColor?: string;
-  logoPath?: string;
-  logoPath64?: string;
-}
-
-export interface KillEvent {
-  id: string;
-  causerName: string;
-  victimName: string;
-  causerTeamSlot: number;
-  victimTeamSlot: number;
-  causerTeamColor?: string;
-  victimTeamColor?: string;
-  gameTime: string;
-  distance: number;
-  timestamp: number;
-}
-
-export type GamePhase = 'lobby' | 'ingame' | 'finished';
-
-export interface CircleInfo {
-  gameTime: number;
-  circleStatus: number;
-  circleIndex: number;
-  counter: number;
-  maxTime: number;
-}
-
-export interface MatchTimestamps {
-  gameStartTime: number;
-  fightingStartTime: number;
-  finishedStartTime: number;
-}
-
-export interface PostMatchWeaponDetail {
-  playerId: string;
-  weapons: Array<{
-    avatarId: number;
-    totalDamage: number;
-    killCount: number;
-    headShootCount: number;
-    bodyShootCount: number;
-    limbsShootCount: number;
-    uniqueHitCount: number;
-    totalUseTime: number;
-  }>;
-}
+// ─── Local-only types ────────────────────────────────────────────────────────
 
 export interface GameState {
   gameId: string;
   players: Map<string, PlayerState>;
   uidToOpenId: Map<string, string>;
-  /** Reverse map: openId → uId (for kill lookups etc.) */
   openIdToUid: Map<string, string>;
   teams: Map<number, TeamState>;
   kills: KillEvent[];
@@ -263,6 +185,7 @@ export function handleTotalMessage(payload: {
 export function handleKillInfo(payload: {
   CauserName: string; VictimName: string;
   CauserUID: string; VictimUID: string;
+  ItemID?: string;
   CurGameTime: string; Distance: number;
 }): void {
   const causerOpenId = state.uidToOpenId.get(payload.CauserUID) ?? payload.CauserUID;
@@ -278,6 +201,7 @@ export function handleKillInfo(payload: {
     victimTeamSlot: victimPlayer?.teamSlot ?? 0,
     causerTeamColor: causerPlayer ? state.teams.get(causerPlayer.teamSlot)?.brandColor : undefined,
     victimTeamColor: victimPlayer ? state.teams.get(victimPlayer.teamSlot)?.brandColor : undefined,
+    weaponId: payload.ItemID,
     gameTime: payload.CurGameTime,
     distance: payload.Distance,
     timestamp: Date.now(),
@@ -323,15 +247,10 @@ export function handlePostMatchWeapons(playerId: string, weapons: PostMatchWeapo
 
 function computeRanks(): void {
   // Use the game-provided rank from player data when available.
-  // The game sets rank on eliminated players (rank > 0 means placed).
-  // For teams still alive, rank = 0 (not placed yet).
-
-  // First: collect max player rank per team (game-assigned placement)
   const gameRankByTeam = new Map<number, number>();
   for (const p of state.players.values()) {
     if (p.rank > 0) {
       const current = gameRankByTeam.get(p.teamSlot) ?? 0;
-      // Use the player's rank (all players in a team get the same rank from the game)
       if (current === 0 || p.rank < current) {
         gameRankByTeam.set(p.teamSlot, p.rank);
       }
@@ -344,14 +263,13 @@ function computeRanks(): void {
     if (t) t.rank = rank;
   }
 
-  // For alive teams (no game rank yet), compute live ranking by liveMemberNum desc → killNum desc
+  // For alive teams (no game rank yet), compute live ranking
   const aliveTeams = Array.from(state.teams.values()).filter(t => gameRankByTeam.get(t.slot) == null);
   aliveTeams.sort((a, b) =>
     b.liveMemberNum !== a.liveMemberNum
       ? b.liveMemberNum - a.liveMemberNum
       : b.killNum - a.killNum
   );
-  // Alive teams get temporary rank starting from 1 (they haven't placed yet)
   aliveTeams.forEach((t, i) => {
     const s = state.teams.get(t.slot);
     if (s) s.rank = i + 1;
@@ -382,10 +300,6 @@ export function snapshot(): GameSnapshot {
   };
 }
 
-/**
- * Hydrate local state from a remote snapshot (used by Followers).
- * Replaces the entire game state and notifies all subscribers.
- */
 export function hydrateFromSnapshot(snap: GameSnapshot): void {
   state.gameId = snap.gameId;
   state.phase = snap.phase;
@@ -408,24 +322,16 @@ export function hydrateFromSnapshot(snap: GameSnapshot): void {
   }
 
   state.kills = snap.kills;
-
   notify('state', snapshot());
 }
 
-/**
- * Ingest a single kill event from remote (used by Followers).
- */
 export function ingestRemoteKill(ev: KillEvent): void {
-  // Avoid duplicates
   if (state.kills.some(k => k.id === ev.id)) return;
   state.kills.push(ev);
   if (state.kills.length > 20) state.kills = state.kills.slice(-20);
   notify('killfeed', ev);
 }
 
-/**
- * Ingest a remote playercard update (used by Followers).
- */
 export function ingestRemotePlayercard(data: { uid: string; openId: string; player: PlayerState | undefined; team: TeamState | undefined }): void {
   state.observingUid = data.uid;
   notify('playercard', data);

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 
-import type { LeaderboardPlayer, LeaderboardResponse, LeaderboardTeam } from '@/lib/types';
+import type { LeaderboardPlayer, LeaderboardResponse, LeaderboardTeam } from '@shared/types';
 
 type TeamCard = {
   teamName: string;

@@ -2,22 +2,27 @@ import { NextResponse } from 'next/server';
 import { getState, getPhase } from '@/lib/gameStore';
 import { getRoster } from '@/lib/rosterStore';
 import { calcTeamPoints } from '@/lib/scorer';
+import { ok, err } from '@shared/api';
+import type { LeaderboardResponse, LeaderboardTeam } from '@shared/types';
 
 export const runtime = 'nodejs';
 
 // Initialise rosterStore (file watch) on first request
 import '@/lib/rosterStore';
 
+/**
+ * GET /api/live — Leaderboard endpoint (legacy, kept for overlay compat).
+ * For dashboards, prefer /api/state which includes everything in one call.
+ */
 export async function GET() {
   try {
     const gs = getState();
     const phase = getPhase();
     const teams = Array.from(gs.teams.values());
 
-    let leaderboard = teams.map(t => {
+    let leaderboard: LeaderboardTeam[] = teams.map(t => {
       const kills = t.killNum;
       const alive = t.liveMemberNum > 0;
-      // Use game-assigned rank for eliminated teams. Alive teams have no placement yet.
       const placement = !alive && t.rank > 0 ? t.rank : undefined;
       const placementPoints = calcTeamPoints(placement, 0);
       const totalPoints = calcTeamPoints(placement, kills);
@@ -83,7 +88,7 @@ export async function GET() {
           }
         : undefined;
 
-    return NextResponse.json({
+    const data: LeaderboardResponse = {
       matchId: gs.gameId || 'default',
       serverTime: Date.now(),
       phase,
@@ -94,11 +99,18 @@ export async function GET() {
         displayName: p.displayName,
         teamName: p.teamName,
         kills: p.killNum,
+        damage: p.damage,
+        headshots: p.headShotNum,
+        assists: p.assists,
+        knockouts: p.knockouts,
+        survived: !p.bHasDied,
       })),
-    });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('[Live API]', err);
-    return NextResponse.json({ ok: false, error: message }, { status: 500 });
+    };
+
+    return NextResponse.json(ok(data));
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Unknown error';
+    console.error('[Live API]', e);
+    return NextResponse.json(err(message), { status: 500 });
   }
 }
