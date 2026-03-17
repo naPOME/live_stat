@@ -14,7 +14,7 @@ export default function MatchInfoOverlay() {
   });
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(setTheme).catch(() => {});
+    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
 
     // Read query params: ?stage=Groups&game=Game 1&map=Erangel
     const params = new URLSearchParams(window.location.search);

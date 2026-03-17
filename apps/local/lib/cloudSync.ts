@@ -33,7 +33,12 @@ interface MatchResult {
   player_results?: PlayerResult[];
 }
 
-async function tryPost(url: string, apiKey: string, body: MatchResult, attempt: number): Promise<void> {
+interface SyncResult {
+  ok: boolean;
+  error?: string;
+}
+
+async function tryPost(url: string, apiKey: string, body: MatchResult, attempt: number): Promise<SyncResult> {
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -46,6 +51,7 @@ async function tryPost(url: string, apiKey: string, body: MatchResult, attempt: 
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     console.log('[CloudSync] Match result synced successfully.');
+    return { ok: true };
   } catch (err) {
     if (attempt < 3) {
       console.warn(`[CloudSync] Attempt ${attempt} failed, retrying in 5s...`);
@@ -53,20 +59,22 @@ async function tryPost(url: string, apiKey: string, body: MatchResult, attempt: 
       return tryPost(url, apiKey, body, attempt + 1);
     }
 
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
     console.error('[CloudSync] All retries failed. Logging to failed_syncs.json');
     const logPath = path.join(process.cwd(), 'failed_syncs.json');
     let existing: MatchResult[] = [];
     try { existing = JSON.parse(fs.readFileSync(logPath, 'utf-8')); } catch { /* empty */ }
     existing.push(body);
     fs.writeFileSync(logPath, JSON.stringify(existing, null, 2));
+    return { ok: false, error: errorMsg };
   }
 }
 
-export async function pushMatchResult(): Promise<void> {
+export async function pushMatchResult(): Promise<SyncResult> {
   const roster = getRoster();
   if (!roster?.cloud_endpoint || !roster?.cloud_api_key) {
     console.log('[CloudSync] No cloud_endpoint configured, skipping sync.');
-    return;
+    return { ok: true }; // Not an error — just no config
   }
 
   const gs = getState();
@@ -115,5 +123,5 @@ export async function pushMatchResult(): Promise<void> {
     player_results: playerResults,
   };
 
-  await tryPost(roster.cloud_endpoint, roster.cloud_api_key, body, 1);
+  return tryPost(roster.cloud_endpoint, roster.cloud_api_key, body, 1);
 }

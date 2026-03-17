@@ -28,11 +28,12 @@ export default function LeaderboardOverlay() {
   const [flashing, setFlashing] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(setTheme).catch(() => {});
+    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
   }, []);
 
   useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((d: LiveData) => {
+    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => {
+      const d = (raw?.data ?? raw) as LiveData;
       // Detect point changes for flash animation
       const newFlash: Record<string, boolean> = {};
       for (const t of d.teams) {

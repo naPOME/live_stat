@@ -71,6 +71,12 @@ export function subscribe(ch: Channel, fn: Subscriber): () => void {
 export function getState(): GameState { return state; }
 export function getPhase(): GamePhase { return state.phase; }
 
+/** Reset state for next match. Called by lifecycle "Ready for Next Match" action. */
+export function resetForNextMatch(): void {
+  state = createEmpty('');
+  notify('state', snapshot());
+}
+
 // ─── Handlers ──────────────────────────────────────────────────────────────────
 
 export function handleTotalMessage(payload: {

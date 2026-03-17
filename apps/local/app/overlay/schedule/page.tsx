@@ -25,7 +25,7 @@ export default function ScheduleOverlay() {
   const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(setTheme).catch(() => {});
+    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
 
     // Read matches from query params: ?matches=Game 1:Erangel:finished,Game 2:Miramar:live,Game 3:Sanhok:upcoming
     const params = new URLSearchParams(window.location.search);

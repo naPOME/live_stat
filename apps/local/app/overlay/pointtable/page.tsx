@@ -15,7 +15,8 @@ export default function PointTableOverlay() {
   useEffect(() => {
     fetch('/api/theme')
       .then(r => r.json())
-      .then(data => {
+      .then(raw => {
+        const data = raw?.data ?? raw;
         setTheme(data);
         if (data.point_system) setPointSystem(data.point_system);
         setTimeout(() => setShow(true), 200);

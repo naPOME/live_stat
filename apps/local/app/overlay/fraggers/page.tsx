@@ -26,11 +26,11 @@ export default function FraggersOverlay() {
   const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(setTheme).catch(() => {});
+    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
   }, []);
 
   useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((d: LiveData) => {
+    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => { const d = (raw?.data ?? raw) as LiveData;
       const teamMap = new Map<string, Team>();
       for (const t of d.teams) teamMap.set(t.teamName, t);
 

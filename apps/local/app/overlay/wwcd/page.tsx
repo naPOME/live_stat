@@ -35,11 +35,11 @@ export default function WwcdOverlay() {
   const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(setTheme).catch(() => {});
+    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
   }, []);
 
   useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((d: LiveData) => {
+    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => { const d = (raw?.data ?? raw) as LiveData;
       if (d.phase === 'finished' && d.teams.length > 0) {
         // Winner is first team (already sorted by points)
         const winTeam = d.teams[0];

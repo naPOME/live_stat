@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { handlePostMatchWeapons } from '@/lib/gameStore';
+import { recordTelemetry } from '@/lib/lifecycleStore';
 
 export const runtime = 'nodejs';
 
 // Post-match per-player weapon accuracy data
 export async function POST(req: NextRequest) {
   try {
+    recordTelemetry();
     const body = await req.json();
     const weapons = (body.WeaponResult ?? []).map((w: Record<string, unknown>) => ({
       avatarId: Number(w.AvatarID ?? 0),

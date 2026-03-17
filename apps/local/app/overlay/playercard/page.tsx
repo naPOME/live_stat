@@ -30,7 +30,8 @@ export default function PlayerCardPage() {
     const es = new EventSource('/api/playercard');
 
     es.onmessage = (e) => {
-      const data = JSON.parse(e.data) as PlayerCardData;
+      const raw = JSON.parse(e.data);
+      const data = (raw?.data ?? raw) as PlayerCardData;
       if (!data.player) return;
 
       setFlash(true);

@@ -26,11 +26,11 @@ export default function ResultsOverlay() {
   const [show, setShow] = useState(false);
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(setTheme).catch(() => {});
+    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
   }, []);
 
   useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((d: LiveData) => {
+    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => { const d = (raw?.data ?? raw) as LiveData;
       if (d.teams.length > 0) {
         setTeams(d.teams);
         if (!show) setTimeout(() => setShow(true), 300);

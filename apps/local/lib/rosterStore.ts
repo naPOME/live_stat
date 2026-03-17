@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { setRoster } from './gameStore';
+import { onRosterLoaded, onRosterCleared } from './lifecycleStore';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ function load(): void {
     setRoster(roster);
     lastRosterError = null;
     rosterSource = 'file';
+    onRosterLoaded();
     console.log('[RosterStore] Loaded roster:', filePath);
   } catch (err) {
     lastRosterError = err instanceof Error ? err.message : String(err);
@@ -156,6 +158,7 @@ export function setRosterFromCloud(next: RosterMapping | null): void {
   setRoster(next);
   lastRosterError = null;
   rosterSource = next ? 'cloud' : 'none';
+  if (next) onRosterLoaded(); else onRosterCleared();
 }
 
 export function getPointSystem(): PointSystem {

@@ -34,7 +34,7 @@ export default function EliminationOverlay() {
   const showing = useRef(false);
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(setTheme).catch(() => {});
+    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
   }, []);
 
   function showNext() {
@@ -55,7 +55,8 @@ export default function EliminationOverlay() {
   }
 
   useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((d: { teams: Team[] }) => {
+    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => {
+      const d = (raw?.data ?? raw) as { teams: Team[] };
       const teams = d.teams;
       for (let i = 0; i < teams.length; i++) {
         const t = teams[i];
