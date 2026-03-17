@@ -50,10 +50,21 @@ export function upsertFromPayload(payload: PcobIngestPayload): { matchId: string
       teamId: tIdx + 1,
       teamName: t.name,
       killNum: p.kills ?? 0,
+      killNumBeforeDie: 0,
       health: 100,
       healthMax: 100,
       liveState: 0,
       damage: 0,
+      inDamage: 0,
+      heal: 0,
+      headShotNum: 0,
+      assists: 0,
+      knockouts: 0,
+      rescueTimes: 0,
+      survivalTime: 0,
+      marchDistance: 0,
+      driveDistance: 0,
+      rank: 0,
       bHasDied: false,
     })),
   );
@@ -62,7 +73,9 @@ export function upsertFromPayload(payload: PcobIngestPayload): { matchId: string
     GameID: matchId,
     TeamInfoList,
     TotalPlayerList,
+    GameStartTime: '0',
     FightingStartTime: '',
+    FinishedStartTime: '0',
   });
 
   return { matchId, changed: true };
@@ -108,7 +121,7 @@ export function ingestMockTick(matchId: string): void {
       killNum: et === t ? et.killNum + 1 : et.killNum,
       liveMemberNum: et.liveMemberNum,
     }));
-    handleTotalMessage({ GameID: matchId, TeamInfoList, TotalPlayerList: [], FightingStartTime: '' });
+    handleTotalMessage({ GameID: matchId, TeamInfoList, TotalPlayerList: [], GameStartTime: '0', FightingStartTime: '', FinishedStartTime: '0' });
     return;
   }
 
@@ -120,5 +133,5 @@ export function ingestMockTick(matchId: string): void {
     liveMemberNum: Math.floor(Math.random() * 4) + 1,
   }));
 
-  handleTotalMessage({ GameID: matchId, TeamInfoList: demoTeams, TotalPlayerList: [], FightingStartTime: '' });
+  handleTotalMessage({ GameID: matchId, TeamInfoList: demoTeams, TotalPlayerList: [], GameStartTime: '0', FightingStartTime: '', FinishedStartTime: '0' });
 }

@@ -12,7 +12,18 @@ export interface PlayerState {
   healthMax: number;
   liveState: number; // 0=alive, 5=dead
   killNum: number;
+  killNumBeforeDie: number;
   damage: number;
+  inDamage: number;
+  heal: number;
+  headShotNum: number;
+  assists: number;
+  knockouts: number;
+  rescueTimes: number;
+  survivalTime: number;
+  marchDistance: number;
+  driveDistance: number;
+  rank: number;        // game-provided placement (0=not placed yet)
   bHasDied: boolean;
   displayName?: string;
   registeredTeamId?: string;
@@ -47,14 +58,47 @@ export interface KillEvent {
 
 export type GamePhase = 'lobby' | 'ingame' | 'finished';
 
+export interface CircleInfo {
+  gameTime: number;
+  circleStatus: number;
+  circleIndex: number;
+  counter: number;
+  maxTime: number;
+}
+
+export interface MatchTimestamps {
+  gameStartTime: number;
+  fightingStartTime: number;
+  finishedStartTime: number;
+}
+
+export interface PostMatchWeaponDetail {
+  playerId: string;
+  weapons: Array<{
+    avatarId: number;
+    totalDamage: number;
+    killCount: number;
+    headShootCount: number;
+    bodyShootCount: number;
+    limbsShootCount: number;
+    uniqueHitCount: number;
+    totalUseTime: number;
+  }>;
+}
+
 export interface GameState {
   gameId: string;
   players: Map<string, PlayerState>;
   uidToOpenId: Map<string, string>;
+  /** Reverse map: openId → uId (for kill lookups etc.) */
+  openIdToUid: Map<string, string>;
   teams: Map<number, TeamState>;
   kills: KillEvent[];
   observingUid: string | null;
   phase: GamePhase;
+  circle: CircleInfo | null;
+  timestamps: MatchTimestamps;
+  postMatchWeapons: PostMatchWeaponDetail[];
 }
 
 type Subscriber = (data: unknown) => void;
@@ -76,10 +120,14 @@ function createEmpty(gameId: string): GameState {
     gameId,
     players: new Map(),
     uidToOpenId: new Map(),
+    openIdToUid: new Map(),
     teams: new Map(),
     kills: [],
     observingUid: null,
     phase: 'lobby',
+    circle: null,
+    timestamps: { gameStartTime: 0, fightingStartTime: 0, finishedStartTime: 0 },
+    postMatchWeapons: [],
   };
 }
 
@@ -108,26 +156,58 @@ export function handleTotalMessage(payload: {
   TotalPlayerList: Array<{
     uId: number; playerName: string; playerOpenId: string;
     teamId: number; teamName: string; health: number; healthMax: number;
-    liveState: number; killNum: number; damage: number; bHasDied: boolean;
+    liveState: number; killNum: number; killNumBeforeDie: number;
+    damage: number; inDamage: number; heal: number; headShotNum: number;
+    assists: number; knockouts: number; rescueTimes: number;
+    survivalTime: number; marchDistance: number; driveDistance: number;
+    rank: number; bHasDied: boolean;
   }>;
   TeamInfoList: Array<{
     teamId: number; teamName: string; killNum: number; liveMemberNum: number;
   }>;
+  GameStartTime: string;
   FightingStartTime: string;
+  FinishedStartTime: string;
 }): void {
   if (payload.GameID !== state.gameId) {
     state = createEmpty(payload.GameID);
   }
 
+  // Update timestamps
+  const gst = parseInt(payload.GameStartTime, 10) || 0;
+  const fst = parseInt(payload.FightingStartTime, 10) || 0;
+  const fnst = parseInt(payload.FinishedStartTime, 10) || 0;
+  if (gst) state.timestamps.gameStartTime = gst;
+  if (fst) state.timestamps.fightingStartTime = fst;
+  if (fnst) state.timestamps.finishedStartTime = fnst;
+
   for (const p of payload.TotalPlayerList) {
     const uid = String(p.uId);
-    state.uidToOpenId.set(uid, p.playerOpenId);
+    const openId = p.playerOpenId || '';
 
-    const rp = rosterRef?.player_index[p.playerOpenId];
-    const rt = rp ? rosterRef?.teams.find(t => t.team_id === rp.team_id) : null;
+    // Track uid↔openId mapping (only when openId is non-empty)
+    if (openId) {
+      state.uidToOpenId.set(uid, openId);
+      state.openIdToUid.set(openId, uid);
+    }
 
-    state.players.set(p.playerOpenId, {
-      openId: p.playerOpenId,
+    // Use openId as key if available, otherwise fall back to uid.
+    // This handles the first totalmessage where playerOpenId is empty.
+    const key = openId || uid;
+
+    // If we previously stored this player under uid (because openId was empty),
+    // migrate to openId key now that we have it.
+    if (openId && state.players.has(uid) && !state.players.has(openId)) {
+      const old = state.players.get(uid)!;
+      state.players.delete(uid);
+      old.openId = openId;
+      state.players.set(openId, old);
+    }
+
+    const rp = openId ? rosterRef?.player_index[openId] : undefined;
+
+    state.players.set(key, {
+      openId: openId || uid,
       uId: uid,
       playerName: p.playerName,
       teamSlot: p.teamId,
@@ -136,7 +216,18 @@ export function handleTotalMessage(payload: {
       healthMax: p.healthMax,
       liveState: p.liveState,
       killNum: p.killNum,
+      killNumBeforeDie: p.killNumBeforeDie ?? 0,
       damage: p.damage,
+      inDamage: p.inDamage ?? 0,
+      heal: p.heal ?? 0,
+      headShotNum: p.headShotNum ?? 0,
+      assists: p.assists ?? 0,
+      knockouts: p.knockouts ?? 0,
+      rescueTimes: p.rescueTimes ?? 0,
+      survivalTime: p.survivalTime ?? 0,
+      marchDistance: p.marchDistance ?? 0,
+      driveDistance: p.driveDistance ?? 0,
+      rank: p.rank ?? 0,
       bHasDied: p.bHasDied,
       displayName: rp?.display_name,
       registeredTeamId: rp?.team_id,
@@ -145,13 +236,12 @@ export function handleTotalMessage(payload: {
 
   for (const t of payload.TeamInfoList) {
     const rt = rosterRef?.teams.find(r => r.slot_number === t.teamId) ?? null;
-    const existing = state.teams.get(t.teamId);
     state.teams.set(t.teamId, {
       slot: t.teamId,
       inGameName: t.teamName,
       killNum: t.killNum,
       liveMemberNum: t.liveMemberNum,
-      rank: existing?.rank ?? 99,
+      rank: 0, // will be computed below
       registeredTeamId: rt?.team_id,
       displayName: rt?.name,
       shortName: rt?.short_name,
@@ -211,15 +301,58 @@ export function handleMatchPhase(phase: 'InGame' | 'Finished'): void {
   notify('state', snapshot());
 }
 
+export function handleCircleInfo(payload: {
+  GameTime: string; CircleStatus: string; CircleIndex: string;
+  Counter: string; MaxTime: string;
+}): void {
+  state.circle = {
+    gameTime: parseInt(payload.GameTime, 10) || 0,
+    circleStatus: parseInt(payload.CircleStatus, 10) || 0,
+    circleIndex: parseInt(payload.CircleIndex, 10) || 0,
+    counter: parseInt(payload.Counter, 10) || 0,
+    maxTime: parseInt(payload.MaxTime, 10) || 0,
+  };
+  notify('state', snapshot());
+}
+
+export function handlePostMatchWeapons(playerId: string, weapons: PostMatchWeaponDetail['weapons']): void {
+  state.postMatchWeapons.push({ playerId, weapons });
+}
+
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
 function computeRanks(): void {
-  const sorted = Array.from(state.teams.values()).sort((a, b) =>
+  // Use the game-provided rank from player data when available.
+  // The game sets rank on eliminated players (rank > 0 means placed).
+  // For teams still alive, rank = 0 (not placed yet).
+
+  // First: collect max player rank per team (game-assigned placement)
+  const gameRankByTeam = new Map<number, number>();
+  for (const p of state.players.values()) {
+    if (p.rank > 0) {
+      const current = gameRankByTeam.get(p.teamSlot) ?? 0;
+      // Use the player's rank (all players in a team get the same rank from the game)
+      if (current === 0 || p.rank < current) {
+        gameRankByTeam.set(p.teamSlot, p.rank);
+      }
+    }
+  }
+
+  // Apply game ranks to eliminated teams
+  for (const [slot, rank] of gameRankByTeam) {
+    const t = state.teams.get(slot);
+    if (t) t.rank = rank;
+  }
+
+  // For alive teams (no game rank yet), compute live ranking by liveMemberNum desc → killNum desc
+  const aliveTeams = Array.from(state.teams.values()).filter(t => gameRankByTeam.get(t.slot) == null);
+  aliveTeams.sort((a, b) =>
     b.liveMemberNum !== a.liveMemberNum
       ? b.liveMemberNum - a.liveMemberNum
       : b.killNum - a.killNum
   );
-  sorted.forEach((t, i) => {
+  // Alive teams get temporary rank starting from 1 (they haven't placed yet)
+  aliveTeams.forEach((t, i) => {
     const s = state.teams.get(t.slot);
     if (s) s.rank = i + 1;
   });
@@ -232,6 +365,8 @@ export interface GameSnapshot {
   players: PlayerState[];
   kills: KillEvent[];
   observingUid: string | null;
+  circle: CircleInfo | null;
+  timestamps: MatchTimestamps;
 }
 
 export function snapshot(): GameSnapshot {
@@ -242,6 +377,8 @@ export function snapshot(): GameSnapshot {
     players: Array.from(state.players.values()),
     kills: state.kills.slice(-8),
     observingUid: state.observingUid,
+    circle: state.circle,
+    timestamps: state.timestamps,
   };
 }
 
@@ -253,6 +390,8 @@ export function hydrateFromSnapshot(snap: GameSnapshot): void {
   state.gameId = snap.gameId;
   state.phase = snap.phase;
   state.observingUid = snap.observingUid;
+  state.circle = snap.circle ?? null;
+  if (snap.timestamps) state.timestamps = snap.timestamps;
 
   state.teams.clear();
   for (const t of snap.teams) {
@@ -261,9 +400,11 @@ export function hydrateFromSnapshot(snap: GameSnapshot): void {
 
   state.players.clear();
   state.uidToOpenId.clear();
+  state.openIdToUid.clear();
   for (const p of snap.players) {
     state.players.set(p.openId, p);
     state.uidToOpenId.set(p.uId, p.openId);
+    state.openIdToUid.set(p.openId, p.uId);
   }
 
   state.kills = snap.kills;

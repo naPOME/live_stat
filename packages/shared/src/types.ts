@@ -1,3 +1,9 @@
+// ─── API Response Envelope ────────────────────────────────────────────────────
+
+export type ApiOk<T> = { ok: true; data: T; ts: number };
+export type ApiErr = { ok: false; error: string; ts: number };
+export type ApiResponse<T> = ApiOk<T> | ApiErr;
+
 // ─── Game Client Payload Types ────────────────────────────────────────────────
 
 export interface GamePlayer {
@@ -14,6 +20,15 @@ export interface GamePlayer {
   isFiring: boolean;
   rank: number;
   damage: number;
+  inDamage: number;
+  heal: number;
+  headShotNum: number;
+  assists: number;
+  knockouts: number;
+  rescueTimes: number;
+  survivalTime: number;
+  marchDistance: number;
+  driveDistance: number;
   AIKillNum: number;
   bHasDied: boolean;
 }
@@ -69,6 +84,7 @@ export interface CircleInfoPayload {
   CircleStatus: string;
   CircleIndex: string;
   Counter: string;
+  MaxTime: string;
 }
 
 export interface TdmResultPayload {
@@ -76,7 +92,7 @@ export interface TdmResultPayload {
   Team2: { TeamID: number; [key: string]: unknown };
 }
 
-// ─── Game Store State ──────────────────────────────────────────────────────────
+// ─── Game Store State (runtime) ──────────────────────────────────────────────
 
 export interface PlayerState {
   openId: string;
@@ -88,7 +104,18 @@ export interface PlayerState {
   healthMax: number;
   liveState: number;
   killNum: number;
+  killNumBeforeDie: number;
   damage: number;
+  inDamage: number;
+  heal: number;
+  headShotNum: number;
+  assists: number;
+  knockouts: number;
+  rescueTimes: number;
+  survivalTime: number;
+  marchDistance: number;
+  driveDistance: number;
+  rank: number; // game-provided placement (0 = not placed yet)
   bHasDied: boolean;
   // enriched from roster
   displayName?: string;
@@ -100,7 +127,7 @@ export interface TeamState {
   inGameName: string;
   killNum: number;
   liveMemberNum: number;
-  rank?: number;
+  rank: number;
   // enriched from roster
   registeredTeamId?: string;
   displayName?: string;
@@ -114,14 +141,12 @@ export interface KillEvent {
   id: string;
   causerName: string;
   victimName: string;
-  causerOpenId: string;
-  victimOpenId: string;
   causerTeamSlot: number;
   victimTeamSlot: number;
   causerTeamColor?: string;
   victimTeamColor?: string;
-  weaponId: string;
-  weaponName: string;
+  weaponId?: string;
+  weaponName?: string;
   gameTime: string;
   distance: number;
   timestamp: number;
@@ -136,7 +161,41 @@ export interface WeaponState {
 
 export type GamePhase = 'lobby' | 'ingame' | 'finished';
 
-// ─── Roster Mapping Types ──────────────────────────────────────────────────────
+// ─── Circle / Zone ───────────────────────────────────────────────────────────
+
+export interface CircleInfo {
+  gameTime: number;
+  circleStatus: number; // 0=waiting, 1=shrinking, 2=paused, 3=pre-game
+  circleIndex: number;
+  counter: number;
+  maxTime: number;
+}
+
+// ─── Match Timestamps ────────────────────────────────────────────────────────
+
+export interface MatchTimestamps {
+  gameStartTime: number;
+  fightingStartTime: number;
+  finishedStartTime: number;
+}
+
+// ─── Post-Match Data ─────────────────────────────────────────────────────────
+
+export interface PostMatchWeaponDetail {
+  playerId: string;
+  weapons: Array<{
+    avatarId: number;
+    totalDamage: number;
+    killCount: number;
+    headShootCount: number;
+    bodyShootCount: number;
+    limbsShootCount: number;
+    uniqueHitCount: number;
+    totalUseTime: number;
+  }>;
+}
+
+// ─── Roster Mapping Types ────────────────────────────────────────────────────
 
 export interface RosterPlayer {
   player_open_id: string;
@@ -188,6 +247,10 @@ export interface RosterMapping {
   tournament_id: string;
   stage_id: string;
   match_id: string;
+  match_ids?: string[];
+  stage_name?: string;
+  group_id?: string;
+  group_name?: string;
   cloud_endpoint?: string;
   cloud_api_key?: string;
   point_system: PointSystem;
@@ -196,7 +259,7 @@ export interface RosterMapping {
   player_index: Record<string, PlayerIndex>;
 }
 
-// ─── Leaderboard API Types ─────────────────────────────────────────────────────
+// ─── Leaderboard API Types ───────────────────────────────────────────────────
 
 export interface LeaderboardTeam {
   teamName: string;
@@ -209,7 +272,6 @@ export interface LeaderboardTeam {
   alive: boolean;
   liveMemberNum: number;
   placementPoints: number;
-  killPoints: number;
   totalPoints: number;
   updatedAt: number;
 }
@@ -219,6 +281,11 @@ export interface LeaderboardPlayer {
   displayName?: string;
   teamName: string;
   kills: number;
+  damage: number;
+  headshots: number;
+  assists: number;
+  knockouts: number;
+  survived: boolean;
 }
 
 export interface LeaderboardResponse {
@@ -233,4 +300,38 @@ export interface LeaderboardResponse {
   };
   teams: LeaderboardTeam[];
   players?: LeaderboardPlayer[];
+}
+
+// ─── Unified Live State (dashboard endpoint) ─────────────────────────────────
+
+export interface LiveState {
+  matchId: string;
+  phase: GamePhase;
+  serverTime: number;
+  timestamps: MatchTimestamps;
+  circle: CircleInfo | null;
+  teams: LeaderboardTeam[];
+  players: LeaderboardPlayer[];
+  kills: KillEvent[];
+  observing: {
+    uid: string;
+    player: PlayerState | null;
+    team: TeamState | null;
+  } | null;
+  spotlight: {
+    playerName: string;
+    displayName?: string;
+    teamName: string;
+    kills: number;
+  } | null;
+}
+
+// ─── SSE Event Types ─────────────────────────────────────────────────────────
+
+export type SSEEventType = 'state' | 'kill' | 'playercard' | 'circle' | 'phase';
+
+export interface SSEEvent<T = unknown> {
+  event: SSEEventType;
+  data: T;
+  ts: number;
 }

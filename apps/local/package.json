@@ -10,6 +10,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@live-stat/shared": "*",
     "@supabase/supabase-js": "^2.99.1",
     "next": "16.1.0",
     "react": "19.2.3",

@@ -10,7 +10,11 @@ export async function POST(req: NextRequest) {
     if (text === 'InGame' || text === 'Finished') {
       handleMatchPhase(text as 'InGame' | 'Finished');
       if (text === 'Finished') {
-        pushMatchResult().catch(console.error);
+        // Delay sync by 6s — the game sends final totalmessage with complete stats
+        // (rank, survivalTime, damage, etc.) 1-5s AFTER the Finished event.
+        setTimeout(() => {
+          pushMatchResult().catch(console.error);
+        }, 6000);
       }
     }
     return NextResponse.json({ ok: true });

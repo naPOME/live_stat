@@ -9,6 +9,13 @@ interface PlayerResult {
   team_id: string;
   kills: number;
   damage: number;
+  damage_taken: number;
+  heal: number;
+  headshots: number;
+  assists: number;
+  knockouts: number;
+  rescues: number;
+  survival_time: number;
   survived: boolean;
 }
 
@@ -70,11 +77,11 @@ export async function pushMatchResult(): Promise<void> {
 
   const results = sorted
     .filter(t => t.registeredTeamId)
-    .map((t, i) => ({
+    .map((t) => ({
       team_id: t.registeredTeamId!,
-      placement: i + 1,
+      placement: t.rank,
       kill_count: t.killNum,
-      total_pts: calcTeamPoints(i + 1, t.killNum),
+      total_pts: calcTeamPoints(t.rank, t.killNum),
     }));
 
   // Collect per-player stats
@@ -88,6 +95,13 @@ export async function pushMatchResult(): Promise<void> {
       team_id: teamId,
       kills: p.killNum,
       damage: p.damage,
+      damage_taken: p.inDamage ?? 0,
+      heal: p.heal ?? 0,
+      headshots: p.headShotNum ?? 0,
+      assists: p.assists ?? 0,
+      knockouts: p.knockouts ?? 0,
+      rescues: p.rescueTimes ?? 0,
+      survival_time: p.survivalTime ?? 0,
       survived: !p.bHasDied,
     });
   }

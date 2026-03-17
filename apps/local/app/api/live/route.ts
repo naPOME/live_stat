@@ -16,7 +16,9 @@ export async function GET() {
 
     let leaderboard = teams.map(t => {
       const kills = t.killNum;
-      const placement = t.liveMemberNum === 0 ? t.rank : undefined;
+      const alive = t.liveMemberNum > 0;
+      // Use game-assigned rank for eliminated teams. Alive teams have no placement yet.
+      const placement = !alive && t.rank > 0 ? t.rank : undefined;
       const placementPoints = calcTeamPoints(placement, 0);
       const totalPoints = calcTeamPoints(placement, kills);
 
@@ -28,7 +30,7 @@ export async function GET() {
         logoPath: t.logoPath,
         kills,
         placement,
-        alive: t.liveMemberNum > 0,
+        alive,
         liveMemberNum: t.liveMemberNum,
         placementPoints,
         totalPoints,

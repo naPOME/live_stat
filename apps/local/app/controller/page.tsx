@@ -24,44 +24,28 @@ const WIDGETS: WidgetDef[] = [
   { key: 'schedule',     label: 'Schedule',          hotkey: 'F12', group: 'static' },
 ];
 
-const GROUPS: { id: string; label: string; color: string }[] = [
-  { id: 'live',   label: 'LIVE',       color: 'var(--red)' },
-  { id: 'post',   label: 'POST-MATCH', color: 'var(--accent)' },
-  { id: 'static', label: 'STATIC',     color: 'var(--purple)' },
-];
+const GROUPS = [
+  { id: 'live',   label: 'LIVE',  color: 'var(--red)' },
+  { id: 'post',   label: 'POST',  color: 'var(--accent)' },
+  { id: 'static', label: 'INFO',  color: 'var(--purple)' },
+] as const;
 
 const PRESETS = [
-  { label: 'Match Live', keys: ['leaderboard', 'killfeed', 'playercard', 'elimination'] },
-  { label: 'Post Match', keys: ['results', 'fraggers', 'mvp'] },
-  { label: 'WWCD',       keys: ['wwcd'] },
-  { label: 'Pre-Match',  keys: ['teamlist', 'schedule', 'matchinfo'] },
-  { label: 'Points',     keys: ['pointtable'] },
-  { label: 'Clean',      keys: ['killfeed', 'playercard', 'elimination'] },
+  { label: 'Match Live', icon: '\u25B6', keys: ['leaderboard', 'killfeed', 'playercard', 'elimination'] },
+  { label: 'Post Match', icon: '\u2605', keys: ['results', 'fraggers', 'mvp'] },
+  { label: 'WWCD',       icon: '\u2714', keys: ['wwcd'] },
+  { label: 'Pre-Match',  icon: '\u25A0', keys: ['teamlist', 'schedule', 'matchinfo'] },
+  { label: 'Clean',      icon: '\u25CB', keys: ['killfeed', 'playercard', 'elimination'] },
 ];
-
-interface SyncStatus {
-  role: 'leader' | 'follower' | 'standalone';
-  connected: boolean;
-  peerCount: number;
-}
 
 export default function ControllerPage() {
   const [vis, setVis] = useState<Record<string, boolean>>({});
   const [phase, setPhase] = useState('lobby');
-  const [activePreset, setActivePreset] = useState<string | null>(null);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>({ role: 'standalone', connected: false, peerCount: 0 });
 
   useEffect(() => {
     fetch('/api/widgets').then(r => r.json()).then(setVis).catch(() => {});
     const es = new EventSource('/api/widgets?stream=1');
     es.onmessage = e => { try { setVis(JSON.parse(e.data)); } catch {} };
-    return () => es.close();
-  }, []);
-
-  useEffect(() => {
-    fetch('/api/sync').then(r => r.json()).then(setSyncStatus).catch(() => {});
-    const es = new EventSource('/api/sync?stream=1');
-    es.onmessage = e => { try { setSyncStatus(JSON.parse(e.data)); } catch {} };
     return () => es.close();
   }, []);
 
@@ -73,28 +57,23 @@ export default function ControllerPage() {
   }, []);
 
   const toggle = useCallback(async (key: string) => {
-    setActivePreset(null);
-    setVis(prev => ({ ...prev, [key]: !prev[key] })); // optimistic
+    setVis(prev => ({ ...prev, [key]: !prev[key] }));
     const res = await fetch('/api/widgets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'toggle', key }) });
     setVis(await res.json());
   }, []);
 
   const showOnly = useCallback(async (key: string) => {
-    setActivePreset(null);
     const res = await fetch('/api/widgets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'showOnly', key }) });
     setVis(await res.json());
   }, []);
 
   const hideAll = useCallback(async () => {
-    setActivePreset(null);
-    setVis(prev => Object.fromEntries(Object.keys(prev).map(k => [k, false]))); // optimistic
+    setVis(prev => Object.fromEntries(Object.keys(prev).map(k => [k, false])));
     const res = await fetch('/api/widgets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'hideAll' }) });
     setVis(await res.json());
   }, []);
 
   const applyPreset = useCallback(async (preset: typeof PRESETS[0]) => {
-    setActivePreset(preset.label);
-    // Optimistic: turn off all, turn on preset keys
     setVis(prev => {
       const next: Record<string, boolean> = {};
       for (const k of Object.keys(prev)) next[k] = false;
@@ -124,90 +103,98 @@ export default function ControllerPage() {
 
   return (
     <div className="animate-in">
-      {/* ── Page header ──────────────────────────── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 2 }}>Controller</h1>
-          <p style={{ fontSize: 12, color: 'var(--text-faint)' }}>Toggle overlays with hotkeys during broadcast</p>
-        </div>
-        <div className="flex items-center gap-10">
-          {syncStatus.connected && (
-            <div className="pill" style={{ color: 'var(--purple)', borderColor: 'rgba(124,106,252,0.25)', background: 'rgba(124,106,252,0.08)' }}>
-              <div className="pill-dot" style={{ background: 'var(--purple)' }} />
-              {syncStatus.role.toUpperCase()} {syncStatus.peerCount > 0 && `· ${syncStatus.peerCount}`}
-            </div>
-          )}
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <h1 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em' }}>Controller</h1>
+        <div className="flex items-center gap-8">
           <div className="pill" style={{ color: phaseColor, borderColor: `color-mix(in srgb, ${phaseColor} 25%, transparent)`, background: `color-mix(in srgb, ${phaseColor} 8%, transparent)` }}>
             <div className={`pill-dot${phase === 'ingame' ? ' pulse' : ''}`} style={{ background: phaseColor }} />
             {phase === 'ingame' ? 'LIVE' : phase.toUpperCase()}
           </div>
-          <div className="pill" style={{ color: activeCount > 0 ? 'var(--accent)' : 'var(--text-faint)', borderColor: activeCount > 0 ? 'rgba(0,255,195,0.2)' : 'var(--border)', background: activeCount > 0 ? 'rgba(0,255,195,0.06)' : 'transparent' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: activeCount > 0 ? 'var(--accent)' : 'var(--text-faint)' }}>
             {activeCount} active
-          </div>
-          <button className="btn" onClick={hideAll}>
-            Hide All <kbd>ESC</kbd>
+          </span>
+          <button className="btn" onClick={hideAll} style={{ fontSize: 11, padding: '4px 10px' }}>
+            Hide All <kbd style={{ marginLeft: 4, fontSize: 9, opacity: 0.5 }}>ESC</kbd>
           </button>
         </div>
       </div>
 
-      <div>
-        {/* ── Presets ──────────────────────────── */}
-        <div style={{ marginBottom: 24 }}>
-          <div className="section-label">Presets</div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 6 }}>
-            {PRESETS.map(p => (
-              <button
-                key={p.label}
-                onClick={() => applyPreset(p)}
-                className={`preset-btn${activePreset === p.label ? ' active' : ''}`}
-              >
-                <div style={{ fontSize: 12, fontWeight: 700, color: activePreset === p.label ? 'var(--accent)' : 'var(--text)' }}>{p.label}</div>
-                <div style={{ fontSize: 9, color: 'var(--text-faint)', marginTop: 2 }}>{p.keys.length} widget{p.keys.length !== 1 ? 's' : ''}</div>
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Presets — compact row */}
+      <div className="flex gap-4" style={{ marginBottom: 16 }}>
+        {PRESETS.map(p => (
+          <button key={p.label} onClick={() => applyPreset(p)} className="btn" style={{
+            fontSize: 11, padding: '5px 12px', flex: 1,
+          }}>
+            {p.label}
+          </button>
+        ))}
+      </div>
 
-        {/* ── Widget groups ────────────────────── */}
-        {GROUPS.map(g => (
-          <div key={g.id} style={{ marginBottom: 24 }}>
-            <div className="flex items-center gap-8" style={{ marginBottom: 10 }}>
-              <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.1em', color: g.color }}>{g.label}</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-              {WIDGETS.filter(w => w.group === g.id).map(w => {
+      {/* Widget groups */}
+      {GROUPS.map(g => {
+        const groupWidgets = WIDGETS.filter(w => w.group === g.id);
+        return (
+          <div key={g.id} style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.12em', color: g.color, marginBottom: 6 }}>{g.label}</div>
+            <div style={{ borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border)' }}>
+              {groupWidgets.map((w, i) => {
                 const on = vis[w.key] ?? false;
                 return (
                   <button
                     key={w.key}
                     onClick={() => toggle(w.key)}
                     onDoubleClick={() => showOnly(w.key)}
-                    className={`widget-card${on ? ' active' : ''}`}
-                    style={{ '--group-color': g.color } as React.CSSProperties}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                      padding: '8px 12px', cursor: 'pointer',
+                      background: on ? `color-mix(in srgb, ${g.color} 6%, transparent)` : 'transparent',
+                      borderBottom: i < groupWidgets.length - 1 ? '1px solid var(--border)' : 'none',
+                      border: 'none', borderBottomStyle: i < groupWidgets.length - 1 ? 'solid' : 'none',
+                      borderBottomWidth: 1, borderBottomColor: 'var(--border)',
+                      color: 'inherit', textAlign: 'left', outline: 'none',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => { if (!on) e.currentTarget.style.background = 'rgba(255,255,255,0.02)'; }}
+                    onMouseLeave={e => { if (!on) e.currentTarget.style.background = 'transparent'; else e.currentTarget.style.background = `color-mix(in srgb, ${g.color} 6%, transparent)`; }}
                   >
-                    <div className="flex items-center" style={{ justifyContent: 'space-between', marginBottom: 10 }}>
-                      <div className={`toggle${on ? ' on' : ''}`}>
-                        <div className="toggle-knob" />
-                      </div>
-                      <kbd>{w.hotkey}</kbd>
-                    </div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: on ? 'var(--text)' : 'var(--text-dim)' }}>
+                    {/* Toggle dot */}
+                    <div style={{
+                      width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                      background: on ? g.color : 'rgba(255,255,255,0.08)',
+                      boxShadow: on ? `0 0 8px ${g.color}` : 'none',
+                      transition: 'all 0.2s',
+                    }} />
+
+                    {/* Label */}
+                    <span style={{ flex: 1, fontSize: 12, fontWeight: on ? 700 : 500, color: on ? 'var(--text)' : 'var(--text-dim)' }}>
                       {w.label}
-                    </div>
-                    <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginTop: 3, color: on ? g.color : 'rgba(255,255,255,0.1)' }}>
-                      {on ? 'ON AIR' : 'OFF'}
-                    </div>
+                    </span>
+
+                    {/* Hotkey */}
+                    <kbd style={{
+                      fontSize: 9, fontWeight: 700, padding: '1px 6px', borderRadius: 3,
+                      background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border)',
+                      color: 'var(--text-faint)', fontFamily: 'var(--mono)',
+                    }}>
+                      {w.hotkey}
+                    </kbd>
+
+                    {/* Status */}
+                    {on && (
+                      <span style={{ fontSize: 8, fontWeight: 800, letterSpacing: '0.06em', color: g.color, textTransform: 'uppercase' }}>ON</span>
+                    )}
                   </button>
                 );
               })}
             </div>
           </div>
-        ))}
+        );
+      })}
 
-        {/* ── Footer ───────────────────────────── */}
-        <div className="flex items-center" style={{ justifyContent: 'space-between', paddingTop: 12, borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-faint)' }}>
-          <span>Double-click to solo · Hotkeys work when focused</span>
-        </div>
+      {/* Footer */}
+      <div style={{ paddingTop: 10, borderTop: '1px solid var(--border)', fontSize: 10, color: 'var(--text-faint)' }}>
+        Double-click to solo a widget
       </div>
     </div>
   );
