@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import JSZip from 'jszip';
 import { generatePcobIni, addTeamLogos } from '@/lib/export/pcob-ini';
+import { getSlotColor } from '@/lib/config/tournament';
 
 export async function GET(
   request: NextRequest,
@@ -95,7 +96,7 @@ export async function GET(
         slot_number: slotNum,
         name: team.name,
         short_name: team.short_name ?? team.name.substring(0, 4).toUpperCase(),
-        brand_color: team.brand_color,
+        brand_color: getSlotColor(slotNum),
         logo_path: `c:/logo/${padded}.png`,
         logo_path_64: `c:/logo/${padded}_64.png`,
         logo_path_128: `c:/logo/${padded}_128.png`,
@@ -139,7 +140,7 @@ export async function GET(
         slot_number: slotNum,
         name: team.name,
         short_name: team.short_name ?? team.name.substring(0, 4).toUpperCase(),
-        brand_color: team.brand_color,
+        brand_color: getSlotColor(slotNum),
         logo_path: `c:/logo/${padded}.png`,
         logo_path_64: `c:/logo/${padded}_64.png`,
         logo_path_128: `c:/logo/${padded}_128.png`,

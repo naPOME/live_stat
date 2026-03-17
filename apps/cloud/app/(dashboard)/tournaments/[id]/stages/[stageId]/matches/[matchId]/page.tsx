@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import type { MatchDispute, Team } from '@/lib/types';
+import { getSlotColor } from '@/lib/config/tournament';
 
 const SLOT_COUNT = 22;
 
@@ -426,13 +427,11 @@ export default function MatchPage({
                   </span>
                 </div>
 
-                {/* Color dot for assigned team */}
-                {assignedTeam && (
-                  <div
-                    className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: assignedTeam.brand_color }}
-                  />
-                )}
+                {/* Slot color dot */}
+                <div
+                  className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: getSlotColor(slotNum) }}
+                />
 
                 {/* Team select */}
                 <select

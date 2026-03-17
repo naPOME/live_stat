@@ -1,20 +1,10 @@
-/**
- * Tournament structure presets, scoring defaults, and stage configuration.
- *
- * Edit this file to add new tournament formats, adjust default
- * point systems, or change match slot limits.
- */
 
 import type { Stage } from '@/lib/types';
 
-// ── Stage presets ────────────────────────────────────────────────
 
 export type StagePreset = {
-  /** Internal key */
   id: string;
-  /** Display label */
   label: string;
-  /** Stages in order */
   stages: { name: string; type: Stage['stage_type'] }[];
 };
 
@@ -78,7 +68,6 @@ export const PMGC_POINTS: PointSystemPreset = {
   },
 };
 
-/** PUBG Mobile Super League standard (higher kill value) */
 export const PMSL_POINTS: PointSystemPreset = {
   id: 'pmsl',
   name: 'PMSL Standard',
@@ -92,13 +81,44 @@ export const PMSL_POINTS: PointSystemPreset = {
 
 export const POINT_SYSTEM_PRESETS: PointSystemPreset[] = [PMGC_POINTS, PMSL_POINTS];
 
-// ── Match slot limits ────────────────────────────────────────────
-
-/** Maximum teams per match (BR lobby cap) */
 export const MAX_TEAMS_PER_MATCH = 22;
 
 /** Maximum players per team */
 export const MAX_PLAYERS_PER_TEAM = 6;
+
+// ── Default slot colors (22 distinct, visually separated) ────────
+// These are the default colors assigned per lobby slot.
+// The manager can override per-slot via the match page.
+
+export const SLOT_COLORS: string[] = [
+  '#ff4e4e', // 01 — red
+  '#3b82f6', // 02 — blue
+  '#22c55e', // 03 — green
+  '#f59e0b', // 04 — amber
+  '#8b5cf6', // 05 — violet
+  '#06b6d4', // 06 — cyan
+  '#ec4899', // 07 — pink
+  '#f97316', // 08 — orange
+  '#14b8a6', // 09 — teal
+  '#a855f7', // 10 — purple
+  '#eab308', // 11 — yellow
+  '#ef4444', // 12 — rose
+  '#0ea5e9', // 13 — sky
+  '#84cc16', // 14 — lime
+  '#d946ef', // 15 — fuchsia
+  '#fb923c', // 16 — light-orange
+  '#2dd4bf', // 17 — aqua
+  '#818cf8', // 18 — indigo
+  '#fbbf24', // 19 — gold
+  '#f43f5e', // 20 — crimson
+  '#38bdf8', // 21 — light-blue
+  '#a3e635', // 22 — chartreuse
+];
+
+/** Get default color for a slot number (1-based). */
+export function getSlotColor(slotNumber: number): string {
+  return SLOT_COLORS[(slotNumber - 1) % SLOT_COLORS.length] ?? '#ffffff';
+}
 
 // ── Registration modes ───────────────────────────────────────────
 

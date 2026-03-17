@@ -1,7 +1,3 @@
-/**
- * OBS overlay widget definitions.
- * Shared between cloud settings and local controller.
- */
 
 export type WidgetDef = {
   key: string;

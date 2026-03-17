@@ -160,14 +160,22 @@ export async function POST(request: Request) {
   // ── JOIN (FOLLOWER) ───────────────────────────────────────────────────────────
   if (action === 'join') {
     const code = (body.code as string)?.trim().toUpperCase();
-    const cloudUrl = (body.cloudUrl as string)?.trim().replace(/\/$/, '');
+    // Try explicit cloudUrl first, then fall back to stored cloud config
+    let cloudUrl = (body.cloudUrl as string)?.trim().replace(/\/$/, '') || '';
+    if (!cloudUrl) {
+      const { loadCloudConfig } = await import('@/lib/cloudConfig');
+      const cfg = loadCloudConfig();
+      if (cfg?.cloud_url) {
+        cloudUrl = cfg.cloud_url.replace(/\/$/, '');
+      }
+    }
 
     if (!code || code.length !== 6) {
       return NextResponse.json({ ok: false, error: 'Sync code must be 6 characters' }, { status: 400 });
     }
 
     if (!cloudUrl) {
-      return NextResponse.json({ ok: false, error: 'Cloud URL is required' }, { status: 400 });
+      return NextResponse.json({ ok: false, error: 'No cloud URL found. Link your organization first, or provide a cloud URL.' }, { status: 400 });
     }
 
     try {

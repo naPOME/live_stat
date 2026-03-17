@@ -123,22 +123,18 @@ export default function ControllerPage() {
   const phaseColor = phase === 'ingame' ? 'var(--red)' : phase === 'finished' ? 'var(--accent)' : 'var(--text-faint)';
 
   return (
-    <div className="page">
-      <header className="topbar">
-        <div className="flex items-center gap-8">
-          <a href="/" className="topbar-brand">
-            <div className="topbar-logo">LS</div>
-            <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>Live Stat</span>
-          </a>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ opacity: 0.15 }}><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" /></svg>
-          <span style={{ fontSize: 14, fontWeight: 700 }}>Controller</span>
+    <div className="animate-in">
+      {/* ── Page header ──────────────────────────── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 2 }}>Controller</h1>
+          <p style={{ fontSize: 12, color: 'var(--text-faint)' }}>Toggle overlays with hotkeys during broadcast</p>
         </div>
-
-        <div className="topbar-right">
+        <div className="flex items-center gap-10">
           {syncStatus.connected && (
-            <div className="pill" style={{ color: 'var(--purple)', borderColor: 'rgba(109,94,252,0.25)', background: 'rgba(109,94,252,0.08)' }}>
+            <div className="pill" style={{ color: 'var(--purple)', borderColor: 'rgba(124,106,252,0.25)', background: 'rgba(124,106,252,0.08)' }}>
               <div className="pill-dot" style={{ background: 'var(--purple)' }} />
-              {syncStatus.role.toUpperCase()} {syncStatus.peerCount > 0 && `\u00B7 ${syncStatus.peerCount}`}
+              {syncStatus.role.toUpperCase()} {syncStatus.peerCount > 0 && `· ${syncStatus.peerCount}`}
             </div>
           )}
           <div className="pill" style={{ color: phaseColor, borderColor: `color-mix(in srgb, ${phaseColor} 25%, transparent)`, background: `color-mix(in srgb, ${phaseColor} 8%, transparent)` }}>
@@ -152,9 +148,9 @@ export default function ControllerPage() {
             Hide All <kbd>ESC</kbd>
           </button>
         </div>
-      </header>
+      </div>
 
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '20px 24px' }}>
+      <div>
         {/* ── Presets ──────────────────────────── */}
         <div style={{ marginBottom: 24 }}>
           <div className="section-label">Presets</div>
@@ -210,11 +206,7 @@ export default function ControllerPage() {
 
         {/* ── Footer ───────────────────────────── */}
         <div className="flex items-center" style={{ justifyContent: 'space-between', paddingTop: 12, borderTop: '1px solid var(--border)', fontSize: 11, color: 'var(--text-faint)' }}>
-          <span>Double-click to solo \u00B7 Hotkeys work when focused</span>
-          <div className="flex gap-10">
-            <a href="/" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Dashboard</a>
-            <a href="/overlay/gallery" style={{ color: 'var(--text-dim)', textDecoration: 'none' }}>Gallery</a>
-          </div>
+          <span>Double-click to solo · Hotkeys work when focused</span>
         </div>
       </div>
     </div>

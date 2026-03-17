@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase/server';
+import { getSlotColor } from '@/lib/config/tournament';
 
 /**
  * POST /api/local/roster
@@ -171,7 +172,7 @@ export async function POST(req: NextRequest) {
         slot_number: slotNum,
         name: team.name,
         short_name: team.short_name ?? team.name.substring(0, 4).toUpperCase(),
-        brand_color: team.brand_color,
+        brand_color: getSlotColor(slotNum),
         logo_path: logoUrl ?? `c:/logo/${padded}.png`,
         logo_path_64: logoUrl ?? `c:/logo/${padded}_64.png`,
         logo_path_128: logoUrl ?? `c:/logo/${padded}_128.png`,
@@ -286,7 +287,7 @@ export async function POST(req: NextRequest) {
       slot_number: slotNum,
       name: team.name,
       short_name: team.short_name ?? team.name.substring(0, 4).toUpperCase(),
-      brand_color: team.brand_color,
+      brand_color: getSlotColor(slotNum),
       logo_path: logoUrl ?? `c:/logo/${padded}.png`,
       logo_path_64: logoUrl ?? `c:/logo/${padded}_64.png`,
       logo_path_128: logoUrl ?? `c:/logo/${padded}_128.png`,
