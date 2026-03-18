@@ -17,15 +17,6 @@ interface LiveTeam { teamName: string; displayName?: string; shortName?: string;
 interface GameData { phase?: string; teams: LiveTeam[]; spotlight?: { playerName: string; displayName?: string; teamName: string; kills: number }; players?: { playerName: string; displayName?: string; teamName: string; kills: number; damage: number; headshots: number; }[]; }
 interface SyncStatus { role: string; connected: boolean; peerCount: number; syncCode: string | null; }
 
-/* ── SVG Icons ────────────────────────────────────── */
-const Trophy = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 1012 0V2z"/></svg>;
-const Crosshair = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="22" y1="12" x2="18" y2="12"/><line x1="6" y1="12" x2="2" y2="12"/><line x1="12" y1="6" x2="12" y2="2"/><line x1="12" y1="22" x2="12" y2="18"/></svg>;
-const Users = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>;
-const Zap = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
-const Eye = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
-const Cloud = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z"/></svg>;
-const Refresh = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>;
-
 /* ── Dashboard ────────────────────────────────────── */
 export default function Dashboard() {
   const [lc, setLc] = useState<Lifecycle>({ phase: 'idle', rosterLoaded: false, gameClientConnected: false, lastTelemetryAt: null, syncResult: null, syncError: null, notifications: [], matchNumber: 1, matchId: null });
@@ -121,275 +112,254 @@ export default function Dashboard() {
   const kills = teams.reduce((s, t) => s + t.kills, 0);
   const widgetCount = Object.values(widgets).filter(Boolean).length;
   const connAge = lc.lastTelemetryAt ? (Date.now() - lc.lastTelemetryAt) / 1000 : Infinity;
-  const connColor = connAge < 5 ? 'var(--accent)' : connAge < 15 ? 'var(--amber)' : 'var(--red)';
+  const connColor = connAge < 5 ? 'var(--green)' : connAge < 15 ? 'var(--amber)' : 'var(--red)';
   const org = roster?.org;
   const orgAccent = org?.brand_color || 'var(--accent)';
   const hasOrg = !!org && lc.rosterLoaded;
 
   const topFraggers = [...(game?.players ?? [])].sort((a, b) => b.kills - a.kills || b.damage - a.damage).slice(0, 5);
 
-  const phaseMeta: Record<LifecyclePhase, { label: string; color: string }> = {
-    idle: { label: 'SETUP', color: 'var(--text-faint)' },
-    ready: { label: 'READY', color: 'var(--purple)' },
-    warmup: { label: 'WARMUP', color: 'var(--amber)' },
-    live: { label: 'LIVE', color: 'var(--red)' },
-    finished: { label: 'FINISHED', color: 'var(--accent)' },
-    synced: { label: 'SYNCED', color: 'var(--accent)' },
+  const phaseMeta: Record<LifecyclePhase, { label: string; color: string; bg: string }> = {
+    idle:     { label: 'SETUP',    color: 'var(--text-faint)', bg: 'rgba(85,85,85,0.08)' },
+    ready:    { label: 'READY',    color: 'var(--purple)',     bg: 'var(--purple-soft)' },
+    warmup:   { label: 'WARMUP',   color: 'var(--amber)',      bg: 'var(--amber-soft)' },
+    live:     { label: 'LIVE',     color: 'var(--red)',        bg: 'var(--red-soft)' },
+    finished: { label: 'FINISHED', color: 'var(--green)',      bg: 'var(--green-soft)' },
+    synced:   { label: 'SYNCED',   color: 'var(--accent)',     bg: 'var(--accent-soft)' },
   };
-  const { label: phaseLabel, color: phaseColor } = phaseMeta[phase];
+  const { label: phaseLabel, color: phaseColor, bg: phaseBg } = phaseMeta[phase];
 
   return (
-    <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
       {/* ── Toasts ──────────────────────────────────── */}
-      <div style={{ position: 'fixed', top: 52, right: 20, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 6, pointerEvents: 'none' }}>
+      <div style={{ position: 'fixed', top: 56, right: 24, zIndex: 200, display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none' }}>
         {visibleToasts.map(n => (
           <div key={n.id} className="animate-in" style={{
-            padding: '8px 14px', borderRadius: 'var(--radius-sm)',
-            background: n.type === 'error' ? 'rgba(239,107,107,0.12)' : n.type === 'warning' ? 'rgba(240,185,64,0.12)' : n.type === 'success' ? 'rgba(96,165,250,0.12)' : 'rgba(255,255,255,0.06)',
-            border: `1px solid ${n.type === 'error' ? 'rgba(239,107,107,0.2)' : n.type === 'warning' ? 'rgba(240,185,64,0.2)' : n.type === 'success' ? 'rgba(96,165,250,0.2)' : 'var(--border-hi)'}`,
-            backdropFilter: 'blur(12px)', fontSize: 11, fontWeight: 600,
-            color: n.type === 'error' ? 'var(--red)' : n.type === 'warning' ? 'var(--amber)' : n.type === 'success' ? 'var(--accent)' : 'var(--text)',
-            pointerEvents: 'auto', maxWidth: 300,
+            padding: '10px 16px', borderRadius: 'var(--radius)',
+            background: n.type === 'error' ? 'var(--red-soft)' : n.type === 'warning' ? 'var(--amber-soft)' : n.type === 'success' ? 'var(--green-soft)' : 'var(--bg-raised)',
+            border: `1px solid ${n.type === 'error' ? 'rgba(239,68,68,0.15)' : n.type === 'warning' ? 'rgba(245,158,11,0.15)' : n.type === 'success' ? 'rgba(34,197,94,0.15)' : 'var(--border)'}`,
+            fontSize: 12, fontWeight: 600,
+            color: n.type === 'error' ? 'var(--red)' : n.type === 'warning' ? 'var(--amber)' : n.type === 'success' ? 'var(--green)' : 'var(--text)',
+            pointerEvents: 'auto', maxWidth: 320,
           }}>{n.message}</div>
         ))}
       </div>
 
       {/* ═══════════════════════════════════════════════ */}
-      {/* ── Organization Banner ─────────────────────── */}
+      {/* ── Header row ────────────────────────────────  */}
       {/* ═══════════════════════════════════════════════ */}
-      {hasOrg && (
-        <div style={{
-          position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden',
-          background: `linear-gradient(135deg, ${orgAccent}12 0%, rgba(16,20,32,0.9) 60%, rgba(16,20,32,0.95) 100%)`,
-          border: `1px solid ${orgAccent}18`,
-          padding: '20px 24px',
-        }}>
-          {/* Accent line top */}
-          <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, ${orgAccent}, transparent)` }} />
-
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              {/* Org logo */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div>
+          {hasOrg ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
               <div style={{
-                width: 48, height: 48, borderRadius: 12, overflow: 'hidden',
-                background: `linear-gradient(135deg, ${orgAccent}25, ${orgAccent}08)`,
-                border: `1px solid ${orgAccent}20`, display: 'grid', placeItems: 'center',
+                width: 40, height: 40, borderRadius: 'var(--radius)', overflow: 'hidden',
+                background: `${orgAccent}12`, border: `1px solid ${orgAccent}18`,
+                display: 'grid', placeItems: 'center', flexShrink: 0,
               }}>
                 {org.logo_path ? (
-                  <img src={org.logo_path} alt="" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                  <img src={org.logo_path} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
                 ) : (
-                  <span style={{ fontSize: 20, fontWeight: 900, color: orgAccent }}>{org.name.charAt(0)}</span>
+                  <span style={{ fontSize: 18, fontWeight: 900, color: orgAccent }}>{org.name.charAt(0)}</span>
                 )}
               </div>
-
               <div>
-                <div style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', color: 'var(--text)' }}>{org.name}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
-                  {cloud?.tournament?.name && (
-                    <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 600 }}>{cloud.tournament.name}</span>
-                  )}
-                  {roster?.stage_name && (
-                    <>
-                      <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>/</span>
-                      <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{roster.stage_name}</span>
-                    </>
-                  )}
-                  {roster?.group_name && (
-                    <>
-                      <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>/</span>
-                      <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{roster.group_name}</span>
-                    </>
-                  )}
+                <h1 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>{org.name}</h1>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, fontSize: 12, color: 'var(--text-faint)' }}>
+                  {cloud?.tournament?.name && <span>{cloud.tournament.name}</span>}
+                  {roster?.stage_name && <><span style={{ opacity: 0.3 }}>/</span><span>{roster.stage_name}</span></>}
+                  {roster?.group_name && <><span style={{ opacity: 0.3 }}>/</span><span>{roster.group_name}</span></>}
                 </div>
               </div>
             </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {/* Connection health */}
-              {lc.gameClientConnected && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: connColor }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: connColor }} />
-                  {connAge < 5 ? 'Connected' : connAge < 15 ? 'Slow' : 'Lost'}
-                </div>
-              )}
-              {/* Phase pill */}
-              <div className="pill" style={{ color: phaseColor, borderColor: `color-mix(in srgb, ${phaseColor} 20%, transparent)`, background: `color-mix(in srgb, ${phaseColor} 6%, transparent)` }}>
-                {phase === 'live' && <div className="live-dot" style={{ width: 6, height: 6 }} />}
-                {phase !== 'live' && <div className="pill-dot" style={{ background: phaseColor }} />}
-                {phaseLabel}
-              </div>
-              {sync.connected && (
-                <div className="pill" style={{ color: 'var(--purple)', borderColor: 'rgba(155,138,251,0.2)', background: 'rgba(155,138,251,0.06)' }}>
-                  <div className="pill-dot" style={{ background: 'var(--purple)' }} />
-                  {sync.role.toUpperCase()}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Quick stats row */}
-          <div style={{ display: 'flex', gap: 24, marginTop: 16 }}>
-            {[
-              { icon: <Users />, label: 'Teams', value: roster?.team_count ?? 0 },
-              { icon: <Crosshair />, label: 'Players', value: roster?.player_count ?? 0 },
-              { icon: <Eye />, label: 'Overlays', value: widgetCount },
-              { icon: <Zap />, label: 'Kill Pts', value: roster?.point_system?.kill_points ?? 1 },
-            ].map((s, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ color: 'var(--text-faint)', opacity: 0.7 }}>{s.icon}</span>
-                <span style={{ fontSize: 10, color: 'var(--text-faint)', fontWeight: 600 }}>{s.label}</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: 'var(--text)' }}>{s.value}</span>
-              </div>
-            ))}
-          </div>
+          ) : (
+            <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>Dashboard</h1>
+          )}
         </div>
-      )}
 
-      {/* ── No org: header only ──────────────────────── */}
-      {!hasOrg && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>Dashboard</h1>
-          <div className="pill" style={{ color: phaseColor, borderColor: `color-mix(in srgb, ${phaseColor} 20%, transparent)`, background: `color-mix(in srgb, ${phaseColor} 6%, transparent)` }}>
-            {phase === 'live' ? <div className="live-dot" style={{ width: 6, height: 6 }} /> : <div className="pill-dot" style={{ background: phaseColor }} />}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {lc.gameClientConnected && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: connColor, fontWeight: 600 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: connColor }} />
+              {connAge < 5 ? 'Connected' : connAge < 15 ? 'Slow' : 'Lost'}
+            </div>
+          )}
+          <div className="pill" style={{ color: phaseColor, borderColor: `color-mix(in srgb, ${phaseColor} 15%, transparent)`, background: phaseBg }}>
+            {phase === 'live' && <div className="live-dot" style={{ width: 6, height: 6 }} />}
+            {phase !== 'live' && <div className="pill-dot" style={{ background: phaseColor }} />}
             {phaseLabel}
           </div>
+          {sync.connected && (
+            <div className="pill" style={{ color: 'var(--purple)', borderColor: 'rgba(168,85,247,0.15)', background: 'var(--purple-soft)' }}>
+              <div className="pill-dot" style={{ background: 'var(--purple)' }} />
+              {sync.role.toUpperCase()}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* ═══════════════════════════════════════════════ */}
-      {/* ── IDLE: Setup ─────────────────────────────── */}
+      {/* ── IDLE: Setup ───────────────────────────────  */}
       {/* ═══════════════════════════════════════════════ */}
       {phase === 'idle' && (
-        <div className="card" style={{ borderColor: 'rgba(240,185,64,0.08)' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>Getting Started</div>
-          <div style={{ fontSize: 12, color: 'var(--text-faint)', marginBottom: 14 }}>Connect to your cloud organization and select a tournament.</div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 14 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Step indicators */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             {[
-              { n: '1', title: 'Link Org', done: !!cloud?.bound },
-              { n: '2', title: 'Select Tournament', done: lc.rosterLoaded },
-              { n: '3', title: 'Start Game', done: lc.gameClientConnected },
+              { n: '1', title: 'Link Organization', desc: 'Connect to cloud', done: !!cloud?.bound },
+              { n: '2', title: 'Select Tournament', desc: 'Load team roster', done: lc.rosterLoaded },
+              { n: '3', title: 'Start Game Client', desc: 'Begin spectating', done: lc.gameClientConnected },
             ].map(s => (
-              <div key={s.n} style={{
-                padding: '10px 14px', borderRadius: 'var(--radius-sm)',
-                background: s.done ? 'rgba(96,165,250,0.04)' : 'rgba(255,255,255,0.02)',
-                border: `1px solid ${s.done ? 'rgba(96,165,250,0.1)' : 'var(--border)'}`,
-                display: 'flex', alignItems: 'center', gap: 8,
+              <div key={s.n} className="metric-card" style={{
+                borderColor: s.done ? 'rgba(34,197,94,0.12)' : 'var(--border)',
+                padding: '16px 18px',
               }}>
-                <div style={{
-                  width: 22, height: 22, borderRadius: '50%', display: 'grid', placeItems: 'center',
-                  fontSize: 10, fontWeight: 800,
-                  background: s.done ? 'var(--accent)' : 'rgba(255,255,255,0.06)',
-                  color: s.done ? '#0f1117' : 'var(--text-faint)',
-                }}>{s.done ? '\u2713' : s.n}</div>
-                <span style={{ fontSize: 12, fontWeight: 700, color: s.done ? 'var(--accent)' : 'var(--text)' }}>{s.title}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{
+                    width: 28, height: 28, borderRadius: 8, display: 'grid', placeItems: 'center',
+                    fontSize: 11, fontWeight: 800,
+                    background: s.done ? 'var(--green-soft)' : 'var(--bg-hover)',
+                    color: s.done ? 'var(--green)' : 'var(--text-faint)',
+                    border: `1px solid ${s.done ? 'rgba(34,197,94,0.15)' : 'var(--border)'}`,
+                  }}>
+                    {s.done ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    ) : s.n}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: s.done ? 'var(--green)' : 'var(--text)' }}>{s.title}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{s.desc}</div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
 
           {/* Cloud link / tournament select */}
           {!cloud?.bound ? (
-            <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Connect Organization</div>
-              <div className="flex gap-6">
-                <input className="input" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="Cloud URL (https://...)" style={{ flex: 1 }} />
-                <button className="btn btn-accent" onClick={requestDeviceCode} disabled={cloudBusy || !cloudUrl.trim()} style={{ whiteSpace: 'nowrap', fontSize: 11 }}>
+            <div className="card">
+              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Connect Organization</div>
+              <div className="flex gap-8">
+                <input className="input" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="Cloud URL (https://...)" style={{ flex: 1, fontFamily: 'var(--sans)' }} />
+                <button className="btn btn-accent" onClick={requestDeviceCode} disabled={cloudBusy || !cloudUrl.trim()} style={{ whiteSpace: 'nowrap' }}>
                   {cloudBusy ? 'Wait...' : 'Get Code'}
                 </button>
               </div>
               {deviceCode && (
-                <div className="flex items-center gap-8" style={{ marginTop: 10 }}>
-                  <div className="mono" style={{ fontSize: 28, fontWeight: 900, letterSpacing: '0.2em', color: 'var(--accent)' }}>{deviceCode}</div>
-                  <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>
-                    {deviceStatus === 'waiting' ? 'Enter this on the cloud dashboard' : 'Approved'}
+                <div className="flex items-center gap-10" style={{ marginTop: 14 }}>
+                  <div className="mono" style={{ fontSize: 32, fontWeight: 900, letterSpacing: '0.2em', color: 'var(--accent)' }}>{deviceCode}</div>
+                  <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>
+                    {deviceStatus === 'waiting' ? 'Enter this code on the cloud dashboard' : 'Approved'}
                   </span>
                 </div>
               )}
-              {cloudErr && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>{cloudErr}</div>}
+              {cloudErr && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{cloudErr}</div>}
             </div>
           ) : !lc.rosterLoaded ? (
-            <div style={{ padding: '12px 14px', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 6, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Select Tournament</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 8 }}>
+            <div className="card">
+              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Select Tournament</div>
+              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
                 <strong style={{ color: 'var(--text)' }}>{cloud.org?.name}</strong> linked
               </div>
-              <div className="flex gap-6">
-                <select className="input" value={selectedTournament} onChange={e => setSelectedTournament(e.target.value)} style={{ flex: 1 }}>
+              <div className="flex gap-8">
+                <select className="input" value={selectedTournament} onChange={e => setSelectedTournament(e.target.value)} style={{ flex: 1, fontFamily: 'var(--sans)' }}>
                   {(tournaments.length ? tournaments : [{ id: '', name: 'No tournaments', status: '' }]).map(t => (
                     <option key={t.id || 'none'} value={t.id}>{t.name || 'No tournaments'}</option>
                   ))}
                 </select>
-                <button className="btn btn-accent" onClick={selectTournament} disabled={cloudBusy || !selectedTournament} style={{ fontSize: 11 }}>
+                <button className="btn btn-accent" onClick={selectTournament} disabled={cloudBusy || !selectedTournament}>
                   {cloudBusy ? 'Linking...' : 'Link'}
                 </button>
               </div>
             </div>
           ) : null}
-          {rosterMsg && <div style={{ fontSize: 11, padding: '6px 10px', borderRadius: 'var(--radius-sm)', background: 'rgba(96,165,250,0.06)', color: 'var(--accent)', border: '1px solid rgba(96,165,250,0.08)', marginTop: 8 }}>{rosterMsg}</div>}
+          {rosterMsg && (
+            <div style={{ fontSize: 12, padding: '8px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--green-soft)', color: 'var(--green)', border: '1px solid rgba(34,197,94,0.1)' }}>{rosterMsg}</div>
+          )}
         </div>
       )}
 
       {/* ═══════════════════════════════════════════════ */}
-      {/* ── READY: Waiting ──────────────────────────── */}
+      {/* ── READY: Waiting ────────────────────────────  */}
       {/* ═══════════════════════════════════════════════ */}
       {phase === 'ready' && (
-        <>
-          {/* Team cards grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 8 }}>
-            {(roster?.teams ?? []).map(t => (
-              <div key={t.slot_number} style={{
-                padding: '10px 12px', borderRadius: 'var(--radius-sm)',
-                background: 'var(--bg-glass)', border: '1px solid var(--border-glass)',
-                display: 'flex', alignItems: 'center', gap: 8,
-                backdropFilter: 'blur(8px)',
-              }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: 6, flexShrink: 0,
-                  background: `${t.brand_color}18`, border: `1px solid ${t.brand_color}25`,
-                  display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 900, color: t.brand_color,
-                }}>{String(t.slot_number).padStart(2, '0')}</div>
-                <div style={{ overflow: 'hidden' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.short_name || t.name}</div>
-                  <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{t.player_count} players</div>
-                </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Quick stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            {[
+              { label: 'Teams', value: roster?.team_count ?? 0, color: 'var(--accent)' },
+              { label: 'Players', value: roster?.player_count ?? 0, color: 'var(--purple)' },
+              { label: 'Overlays', value: widgetCount, color: 'var(--cyan)' },
+              { label: 'Kill Pts', value: roster?.point_system?.kill_points ?? 1, color: 'var(--amber)' },
+            ].map((s, i) => (
+              <div key={i} className="metric-card">
+                <div className="metric-label">{s.label}</div>
+                <div className="metric-value" style={{ color: s.color }}>{s.value}</div>
               </div>
             ))}
           </div>
 
-          {/* Waiting state */}
-          <div className="card" style={{ textAlign: 'center', padding: '32px 20px' }}>
-            <div className="pulse" style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--purple)', margin: '0 auto 12px', boxShadow: '0 0 12px rgba(155,138,251,0.3)' }} />
-            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-dim)', marginBottom: 4 }}>Waiting for game client</div>
-            <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>Start spectating in the game client — data appears automatically</div>
+          {/* Team cards grid */}
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>Teams</span>
+              <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{roster?.team_count ?? 0} loaded</span>
+            </div>
+            <div style={{ padding: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 8 }}>
+              {(roster?.teams ?? []).map(t => (
+                <div key={t.slot_number} style={{
+                  padding: '10px 12px', borderRadius: 'var(--radius-sm)',
+                  background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)',
+                  display: 'flex', alignItems: 'center', gap: 10,
+                }}>
+                  <div style={{
+                    width: 30, height: 30, borderRadius: 8, flexShrink: 0,
+                    background: `${t.brand_color}12`, border: `1px solid ${t.brand_color}18`,
+                    display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 900, color: t.brand_color,
+                  }}>{String(t.slot_number).padStart(2, '0')}</div>
+                  <div style={{ overflow: 'hidden' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.short_name || t.name}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{t.player_count} players</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </>
+
+          {/* Waiting indicator */}
+          <div className="card" style={{ textAlign: 'center', padding: '36px 20px' }}>
+            <div className="pulse" style={{ width: 10, height: 10, borderRadius: '50%', background: 'var(--purple)', margin: '0 auto 14px', boxShadow: '0 0 16px rgba(168,85,247,0.3)' }} />
+            <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-dim)', marginBottom: 4 }}>Waiting for game client</div>
+            <div style={{ fontSize: 12, color: 'var(--text-faint)' }}>Start spectating in the game client</div>
+          </div>
+        </div>
       )}
 
       {/* ═══════════════════════════════════════════════ */}
-      {/* ── WARMUP ──────────────────────────────────── */}
+      {/* ── WARMUP ────────────────────────────────────  */}
       {/* ═══════════════════════════════════════════════ */}
       {phase === 'warmup' && (
-        <div className="card">
-          <div className="tile-header">
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div className="flex items-center gap-8">
-              <span className="tile-title">Lobby</span>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>Lobby</span>
               <div className="pulse" style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--amber)' }} />
             </div>
-            <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>{teams.length} teams · Plane / warmup</span>
+            <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{teams.length} teams</span>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 6 }}>
+          <div style={{ padding: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 6 }}>
             {teams.map((t, i) => (
               <div key={t.teamName} style={{
-                padding: '8px 10px', borderRadius: 'var(--radius-sm)',
-                background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)',
+                padding: '10px 14px', borderRadius: 'var(--radius-sm)',
+                background: 'var(--bg-inset)', border: '1px solid var(--border-subtle)',
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               }}>
-                <div className="flex items-center gap-6">
-                  <span style={{ fontSize: 10, fontWeight: 900, color: 'var(--text-faint)', width: 16 }}>{i + 1}</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: t.brandColor || 'var(--text)' }}>{t.displayName || t.shortName || t.teamName}</span>
+                <div className="flex items-center gap-8">
+                  <span style={{ fontSize: 11, fontWeight: 900, color: 'var(--text-muted)', width: 18 }}>{i + 1}</span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: t.brandColor || 'var(--text)' }}>{t.displayName || t.shortName || t.teamName}</span>
                 </div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--accent)' }}>{t.liveMemberNum}</span>
+                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent)' }}>{t.liveMemberNum}</span>
               </div>
             ))}
           </div>
@@ -397,93 +367,92 @@ export default function Dashboard() {
       )}
 
       {/* ═══════════════════════════════════════════════ */}
-      {/* ── LIVE ────────────────────────────────────── */}
+      {/* ── LIVE ──────────────────────────────────────  */}
       {/* ═══════════════════════════════════════════════ */}
       {phase === 'live' && (
-        <>
-          {/* Stat row */}
-          <div className="stat-grid">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Metric cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {[
-              { label: 'Alive', value: `${alive}/${teams.length}`, color: alive > 5 ? 'var(--accent)' : alive > 1 ? 'var(--amber)' : 'var(--red)' },
-              { label: 'Kills', value: kills, color: 'var(--red)' },
-              { label: 'Widgets', value: widgetCount, color: 'var(--accent)' },
-              { label: 'Match', value: `#${lc.matchNumber}`, color: 'var(--purple)' },
+              { label: 'Alive', value: `${alive}/${teams.length}`, color: alive > 5 ? 'var(--green)' : alive > 1 ? 'var(--amber)' : 'var(--red)', sub: 'teams remaining' },
+              { label: 'Eliminations', value: kills, color: 'var(--red)', sub: 'total kills' },
+              { label: 'Overlays', value: widgetCount, color: 'var(--cyan)', sub: 'active widgets' },
+              { label: 'Match', value: `#${lc.matchNumber}`, color: 'var(--purple)', sub: `game ${lc.matchNumber}` },
             ].map((s, i) => (
-              <div key={i} className="stat-box">
-                <div className="stat-label">{s.label}</div>
-                <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
+              <div key={i} className="metric-card">
+                <div className="metric-label">{s.label}</div>
+                <div className="metric-value" style={{ color: s.color }}>{s.value}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{s.sub}</div>
               </div>
             ))}
           </div>
 
-          {/* Main live content: leaderboard + sidebar */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 12 }}>
+          {/* Main content: leaderboard + sidebar */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 14 }}>
             {/* Leaderboard */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div className="flex items-center gap-8">
-                  <span style={{ fontSize: 13, fontWeight: 700 }}>Leaderboard</span>
+                  <span style={{ fontSize: 14, fontWeight: 700 }}>Leaderboard</span>
                   <div className="live-dot" />
                 </div>
-                <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>{teams.length} teams</span>
+                <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{teams.length} teams</span>
               </div>
 
-              <div className="table-header" style={{ gridTemplateColumns: '28px 4px 1fr 50px 50px 60px', padding: '8px 18px' }}>
+              <div className="table-header" style={{ gridTemplateColumns: '30px 4px 1fr 55px 55px 65px' }}>
                 <span>#</span><span></span><span>Team</span><span style={{ textAlign: 'center' }}>Alive</span><span style={{ textAlign: 'center' }}>Kills</span><span style={{ textAlign: 'right' }}>Pts</span>
               </div>
               {teams.map((t, i) => (
                 <div key={t.teamName} className="table-row" style={{
-                  gridTemplateColumns: '28px 4px 1fr 50px 50px 60px', padding: '8px 18px',
-                  opacity: t.liveMemberNum === 0 ? 0.4 : 1,
+                  gridTemplateColumns: '30px 4px 1fr 55px 55px 65px',
+                  opacity: t.liveMemberNum === 0 ? 0.35 : 1,
                 }}>
-                  <span style={{ fontWeight: 900, fontSize: 12, color: i === 0 ? 'var(--accent)' : i === 1 ? 'var(--purple)' : i === 2 ? 'var(--amber)' : 'var(--text-faint)' }}>{i + 1}</span>
-                  <div style={{ width: 4, height: 20, borderRadius: 2, background: t.brandColor || 'var(--text-faint)', opacity: 0.6 }} />
-                  <span style={{ fontWeight: 600, fontSize: 12 }}>{t.displayName || t.shortName || t.teamName}</span>
-                  <span style={{ textAlign: 'center', fontWeight: 700, fontSize: 12, color: t.liveMemberNum > 0 ? 'var(--accent)' : 'var(--red)' }}>{t.liveMemberNum}/4</span>
-                  <span style={{ textAlign: 'center', fontWeight: 800, fontSize: 12 }}>{t.kills}</span>
-                  <span style={{ textAlign: 'right', fontWeight: 900, fontSize: 13 }}>{t.totalPoints}</span>
+                  <span style={{ fontWeight: 900, fontSize: 12, color: i === 0 ? 'var(--accent)' : i === 1 ? 'var(--purple)' : i === 2 ? 'var(--amber)' : 'var(--text-muted)' }}>{i + 1}</span>
+                  <div style={{ width: 4, height: 22, borderRadius: 2, background: t.brandColor || 'var(--text-muted)', opacity: 0.7 }} />
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{t.displayName || t.shortName || t.teamName}</span>
+                  <span style={{ textAlign: 'center', fontWeight: 700, fontSize: 12, color: t.liveMemberNum > 0 ? 'var(--green)' : 'var(--red)' }}>{t.liveMemberNum}/4</span>
+                  <span style={{ textAlign: 'center', fontWeight: 800, fontSize: 13 }}>{t.kills}</span>
+                  <span style={{ textAlign: 'right', fontWeight: 900, fontSize: 14 }}>{t.totalPoints}</span>
                 </div>
               ))}
             </div>
 
             {/* Right sidebar: MVP + Top Fraggers */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* MVP */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {game?.spotlight && game.spotlight.kills > 0 && (
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                  <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--purple)' }}>Match MVP</span>
-                    <Trophy />
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--purple)' }}>Match MVP</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 1012 0V2z"/></svg>
                   </div>
-                  <div style={{ padding: '14px' }}>
-                    <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>{game.spotlight.kills}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4 }}>{game.spotlight.displayName || game.spotlight.playerName}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{game.spotlight.teamName}</div>
+                  <div style={{ padding: '16px 18px' }}>
+                    <div style={{ fontSize: 36, fontWeight: 900, color: 'var(--accent)', lineHeight: 1, letterSpacing: '-0.03em' }}>{game.spotlight.kills}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>{game.spotlight.displayName || game.spotlight.playerName}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{game.spotlight.teamName}</div>
                   </div>
                 </div>
               )}
 
-              {/* Top fraggers */}
               {topFraggers.length > 0 && (
                 <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1 }}>
-                  <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>Top Fraggers</span>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-faint)' }}>Top Fraggers</span>
                   </div>
                   {topFraggers.map((p, i) => (
                     <div key={p.playerName} style={{
-                      padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      borderBottom: i < topFraggers.length - 1 ? '1px solid var(--border)' : 'none',
+                      padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      borderBottom: i < topFraggers.length - 1 ? '1px solid var(--border-subtle)' : 'none',
                     }}>
-                      <div className="flex items-center gap-6">
-                        <span style={{ fontSize: 10, fontWeight: 900, color: i === 0 ? 'var(--accent)' : 'var(--text-faint)', width: 14 }}>{i + 1}</span>
+                      <div className="flex items-center gap-8">
+                        <span style={{ fontSize: 11, fontWeight: 900, color: i === 0 ? 'var(--accent)' : 'var(--text-muted)', width: 16 }}>{i + 1}</span>
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 700 }}>{p.displayName || p.playerName}</div>
-                          <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{p.teamName}</div>
+                          <div style={{ fontSize: 12, fontWeight: 700 }}>{p.displayName || p.playerName}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{p.teamName}</div>
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--red)' }}>{p.kills}</div>
-                        <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{p.damage} dmg</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--red)' }}>{p.kills}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{p.damage} dmg</div>
                       </div>
                     </div>
                   ))}
@@ -491,24 +460,24 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* ═══════════════════════════════════════════════ */}
-      {/* ── FINISHED / SYNCED ───────────────────────── */}
+      {/* ── FINISHED / SYNCED ─────────────────────────  */}
       {/* ═══════════════════════════════════════════════ */}
       {(phase === 'finished' || phase === 'synced') && (
-        <>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Next match banner */}
           {phase === 'synced' && (
             <div style={{
-              padding: '14px 18px', borderRadius: 'var(--radius)',
-              background: 'rgba(96,165,250,0.04)', border: '1px solid rgba(96,165,250,0.08)',
+              padding: '16px 20px', borderRadius: 'var(--radius-lg)',
+              background: 'var(--accent-soft)', border: '1px solid rgba(59,130,246,0.1)',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>Match complete — results synced</div>
-                <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>Reset for the next match</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--accent)' }}>Results synced to cloud</div>
+                <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 2 }}>Ready for the next match</div>
               </div>
               <button className="btn btn-accent" onClick={resetMatch}>Next Match</button>
             </div>
@@ -517,119 +486,117 @@ export default function Dashboard() {
           {/* Winner card */}
           {teams[0] && (
             <div style={{
-              padding: '20px 24px', borderRadius: 'var(--radius-lg)', textAlign: 'center',
-              background: `linear-gradient(135deg, ${teams[0].brandColor || orgAccent}10, rgba(16,20,32,0.9))`,
-              border: `1px solid ${teams[0].brandColor || orgAccent}15`,
+              padding: '24px', borderRadius: 'var(--radius-lg)', textAlign: 'center',
+              background: 'var(--bg-card)',
+              border: `1px solid ${teams[0].brandColor || orgAccent}18`,
             }}>
-              <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--amber)', marginBottom: 4 }}>Winner Winner Chicken Dinner</div>
-              <div style={{ fontSize: 24, fontWeight: 900, color: 'var(--text)' }}>{teams[0].displayName || teams[0].shortName || teams[0].teamName}</div>
-              <div style={{ fontSize: 13, color: 'var(--text-dim)', marginTop: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--amber)', marginBottom: 8 }}>Winner Winner Chicken Dinner</div>
+              <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-0.02em' }}>{teams[0].displayName || teams[0].shortName || teams[0].teamName}</div>
+              <div style={{ fontSize: 14, color: 'var(--text-dim)', marginTop: 6 }}>
                 {teams[0].kills} kills · {teams[0].totalPoints} points
               </div>
             </div>
           )}
 
-          {/* Stats row */}
-          <div className="stat-grid">
+          {/* Metric cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {[
               { label: 'Total Kills', value: kills, color: 'var(--red)' },
               { label: 'Teams', value: teams.length, color: 'var(--purple)' },
-              { label: 'Sync', value: lc.syncResult === 'success' ? 'DONE' : lc.syncResult === 'pending' ? '...' : lc.syncResult === 'failed' ? 'FAIL' : 'WAIT', color: lc.syncResult === 'success' ? 'var(--accent)' : lc.syncResult === 'failed' ? 'var(--red)' : 'var(--amber)' },
+              { label: 'Sync Status', value: lc.syncResult === 'success' ? 'DONE' : lc.syncResult === 'pending' ? '...' : lc.syncResult === 'failed' ? 'FAIL' : 'WAIT', color: lc.syncResult === 'success' ? 'var(--green)' : lc.syncResult === 'failed' ? 'var(--red)' : 'var(--amber)' },
               { label: 'Match', value: `#${lc.matchNumber}`, color: 'var(--accent)' },
             ].map((s, i) => (
-              <div key={i} className="stat-box">
-                <div className="stat-label">{s.label}</div>
-                <div className="stat-value" style={{ color: s.color }}>{s.value}</div>
+              <div key={i} className="metric-card">
+                <div className="metric-label">{s.label}</div>
+                <div className="metric-value" style={{ color: s.color }}>{s.value}</div>
               </div>
             ))}
           </div>
 
           {/* Final standings + top fraggers */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 14 }}>
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 700 }}>Final Standings</span>
-                <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 4, background: 'rgba(96,165,250,0.06)', color: 'var(--accent)' }}>COMPLETE</span>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>Final Standings</span>
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '3px 8px', borderRadius: 5, background: 'var(--green-soft)', color: 'var(--green)' }}>COMPLETE</span>
               </div>
-              <div className="table-header" style={{ gridTemplateColumns: '28px 4px 1fr 50px 60px', padding: '8px 18px' }}>
+              <div className="table-header" style={{ gridTemplateColumns: '30px 4px 1fr 55px 65px' }}>
                 <span>#</span><span></span><span>Team</span><span style={{ textAlign: 'center' }}>Kills</span><span style={{ textAlign: 'right' }}>Total</span>
               </div>
               {teams.map((t, i) => (
-                <div key={t.teamName} className="table-row" style={{ gridTemplateColumns: '28px 4px 1fr 50px 60px', padding: '8px 18px' }}>
-                  <span style={{ fontWeight: 900, fontSize: 12, color: i === 0 ? 'var(--accent)' : i === 1 ? 'var(--purple)' : i === 2 ? 'var(--amber)' : 'var(--text-faint)' }}>{i + 1}</span>
-                  <div style={{ width: 4, height: 20, borderRadius: 2, background: t.brandColor || 'var(--text-faint)', opacity: 0.6 }} />
-                  <span style={{ fontWeight: 600, fontSize: 12 }}>{t.displayName || t.shortName || t.teamName}</span>
+                <div key={t.teamName} className="table-row" style={{ gridTemplateColumns: '30px 4px 1fr 55px 65px' }}>
+                  <span style={{ fontWeight: 900, fontSize: 12, color: i === 0 ? 'var(--accent)' : i === 1 ? 'var(--purple)' : i === 2 ? 'var(--amber)' : 'var(--text-muted)' }}>{i + 1}</span>
+                  <div style={{ width: 4, height: 22, borderRadius: 2, background: t.brandColor || 'var(--text-muted)', opacity: 0.7 }} />
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{t.displayName || t.shortName || t.teamName}</span>
                   <span style={{ textAlign: 'center', fontWeight: 700, fontSize: 12, color: 'var(--red)' }}>{t.kills}</span>
-                  <span style={{ textAlign: 'right', fontWeight: 900, fontSize: 13, color: i === 0 ? 'var(--accent)' : 'var(--text)' }}>{t.totalPoints}</span>
+                  <span style={{ textAlign: 'right', fontWeight: 900, fontSize: 14, color: i === 0 ? 'var(--accent)' : 'var(--text)' }}>{t.totalPoints}</span>
                 </div>
               ))}
             </div>
 
-            {/* Top fraggers sidebar */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {game?.spotlight && game.spotlight.kills > 0 && (
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                  <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--purple)' }}>Match MVP</span>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--purple)' }}>Match MVP</span>
                   </div>
-                  <div style={{ padding: '14px' }}>
-                    <div style={{ fontSize: 28, fontWeight: 900, color: 'var(--accent)', lineHeight: 1 }}>{game.spotlight.kills}</div>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginTop: 4 }}>{game.spotlight.displayName || game.spotlight.playerName}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{game.spotlight.teamName}</div>
+                  <div style={{ padding: '16px 18px' }}>
+                    <div style={{ fontSize: 36, fontWeight: 900, color: 'var(--accent)', lineHeight: 1, letterSpacing: '-0.03em' }}>{game.spotlight.kills}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, marginTop: 6 }}>{game.spotlight.displayName || game.spotlight.playerName}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>{game.spotlight.teamName}</div>
                   </div>
                 </div>
               )}
 
               {topFraggers.length > 0 && (
                 <div className="card" style={{ padding: 0, overflow: 'hidden', flex: 1 }}>
-                  <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-faint)' }}>Top Fraggers</span>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-faint)' }}>Top Fraggers</span>
                   </div>
                   {topFraggers.map((p, i) => (
                     <div key={p.playerName} style={{
-                      padding: '8px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      borderBottom: i < topFraggers.length - 1 ? '1px solid var(--border)' : 'none',
+                      padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      borderBottom: i < topFraggers.length - 1 ? '1px solid var(--border-subtle)' : 'none',
                     }}>
-                      <div className="flex items-center gap-6">
-                        <span style={{ fontSize: 10, fontWeight: 900, color: i === 0 ? 'var(--accent)' : 'var(--text-faint)', width: 14 }}>{i + 1}</span>
+                      <div className="flex items-center gap-8">
+                        <span style={{ fontSize: 11, fontWeight: 900, color: i === 0 ? 'var(--accent)' : 'var(--text-muted)', width: 16 }}>{i + 1}</span>
                         <div>
-                          <div style={{ fontSize: 11, fontWeight: 700 }}>{p.displayName || p.playerName}</div>
-                          <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{p.teamName}</div>
+                          <div style={{ fontSize: 12, fontWeight: 700 }}>{p.displayName || p.playerName}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{p.teamName}</div>
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 13, fontWeight: 900, color: 'var(--red)' }}>{p.kills}</div>
-                        <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{p.damage} dmg</div>
+                        <div style={{ fontSize: 14, fontWeight: 900, color: 'var(--red)' }}>{p.kills}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{p.damage} dmg</div>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Sync status */}
               {lc.syncResult === 'failed' && (
-                <div style={{ padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'rgba(239,107,107,0.06)', border: '1px solid rgba(239,107,107,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: 10, color: 'var(--red)' }}>Sync failed</span>
-                  <button className="btn btn-red" onClick={retrySync} style={{ fontSize: 9, padding: '2px 6px' }}>Retry</button>
+                <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--red-soft)', border: '1px solid rgba(239,68,68,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 11, color: 'var(--red)' }}>Sync failed</span>
+                  <button className="btn btn-red" onClick={retrySync} style={{ fontSize: 10, padding: '3px 8px' }}>Retry</button>
                 </div>
               )}
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* ═══════════════════════════════════════════════ */}
-      {/* ── Bottom bar: Overlays + Sync ─────────────── */}
+      {/* ── Bottom bar: Overlays + Sync ───────────────  */}
       {/* ═══════════════════════════════════════════════ */}
       {phase !== 'idle' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
           {/* Overlays */}
           <div className="card">
             <div className="tile-header">
               <span className="tile-title">Overlays</span>
-              <a href="/controller" className="btn" style={{ fontSize: 10, padding: '3px 8px' }}>Controller</a>
+              <a href="/controller" className="btn" style={{ fontSize: 11, padding: '4px 10px' }}>Controller</a>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
               {[
                 { key: 'leaderboard', label: 'Ranking' }, { key: 'killfeed', label: 'Kill Feed' }, { key: 'playercard', label: 'Player' },
                 { key: 'elimination', label: 'Elim' }, { key: 'results', label: 'Results' }, { key: 'mvp', label: 'MVP' },
@@ -638,75 +605,75 @@ export default function Dashboard() {
                 const on = widgets[w.key] ?? false;
                 return (
                   <div key={w.key} style={{
-                    padding: '5px 8px', borderRadius: 'var(--radius-sm)',
-                    background: on ? 'rgba(96,165,250,0.04)' : 'rgba(255,255,255,0.015)',
-                    border: `1px solid ${on ? 'rgba(96,165,250,0.1)' : 'var(--border)'}`,
-                    display: 'flex', alignItems: 'center', gap: 5,
+                    padding: '6px 10px', borderRadius: 'var(--radius-sm)',
+                    background: on ? 'var(--accent-glow)' : 'var(--bg-inset)',
+                    border: `1px solid ${on ? 'rgba(59,130,246,0.1)' : 'var(--border-subtle)'}`,
+                    display: 'flex', alignItems: 'center', gap: 6,
                   }}>
-                    <div style={{ width: 4, height: 4, borderRadius: '50%', background: on ? 'var(--accent)' : 'var(--text-faint)', flexShrink: 0, opacity: on ? 1 : 0.4 }} />
-                    <span style={{ fontSize: 10, fontWeight: 600, color: on ? 'var(--text)' : 'var(--text-faint)' }}>{w.label}</span>
+                    <div style={{ width: 5, height: 5, borderRadius: '50%', background: on ? 'var(--green)' : 'var(--text-muted)', flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: on ? 'var(--text)' : 'var(--text-faint)' }}>{w.label}</span>
                   </div>
                 );
               })}
             </div>
-            <div style={{ marginTop: 8, fontSize: 9, color: 'var(--text-faint)' }}>
-              OBS: <span className="mono">localhost:3001/overlay/master</span>
+            <div style={{ marginTop: 10, fontSize: 10, color: 'var(--text-faint)' }}>
+              OBS: <span className="mono" style={{ color: 'var(--text-dim)' }}>localhost:3001/overlay/master</span>
             </div>
           </div>
 
           {/* Cloud + Sync */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div className="card" style={{ flex: 1, padding: '12px 14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <div className="flex items-center gap-6">
-                  <Cloud />
-                  <span style={{ fontSize: 12, fontWeight: 700 }}>Cloud</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="card" style={{ flex: 1, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div className="flex items-center gap-8">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" /></svg>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>Cloud</span>
                 </div>
-                <span style={{ fontSize: 9, fontWeight: 800, padding: '1px 6px', borderRadius: 4, background: cloud?.bound ? 'rgba(96,165,250,0.06)' : 'rgba(255,255,255,0.03)', color: cloud?.bound ? 'var(--accent)' : 'var(--text-faint)' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 5, background: cloud?.bound ? 'var(--green-soft)' : 'var(--bg-hover)', color: cloud?.bound ? 'var(--green)' : 'var(--text-faint)' }}>
                   {cloud?.bound ? 'LINKED' : 'NOT LINKED'}
                 </span>
               </div>
               {cloud?.bound && (
-                <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>
                   {cloud.org?.name}{cloud.tournament?.name ? ` / ${cloud.tournament.name}` : ''}
                 </div>
               )}
             </div>
 
-            <div className="card" style={{ flex: 1, padding: '12px 14px', borderColor: sync.connected ? 'rgba(155,138,251,0.08)' : undefined }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: sync.connected || true ? 4 : 0 }}>
-                <div className="flex items-center gap-6">
-                  <Refresh />
-                  <span style={{ fontSize: 12, fontWeight: 700 }}>Sync</span>
+            <div className="card" style={{ flex: 1, padding: '14px 16px', borderColor: sync.connected ? 'rgba(168,85,247,0.1)' : undefined }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <div className="flex items-center gap-8">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>Sync</span>
                   {sync.connected && <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--purple)' }} />}
                 </div>
-                {sync.connected && <button className="btn btn-red" onClick={stopSync} style={{ fontSize: 9, padding: '2px 6px' }}>Stop</button>}
+                {sync.connected && <button className="btn btn-red" onClick={stopSync} style={{ fontSize: 10, padding: '3px 8px' }}>Stop</button>}
               </div>
               {sync.connected ? (
-                <div style={{ fontSize: 10, color: 'var(--text-dim)' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                   <span style={{ fontWeight: 800, textTransform: 'uppercase', color: sync.role === 'leader' ? 'var(--red)' : 'var(--accent)' }}>{sync.role}</span>
                   {' '}{sync.peerCount} peers
-                  {sync.syncCode && <span className="mono" style={{ marginLeft: 6, fontWeight: 800, letterSpacing: '0.1em' }}>{sync.syncCode}</span>}
+                  {sync.syncCode && <span className="mono" style={{ marginLeft: 8, fontWeight: 800, letterSpacing: '0.1em' }}>{sync.syncCode}</span>}
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                  <button className="btn" onClick={startLeader} disabled={syncBusy || !roster?.has_cloud_config} style={{ width: '100%', fontSize: 9 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <button className="btn" onClick={startLeader} disabled={syncBusy || !roster?.has_cloud_config} style={{ width: '100%', fontSize: 11 }}>
                     {!roster?.has_cloud_config ? 'Link first' : 'Leader'}
                   </button>
                   <div className="flex gap-4">
-                    <input className="input" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))} placeholder="Code" maxLength={6} style={{ flex: 1, textAlign: 'center', fontWeight: 800, letterSpacing: '0.12em', fontSize: 10 }} />
-                    <button className="btn btn-accent" onClick={joinFollower} disabled={syncBusy || joinCode.length !== 6} style={{ fontSize: 9 }}>Join</button>
+                    <input className="input" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))} placeholder="Code" maxLength={6} style={{ flex: 1, textAlign: 'center', fontWeight: 800, letterSpacing: '0.12em', fontSize: 11 }} />
+                    <button className="btn btn-accent" onClick={joinFollower} disabled={syncBusy || joinCode.length !== 6} style={{ fontSize: 11 }}>Join</button>
                   </div>
                 </div>
               )}
-              {syncErr && <div style={{ fontSize: 10, color: 'var(--red)', marginTop: 4 }}>{syncErr}</div>}
+              {syncErr && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 6 }}>{syncErr}</div>}
             </div>
           </div>
         </div>
       )}
 
       {/* ── Footer ──────────────────────────────────── */}
-      <div className="flex items-center" style={{ justifyContent: 'space-between', paddingTop: 8, borderTop: '1px solid var(--border)', fontSize: 9, color: 'var(--text-faint)' }}>
+      <div className="flex items-center" style={{ justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid var(--border-subtle)', fontSize: 10, color: 'var(--text-muted)' }}>
         <span>Live Stat Engine</span>
         <span className="mono">:3001</span>
       </div>
