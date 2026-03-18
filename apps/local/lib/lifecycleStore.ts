@@ -49,6 +49,7 @@ let state: LifecycleState = {
 const subs = new Set<Subscriber>();
 let previousTeamAlive = new Map<number, number>();
 let initialized = false;
+let notifCounter = 0;
 
 function notify() {
   const snap = getLifecycleState();
@@ -214,7 +215,7 @@ export function resetForNextMatch(): void {
  */
 export function addNotification(type: Notification['type'], message: string): void {
   state.notifications.push({
-    id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    id: `${Date.now()}-${++notifCounter}-${Math.random().toString(36).slice(2, 6)}`,
     type,
     message,
     timestamp: Date.now(),

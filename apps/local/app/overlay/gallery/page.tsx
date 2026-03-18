@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const WIDGETS = [
   { name: 'Match Ranking',        path: '/overlay/leaderboard', size: '420\u00D71080',  position: 'Right side',    desc: 'Live leaderboard with teams, status, points and eliminations.' },
@@ -19,7 +19,11 @@ const WIDGETS = [
 
 export default function GalleryPage() {
   const [copied, setCopied] = useState<string | null>(null);
-  const base = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3001';
+  const [base, setBase] = useState('http://localhost:3001');
+
+  useEffect(() => {
+    setBase(window.location.origin);
+  }, []);
 
   function copy(path: string, params?: string) {
     navigator.clipboard.writeText(`${base}${path}${params || ''}`);
