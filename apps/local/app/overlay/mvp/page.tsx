@@ -25,7 +25,7 @@ interface LiveData {
 
 export default function MvpOverlay() {
   const [mvp, setMvp] = useState<(Player & { brandColor?: string; teamShort?: string; teamLogo?: string }) | null>(null);
-  const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
+  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -61,7 +61,7 @@ export default function MvpOverlay() {
 
   if (!mvp) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
 
-  const accent = theme.accent_color || '#00ffc3';
+  const accent = theme.accent_color || '#60a5fa';
   const color = mvp.brandColor || accent;
   const name = mvp.displayName || mvp.playerName;
 

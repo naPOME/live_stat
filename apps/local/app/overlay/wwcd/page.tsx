@@ -32,7 +32,7 @@ export default function WwcdOverlay() {
   const [winner, setWinner] = useState<Team | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [show, setShow] = useState(false);
-  const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
+  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
 
   useEffect(() => {
     fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
@@ -61,7 +61,7 @@ export default function WwcdOverlay() {
 
   if (!winner) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
 
-  const accent = theme.accent_color || '#00ffc3';
+  const accent = theme.accent_color || '#60a5fa';
   const name = winner.displayName || winner.teamName;
   const color = winner.brandColor || accent;
 

@@ -53,7 +53,8 @@ const TdmLiveScoreboard: React.FC = () => {
       try {
         const res = await fetch('/api/live', { cache: 'no-store' });
         if (!res.ok) return;
-        const next = (await res.json()) as LeaderboardResponse;
+        const raw = await res.json();
+        const next = (raw?.data ?? raw) as LeaderboardResponse;
         if (!cancelled) setData(next);
       } catch {
         // ignore
@@ -79,7 +80,7 @@ const TdmLiveScoreboard: React.FC = () => {
       <div className="rounded-2xl  p-4 ">
         <div className="flex items-center justify-between mb-3  ">
           <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-[#00ffc3] shadow-[0_0_14px_rgba(0,255,195,0.7)]" />
+            <div className="h-2 w-2 rounded-full bg-[#60a5fa] shadow-[0_0_14px_rgba(96,165,250,0.7)]" />
             <div className="text-xs font-extrabold tracking-[0.22em] uppercase text-">TDM Live</div>
           </div>
           <div className="text-[11px] font-medium text-white/45 tabular-nums">
@@ -89,10 +90,10 @@ const TdmLiveScoreboard: React.FC = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-black/10 ">
           {teamCards.map((team, idx) => {
-            const accent = idx === 0 ? 'from-[#00ffc3]/20 via-[#6d5efc]/10 to-transparent' : 'from-[#ff4e4e]/20 via-[#6d5efc]/10 to-transparent';
-            const killColor = idx === 0 ? 'text-[#00ffc3]' : 'text-[#ff4e4e]';
-            const dotColor = idx === 0 ? 'bg-[#00ffc3]' : 'bg-[#ff4e4e]';
-            const dotShadow = idx === 0 ? 'shadow-[0_0_18px_rgba(0,255,195,0.7)]' : 'shadow-[0_0_18px_rgba(255,78,78,0.65)]';
+            const accent = idx === 0 ? 'from-[#60a5fa]/20 via-[#9b8afb]/10 to-transparent' : 'from-[#ef6b6b]/20 via-[#9b8afb]/10 to-transparent';
+            const killColor = idx === 0 ? 'text-[#60a5fa]' : 'text-[#ef6b6b]';
+            const dotColor = idx === 0 ? 'bg-[#60a5fa]' : 'bg-[#ef6b6b]';
+            const dotShadow = idx === 0 ? 'shadow-[0_0_18px_rgba(96,165,250,0.7)]' : 'shadow-[0_0_18px_rgba(239,107,107,0.65)]';
             return (
               <div
                 key={team.teamName}

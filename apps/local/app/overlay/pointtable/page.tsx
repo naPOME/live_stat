@@ -8,7 +8,7 @@ interface PointSystem {
 }
 
 export default function PointTableOverlay() {
-  const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
+  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
   const [pointSystem, setPointSystem] = useState<PointSystem | null>(null);
   const [show, setShow] = useState(false);
 
@@ -26,7 +26,7 @@ export default function PointTableOverlay() {
       });
   }, []);
 
-  const accent = theme.accent_color || '#00ffc3';
+  const accent = theme.accent_color || '#60a5fa';
 
   // Build placement rows from point_system
   const placements: { label: string; value: number }[] = [];

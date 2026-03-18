@@ -15,7 +15,7 @@ interface Team {
 
 export default function TeamListOverlay() {
   const [teams, setTeams] = useState<Team[]>([]);
-  const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
+  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
 
   useEffect(() => {
     fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
@@ -33,7 +33,7 @@ export default function TeamListOverlay() {
 
   if (teams.length === 0) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
 
-  const accent = theme.accent_color || '#00ffc3';
+  const accent = theme.accent_color || '#60a5fa';
 
   // Two-column grid layout
   const half = Math.ceil(teams.length / 2);

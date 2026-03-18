@@ -22,7 +22,7 @@ interface LiveData {
 
 export default function ResultsOverlay() {
   const [teams, setTeams] = useState<Team[]>([]);
-  const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
+  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
   const [show, setShow] = useState(false);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function ResultsOverlay() {
 
   if (teams.length === 0) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
 
-  const accent = theme.accent_color || '#00ffc3';
+  const accent = theme.accent_color || '#60a5fa';
 
   // Split into two columns
   const half = Math.ceil(teams.length / 2);
@@ -70,7 +70,7 @@ export default function ResultsOverlay() {
           className="w-7 flex items-center justify-center text-[11px] font-black flex-shrink-0 py-2"
           style={{
             color: rank <= 3 ? '#000' : '#fff',
-            background: rank === 1 ? accent : rank === 2 ? '#ff4e4e' : rank === 3 ? '#ffb800' : 'transparent',
+            background: rank === 1 ? accent : rank === 2 ? '#ef6b6b' : rank === 3 ? '#f0b940' : 'transparent',
           }}
         >
           #{rank}

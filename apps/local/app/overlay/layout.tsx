@@ -14,11 +14,15 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            html, body {
+            html, body, #__next, [data-nextjs-scroll-focus-boundary] {
               background: transparent !important;
               margin: 0 !important;
               padding: 0 !important;
               overflow: hidden !important;
+            }
+            .shell, .shell-body, .shell-main {
+              background: transparent !important;
+              padding: 0 !important;
             }
           `,
         }}

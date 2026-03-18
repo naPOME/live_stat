@@ -46,11 +46,11 @@ export default function GalleryPage() {
       <div style={{ maxWidth: 1080, margin: '0 auto', padding: '24px' }}>
         {/* Hero cards */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
-          <div className="card" style={{ borderColor: 'rgba(0,255,195,0.15)' }}>
+          <div className="card" style={{ borderColor: 'rgba(96,165,250,0.15)' }}>
             <span style={{ fontSize: 9, fontWeight: 800, color: 'var(--accent)', letterSpacing: '0.1em' }}>RECOMMENDED</span>
             <div style={{ fontSize: 15, fontWeight: 800, marginTop: 4 }}>Master Overlay</div>
             <div style={{ fontSize: 11, color: 'var(--text-faint)', margin: '4px 0 10px' }}>Single OBS source that composites all widgets. Toggle from Controller.</div>
-            <code className="mono" style={{ display: 'block', fontSize: 11, padding: '6px 10px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-base)', border: '1px solid rgba(0,255,195,0.15)', color: 'var(--accent)' }}>
+            <code className="mono" style={{ display: 'block', fontSize: 11, padding: '6px 10px', borderRadius: 'var(--radius-sm)', background: 'var(--bg-base)', border: '1px solid rgba(96,165,250,0.15)', color: 'var(--accent)' }}>
               {base}/overlay/master
             </code>
           </div>

@@ -23,7 +23,7 @@ interface LiveData {
 
 export default function LeaderboardOverlay() {
   const [data, setData] = useState<LiveData | null>(null);
-  const [theme, setTheme] = useState({ bg_color: '#0a0a1a', accent_color: '#00ffc3' });
+  const [theme, setTheme] = useState({ bg_color: '#0a0a1a', accent_color: '#60a5fa' });
   const prevPoints = useRef<Record<string, number>>({});
   const [flashing, setFlashing] = useState<Record<string, boolean>>({});
 
@@ -58,7 +58,7 @@ export default function LeaderboardOverlay() {
 
   if (!data || data.teams.length === 0) return null;
 
-  const accent = theme.accent_color || '#00ffc3';
+  const accent = theme.accent_color || '#60a5fa';
   const teams = data.teams.slice(0, 16);
 
   return (
@@ -112,8 +112,8 @@ export default function LeaderboardOverlay() {
                   color: rank <= 3 ? '#000' : '#fff',
                   background:
                     rank === 1 ? accent
-                    : rank === 2 ? '#ff4e4e'
-                    : rank === 3 ? '#ffb800'
+                    : rank === 2 ? '#ef6b6b'
+                    : rank === 3 ? '#f0b940'
                     : 'transparent',
                 }}
               >
@@ -148,7 +148,7 @@ export default function LeaderboardOverlay() {
                       key={pi}
                       className="w-[3px] h-[14px] rounded-sm"
                       style={{
-                        background: isAlive ? accent : 'rgba(255,78,78,0.4)',
+                        background: isAlive ? accent : 'rgba(239,107,107,0.4)',
                       }}
                     />
                   );
@@ -181,7 +181,7 @@ export default function LeaderboardOverlay() {
           <span className="w-[3px] h-[10px] rounded-sm" style={{ background: accent }} /> ALIVE
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-[3px] h-[10px] rounded-sm" style={{ background: 'rgba(255,78,78,0.4)' }} /> KNOCKED
+          <span className="w-[3px] h-[10px] rounded-sm" style={{ background: 'rgba(239,107,107,0.4)' }} /> KNOCKED
         </span>
         <span className="flex items-center gap-1">
           <span className="w-[3px] h-[10px] rounded-sm" style={{ background: 'rgba(255,255,255,0.1)' }} /> DEAD

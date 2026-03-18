@@ -22,7 +22,7 @@ const MAP_COLORS: Record<string, string> = {
 
 export default function ScheduleOverlay() {
   const [matches, setMatches] = useState<MatchSlot[]>([]);
-  const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
+  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
 
   useEffect(() => {
     fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
@@ -56,7 +56,7 @@ export default function ScheduleOverlay() {
 
   if (matches.length === 0) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
 
-  const accent = theme.accent_color || '#00ffc3';
+  const accent = theme.accent_color || '#60a5fa';
 
   return (
     <div className="fixed bottom-0 left-0 right-0" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -106,7 +106,7 @@ export default function ScheduleOverlay() {
                     <div className="relative flex items-center justify-center">
                       <span
                         className="w-2 h-2 rounded-full animate-pulse"
-                        style={{ background: '#ff4e4e' }}
+                        style={{ background: '#ef6b6b' }}
                       />
                     </div>
                   )}

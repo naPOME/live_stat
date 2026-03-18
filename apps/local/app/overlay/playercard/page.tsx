@@ -45,7 +45,7 @@ export default function PlayerCardPage() {
   if (!card?.player) return null;
 
   const { player, team } = card;
-  const color = team?.brandColor ?? '#6d5efc';
+  const color = team?.brandColor ?? '#9b8afb';
   const healthPct = Math.max(0, Math.min(100, (player.health / (player.healthMax || 100)) * 100));
   const displayName = player.displayName ?? player.playerName;
   const teamName = team?.displayName ?? team?.inGameName ?? '';
@@ -103,7 +103,7 @@ export default function PlayerCardPage() {
               style={{
                 height: '100%',
                 width: `${healthPct}%`,
-                background: healthPct > 50 ? '#00ffc3' : healthPct > 25 ? '#ffb300' : '#ff4e4e',
+                background: healthPct > 50 ? '#60a5fa' : healthPct > 25 ? '#f0b940' : '#ef6b6b',
                 borderRadius: 2,
                 transition: 'width 0.3s ease',
               }}

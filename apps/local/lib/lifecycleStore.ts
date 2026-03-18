@@ -22,6 +22,10 @@ export interface LifecycleState {
   notifications: Notification[];
   matchNumber: number;
   matchId: string | null;
+  /** True while collecting late post-match data (30s window after Finished) */
+  postMatchCollecting: boolean;
+  /** Timestamp when post-match collection window ends */
+  postMatchDeadline: number | null;
 }
 
 type Subscriber = (state: LifecycleState) => void;
@@ -38,6 +42,8 @@ let state: LifecycleState = {
   notifications: [],
   matchNumber: 1,
   matchId: null,
+  postMatchCollecting: false,
+  postMatchDeadline: null,
 };
 
 const subs = new Set<Subscriber>();
@@ -116,16 +122,46 @@ export function goLive(): void {
   }
 }
 
+/** Callback set by setisingame route to trigger cloud sync after collection window */
+let onPostMatchReady: (() => void) | null = null;
+
+/**
+ * Register a callback that fires when the 30s post-match collection window ends.
+ * The setisingame route uses this to trigger cloud sync at the right time.
+ */
+export function setPostMatchCallback(cb: () => void): void {
+  onPostMatchReady = cb;
+}
+
+/** Post-match collection window duration (ms). PCOB guideline: host must stay 30s. */
+const POST_MATCH_WINDOW_MS = 30_000;
+
 /**
  * Transition to finished phase.
+ * Opens a 30s collection window for late post-match data (final totalmessage,
+ * weapon details, etc.) before triggering cloud sync.
  */
 export function goFinished(): void {
   if (state.phase === 'live' || state.phase === 'warmup') {
     state.phase = 'finished';
     state.syncResult = null;
     state.syncError = null;
-    addNotification('info', 'Match finished');
+    state.postMatchCollecting = true;
+    state.postMatchDeadline = Date.now() + POST_MATCH_WINDOW_MS;
+    addNotification('info', 'Match finished — collecting post-match data (30s)');
     notify();
+
+    // After 30s, end collection and trigger sync
+    setTimeout(() => {
+      state.postMatchCollecting = false;
+      state.postMatchDeadline = null;
+      addNotification('info', 'Post-match data collection complete');
+      notify();
+      if (onPostMatchReady) {
+        onPostMatchReady();
+        onPostMatchReady = null;
+      }
+    }, POST_MATCH_WINDOW_MS);
   }
 }
 
@@ -162,10 +198,13 @@ export function resetForNextMatch(): void {
   state.lastTelemetryAt = null;
   state.syncResult = null;
   state.syncError = null;
+  state.postMatchCollecting = false;
+  state.postMatchDeadline = null;
   state.matchNumber += 1;
   state.matchId = null;
   state.notifications = [];
   previousTeamAlive.clear();
+  onPostMatchReady = null;
   addNotification('info', `Ready for match #${state.matchNumber}`);
   notify();
 }

@@ -61,7 +61,7 @@ create table point_systems (
   placement_points  jsonb not null default '{
     "1":10,"2":6,"3":5,"4":4,"5":3,"6":2,"7":1,"8":1,
     "9":0,"10":0,"11":0,"12":0,"13":0,"14":0,"15":0,"16":0,
-    "17":0,"18":0,"19":0,"20":0,"21":0,"22":0
+    "17":0,"18":0,"19":0,"20":0,"21":0,"22":0,"23":0,"24":0,"25":0
   }',
   created_at        timestamptz not null default now()
 );
@@ -113,12 +113,12 @@ create table players (
   created_at      timestamptz not null default now()
 );
 
--- Slot 1-22, one team per slot per match
+-- Slot 1-25, one team per slot per match (PCOB supports up to 25)
 create table match_slots (
   id          uuid primary key default gen_random_uuid(),
   match_id    uuid not null references matches(id) on delete cascade,
   team_id     uuid not null references teams(id) on delete cascade,
-  slot_number int not null check (slot_number between 1 and 22),
+  slot_number int not null check (slot_number between 1 and 25),
   unique (match_id, slot_number),
   unique (match_id, team_id)
 );

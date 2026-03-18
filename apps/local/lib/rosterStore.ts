@@ -174,11 +174,11 @@ export function getPointSystem(): PointSystem {
 export function getTheme(): OverlayTheme {
   return roster?.org.theme ?? {
     bg_color: '#0a0a1a',
-    accent_color: '#6d5efc',
+    accent_color: '#9b8afb',
     font: 'Inter',
   };
 }
 
 export function getOrgBrandColor(): string {
-  return roster?.org.brand_color ?? '#6d5efc';
+  return roster?.org.brand_color ?? '#9b8afb';
 }

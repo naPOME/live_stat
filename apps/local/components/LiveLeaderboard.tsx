@@ -30,7 +30,7 @@ const leaderboardData: TeamData[] = [
   { rank: 14, teamName: 'TBD', countryCode: 'tr', playerStatus: [2, 2, 2, 1], points: 0, elims: 0 },
 ];
 
-const StatusBars = ({ status, color = '#00ffc3' }: { status: number[]; color?: string }) => {
+const StatusBars = ({ status, color = '#60a5fa' }: { status: number[]; color?: string }) => {
   return (
     <div className="flex gap-[3px]">
       {status.map((s, index) => {
@@ -38,7 +38,7 @@ const StatusBars = ({ status, color = '#00ffc3' }: { status: number[]; color?: s
           s === 2
             ? { backgroundColor: color, boxShadow: `0 0 8px ${color}99` }
             : s === 1
-            ? { backgroundColor: '#ff4e4e' }
+            ? { backgroundColor: '#ef6b6b' }
             : { backgroundColor: '#3d405b' };
         return <div key={index} className="h-6 w-1.5 rounded-sm transition-all duration-300" style={style} />;
       })}
@@ -49,15 +49,15 @@ const StatusBars = ({ status, color = '#00ffc3' }: { status: number[]; color?: s
 const TeamRow = ({ team, flash }: { team: TeamData; flash?: 'kills' | 'points' | 'alive' }) => {
   const flashClass = (() => {
     if (!flash) return '';
-    if (flash === 'kills') return 'bg-[#4a1f2a] ring-2 ring-[#ff4e4e] animate-pulse';
-    if (flash === 'points') return 'bg-[#1f3f3a] ring-2 ring-[#00ffc3] animate-pulse';
+    if (flash === 'kills') return 'bg-[#4a1f2a] ring-2 ring-[#ef6b6b] animate-pulse';
+    if (flash === 'points') return 'bg-[#1f3f3a] ring-2 ring-[#60a5fa] animate-pulse';
     return 'bg-[#3a3b55] ring-2 ring-[#8b8da6] animate-pulse';
   })();
 
   const rankAccentClass = (() => {
-    if (team.rank === 1) return 'from-[#00ffc3] to-[#6d5efc]';
-    if (team.rank === 2) return 'from-[#ff4e4e] to-[#6d5efc]';
-    if (team.rank === 3) return 'from-[#ffd166] to-[#6d5efc]';
+    if (team.rank === 1) return 'from-[#60a5fa] to-[#9b8afb]';
+    if (team.rank === 2) return 'from-[#ef6b6b] to-[#9b8afb]';
+    if (team.rank === 3) return 'from-[#ffd166] to-[#9b8afb]';
     return 'from-white/20 to-white/0';
   })();
 
@@ -85,7 +85,7 @@ const TeamRow = ({ team, flash }: { team: TeamData; flash?: 'kills' | 'points' |
           <StatusBars status={team.playerStatus} color={team.brandColor} />
         </div>
         <div className="w-7 text-center font-extrabold text-xl text-white tabular-nums">{team.points}</div>
-        <div className="w-7 text-center font-extrabold text-xl text-[#00ffc3] tabular-nums drop-shadow-[0_0_10px_rgba(0,255,195,0.15)]">
+        <div className="w-7 text-center font-extrabold text-xl text-[#60a5fa] tabular-nums drop-shadow-[0_0_10px_rgba(96,165,250,0.15)]">
           {team.elims}
         </div>
       </div>
@@ -116,7 +116,7 @@ const LiveLeaderboard: React.FC<LeaderboardProps> = ({ teams = leaderboardData, 
   })();
 
   return (
-    <div className="relative w-full max-w-md rounded-2xl p-[1px] bg-gradient-to-br from-[#00ffc3]/35 via-[#6d5efc]/30 to-[#ff4e4e]/30 shadow-[0_18px_60px_rgba(0,0,0,0.55)]">
+    <div className="relative w-full max-w-md rounded-2xl p-[1px] bg-gradient-to-br from-[#60a5fa]/35 via-[#9b8afb]/30 to-[#ef6b6b]/30 shadow-[0_18px_60px_rgba(0,0,0,0.55)]">
       <div className="w-full bg-gradient-to-b from-[#1e1f35] to-[#151628] p-4 rounded-2xl border border-white/10">
       <div className="flex justify-between px-3 mb-2 text-white/60 text-xs font-extrabold tracking-widest uppercase">
         <div className="flex gap-14">

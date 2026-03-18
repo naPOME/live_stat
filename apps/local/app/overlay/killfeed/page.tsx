@@ -64,14 +64,14 @@ export default function KillfeedPage() {
         >
           <span
             style={{
-              color: kill.causerTeamColor ?? '#00ffc3',
-              textShadow: `0 0 8px ${kill.causerTeamColor ?? '#00ffc3'}55`,
+              color: kill.causerTeamColor ?? '#60a5fa',
+              textShadow: `0 0 8px ${kill.causerTeamColor ?? '#60a5fa'}55`,
             }}
           >
             {kill.causerName}
           </span>
           <span style={{ color: '#8b8da6', fontSize: '10px' }}>▶</span>
-          <span style={{ color: '#ff4e4e' }}>{kill.victimName}</span>
+          <span style={{ color: '#ef6b6b' }}>{kill.victimName}</span>
           {kill.distance > 0 && (
             <span style={{ color: '#8b8da6', fontSize: '10px' }}>{Math.round(kill.distance)}m</span>
           )}

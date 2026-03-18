@@ -23,7 +23,7 @@ interface LiveData {
 
 export default function FraggersOverlay() {
   const [topPlayers, setTopPlayers] = useState<(Player & { brandColor?: string; teamDisplayName?: string })[]>([]);
-  const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
+  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
 
   useEffect(() => {
     fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
@@ -56,7 +56,7 @@ export default function FraggersOverlay() {
 
   if (topPlayers.length === 0) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
 
-  const accent = theme.accent_color || '#00ffc3';
+  const accent = theme.accent_color || '#60a5fa';
 
   return (
     <div className="fixed bottom-8 left-1/2 -translate-x-1/2" style={{ fontFamily: 'Inter, sans-serif' }}>

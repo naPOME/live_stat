@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 
 export default function MatchInfoOverlay() {
-  const [theme, setTheme] = useState({ accent_color: '#00ffc3', bg_color: '#0a0a1a' });
+  const [theme, setTheme] = useState({ accent_color: '#60a5fa', bg_color: '#0a0a1a' });
   const [show, setShow] = useState(false);
 
   // Read query params for match info
@@ -27,7 +27,7 @@ export default function MatchInfoOverlay() {
     setTimeout(() => setShow(true), 300);
   }, []);
 
-  const accent = theme.accent_color || '#00ffc3';
+  const accent = theme.accent_color || '#60a5fa';
 
   return (
     <div className="fixed inset-0 flex items-center justify-center" style={{ fontFamily: 'Inter, sans-serif' }}>

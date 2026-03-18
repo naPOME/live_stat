@@ -28,7 +28,7 @@ interface EliminationData {
 export default function EliminationOverlay() {
   const [notification, setNotification] = useState<EliminationData | null>(null);
   const [visible, setVisible] = useState(false);
-  const [theme, setTheme] = useState({ accent_color: '#00ffc3' });
+  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
   const prevAlive = useRef<Record<string, boolean>>({});
   const queue = useRef<EliminationData[]>([]);
   const showing = useRef(false);
@@ -89,7 +89,7 @@ export default function EliminationOverlay() {
 
   if (!notification) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
 
-  const accent = theme.accent_color || '#00ffc3';
+  const accent = theme.accent_color || '#60a5fa';
   const name = notification.displayName || notification.teamName;
   const short = notification.shortName || name.substring(0, 4).toUpperCase();
   const color = notification.brandColor || '#ffffff';
@@ -132,7 +132,7 @@ export default function EliminationOverlay() {
             >
               #{notification.rank}
             </span>
-            <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#ff4e4e' }}>
+            <span className="text-xs font-black uppercase tracking-widest" style={{ color: '#ef6b6b' }}>
               TEAM ELIMINATED
             </span>
           </div>

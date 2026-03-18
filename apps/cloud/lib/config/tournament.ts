@@ -65,6 +65,8 @@ export const PMGC_POINTS: PointSystemPreset = {
     '1': 10, '2': 6, '3': 5, '4': 4, '5': 3,
     '6': 2, '7': 1, '8': 1, '9': 0, '10': 0,
     '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0,
+    '17': 0, '18': 0, '19': 0, '20': 0, '21': 0, '22': 0,
+    '23': 0, '24': 0, '25': 0,
   },
 };
 
@@ -76,12 +78,14 @@ export const PMSL_POINTS: PointSystemPreset = {
     '1': 15, '2': 12, '3': 10, '4': 8, '5': 6,
     '6': 4, '7': 2, '8': 1, '9': 0, '10': 0,
     '11': 0, '12': 0, '13': 0, '14': 0, '15': 0, '16': 0,
+    '17': 0, '18': 0, '19': 0, '20': 0, '21': 0, '22': 0,
+    '23': 0, '24': 0, '25': 0,
   },
 };
 
 export const POINT_SYSTEM_PRESETS: PointSystemPreset[] = [PMGC_POINTS, PMSL_POINTS];
 
-export const MAX_TEAMS_PER_MATCH = 22;
+export const MAX_TEAMS_PER_MATCH = 25;
 
 /** Maximum players per team */
 export const MAX_PLAYERS_PER_TEAM = 6;
@@ -113,6 +117,9 @@ export const SLOT_COLORS: string[] = [
   '#f43f5e', // 20 — crimson
   '#38bdf8', // 21 — light-blue
   '#a3e635', // 22 — chartreuse
+  '#c084fc', // 23 — lavender
+  '#4ade80', // 24 — emerald
+  '#fb7185', // 25 — coral
 ];
 
 /** Get default color for a slot number (1-based). */

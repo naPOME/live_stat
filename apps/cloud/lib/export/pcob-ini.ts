@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 
-const SLOT_COUNT = 22;
+const SLOT_COUNT = 25;
 
 type ExportTeam = {
   team_id: string;
