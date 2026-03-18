@@ -33,9 +33,9 @@ export default async function DashboardPage() {
   const pendingCount = (pendingApps || []).filter(a => ourIds.has(a.tournament_id)).length;
 
   const stats = [
-    { label: 'Active Tournaments', value: tournamentCount ?? 0, accent: '#00ffc3', href: '/tournaments' },
-    { label: 'Registered Teams', value: teamCount ?? 0, accent: '#00b4ff', href: '/teams' },
-    { label: 'Pending Apps', value: pendingCount, accent: pendingCount > 0 ? '#ffb800' : '#4a5a74', href: '/tournaments' },
+    { label: 'Active Tournaments', value: tournamentCount ?? 0, accent: 'var(--accent)', href: '/tournaments' },
+    { label: 'Registered Teams', value: teamCount ?? 0, accent: 'var(--accent)', href: '/teams' },
+    { label: 'Pending Apps', value: pendingCount, accent: pendingCount > 0 ? 'var(--amber)' : 'var(--text-muted)', href: '/tournaments' },
   ];
 
   const quickActions = [
@@ -121,7 +121,9 @@ export default async function DashboardPage() {
                     <span className="text-[14px] font-medium text-[var(--text-primary)] truncate">{t.name}</span>
                   </div>
                   <div>
-                    <span className="badge badge-muted">
+                    <span className={`badge ${
+                      t.status === 'active' ? 'badge-accent' : t.status === 'archived' ? 'badge-muted' : 'badge-warning'
+                    }`}>
                       {t.status}
                     </span>
                   </div>
