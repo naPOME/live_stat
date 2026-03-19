@@ -1,9 +1,21 @@
 import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import path from 'path';
+import fs from 'fs';
 import { spawn, ChildProcess } from 'child_process';
+
+// Crash-safe log to known path
+const CRASH_LOG = path.join(process.env.APPDATA || 'C:\\temp', 'livestat-crash.log');
+function log(msg: string) {
+  try { fs.appendFileSync(CRASH_LOG, `[${new Date().toISOString()}] ${msg}\n`); } catch {}
+}
+
+log('main.ts loaded');
+log(`app type: ${typeof app}, isPackaged: ${app?.isPackaged}`);
 
 const isDev = !app.isPackaged;
 const PORT = 3001;
+
+log(`isDev=${isDev}, PORT=${PORT}`);
 
 let mainWindow: BrowserWindow | null = null;
 let nextServer: ChildProcess | null = null;
@@ -14,8 +26,7 @@ function createWindow() {
     height: 860,
     minWidth: 960,
     minHeight: 640,
-    frame: false,
-    titleBarStyle: 'hidden',
+    frame: true,
     backgroundColor: '#0A0A0A',
     show: false,
     webPreferences: {
@@ -28,8 +39,13 @@ function createWindow() {
 
   mainWindow.loadURL(`http://localhost:${PORT}`);
 
+  mainWindow.webContents.on('did-fail-load', (_e, code, desc) => {
+    log(`did-fail-load: ${code} ${desc}`);
+  });
+
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
+    if (!isDev) mainWindow?.webContents.openDevTools();
   });
 
   // Open external links in browser
@@ -47,18 +63,23 @@ function startNextServer(): Promise<void> {
   return new Promise((resolve, reject) => {
     const serverPath = isDev
       ? path.join(__dirname, '..')
-      : path.join(process.resourcesPath, 'next-server');
+      : path.join(process.resourcesPath, 'next-server', 'apps', 'local');
 
     const cmd = isDev ? 'npx' : 'node';
     const args = isDev
       ? ['next', 'dev', '--port', String(PORT)]
       : [path.join(serverPath, 'server.js')];
 
+    log(`Starting server: ${cmd} ${args.join(' ')}`);
+    log(`Server path: ${serverPath}`);
+    log(`Server exists: ${fs.existsSync(path.join(serverPath, 'server.js'))}`);
+
     nextServer = spawn(cmd, args, {
       cwd: serverPath,
       env: {
         ...process.env,
         PORT: String(PORT),
+        HOSTNAME: 'localhost',
         NODE_ENV: isDev ? 'development' : 'production',
       },
       shell: true,
@@ -67,20 +88,30 @@ function startNextServer(): Promise<void> {
 
     nextServer.stdout?.on('data', (data: Buffer) => {
       const msg = data.toString();
-      process.stdout.write(`[next] ${msg}`);
+      log(`[next:out] ${msg}`);
       if (msg.includes('Ready') || msg.includes('started') || msg.includes(`${PORT}`)) {
         resolve();
       }
     });
 
     nextServer.stderr?.on('data', (data: Buffer) => {
-      process.stderr.write(`[next] ${data.toString()}`);
+      log(`[next:err] ${data.toString()}`);
     });
 
-    nextServer.on('error', reject);
+    nextServer.on('error', (err) => {
+      log(`[next:error] ${err.message}`);
+      reject(err);
+    });
+
+    nextServer.on('exit', (code) => {
+      log(`[next:exit] code=${code}`);
+    });
 
     // Timeout fallback — if server doesn't signal ready in 15s, try anyway
-    setTimeout(resolve, 15000);
+    setTimeout(() => {
+      log('Server start timeout — proceeding anyway');
+      resolve();
+    }, 15000);
   });
 }
 
@@ -104,8 +135,10 @@ ipcMain.on('window:maximize', () => {
 ipcMain.on('window:close', () => mainWindow?.close());
 
 app.whenReady().then(async () => {
+  log(`App ready. isDev=${isDev}, isPackaged=${app.isPackaged}`);
+  log(`resourcesPath=${process.resourcesPath}`);
+
   if (isDev) {
-    // In dev mode, assume `next dev` is already running or start it
     try {
       await fetch(`http://localhost:${PORT}`);
     } catch {
@@ -117,6 +150,7 @@ app.whenReady().then(async () => {
     await waitForServer();
   }
 
+  log('Server ready, creating window...');
   createWindow();
 
   app.on('activate', () => {

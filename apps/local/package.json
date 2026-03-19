@@ -1,6 +1,8 @@
 {
   "name": "live-stat-local",
   "version": "0.1.0",
+  "description": "Live Stat - Esports Tournament Live Scoring Engine",
+  "author": "Live Stat",
   "private": true,
   "packageManager": "npm@11.6.0",
   "main": "dist-electron/main.js",
@@ -21,29 +23,30 @@
       "output": "release"
     },
     "files": [
-      "dist-electron/**/*",
-      "electron/server.js"
+      "dist-electron/**/*"
     ],
     "extraResources": [
       {
         "from": ".next/standalone",
         "to": "next-server",
-        "filter": ["**/*"]
+        "filter": ["**/*", "!**/release/**", "!**/dist-electron/**"]
       },
       {
         "from": ".next/static",
-        "to": "next-server/.next/static",
+        "to": "next-server/apps/local/.next/static",
         "filter": ["**/*"]
       },
       {
         "from": "public",
-        "to": "next-server/public",
+        "to": "next-server/apps/local/public",
         "filter": ["**/*"]
       }
     ],
     "win": {
       "target": ["nsis"],
-      "icon": "public/icon.png"
+      "icon": "public/icon.png",
+      "signAndEditExecutable": false,
+      "forceCodeSigning": false
     },
     "nsis": {
       "oneClick": false,
@@ -72,7 +75,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "concurrently": "^9.1.2",
-    "electron": "^35.1.2",
+    "electron": "35.7.5",
     "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "16.1.0",
