@@ -37,6 +37,9 @@ export default function Dashboard() {
   const [joinCode, setJoinCode] = useState('');
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncErr, setSyncErr] = useState('');
+  const [exportBusy, setExportBusy] = useState(false);
+  const [exportDone, setExportDone] = useState(false);
+  const [exportErr, setExportErr] = useState('');
   const [visibleToasts, setVisibleToasts] = useState<Notification[]>([]);
   const toastTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
@@ -104,6 +107,7 @@ export default function Dashboard() {
   const stopSync = () => fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'stop' }) });
   const resetMatch = () => fetch('/api/lifecycle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset' }) });
   const retrySync = () => fetch('/api/lifecycle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'retry-sync' }) });
+  async function runExport() { setExportBusy(true); setExportErr(''); try { const res = await fetch('/api/cloud/sync-export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); const d = await res.json(); if (d.ok) { setExportDone(true); setTimeout(() => setExportDone(false), 5000); } else { setExportErr(d.error || 'Export failed'); } } catch { setExportErr('Network error'); } finally { setExportBusy(false); } }
 
   /* ── Derived ───────────────────────────────────── */
   const phase = lc.phase;
@@ -205,11 +209,12 @@ export default function Dashboard() {
       {phase === 'idle' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Step indicators */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {[
               { n: '1', title: 'Link Organization', desc: 'Connect to cloud', done: !!cloud?.bound },
               { n: '2', title: 'Select Tournament', desc: 'Load team roster', done: lc.rosterLoaded },
-              { n: '3', title: 'Start Game Client', desc: 'Begin spectating', done: lc.gameClientConnected },
+              { n: '3', title: 'Sync & Export', desc: 'Logos + PCOB files', done: exportDone },
+              { n: '4', title: 'Start Game Client', desc: 'Begin spectating', done: lc.gameClientConnected },
             ].map(s => (
               <div key={s.n} className="metric-card" style={{
                 borderColor: s.done ? 'rgba(34,197,94,0.12)' : 'var(--border)',
@@ -274,6 +279,46 @@ export default function Dashboard() {
               </div>
             </div>
           ) : null}
+
+          {/* Sync & Export step — shown when roster loaded but game not connected */}
+          {lc.rosterLoaded && !lc.gameClientConnected && (
+            <div className="card" style={{ borderColor: exportDone ? 'rgba(34,197,94,0.12)' : undefined }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sync & Export</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+                    Download logos and generate PCOB files to <span className="mono" style={{ color: 'var(--text-faint)', fontSize: 11 }}>C:/logo</span>
+                  </div>
+                </div>
+                <button className="btn btn-accent" onClick={runExport} disabled={exportBusy} style={{ whiteSpace: 'nowrap' }}>
+                  {exportBusy ? (
+                    <span className="flex items-center gap-6">
+                      <svg width="14" height="14" viewBox="0 0 14 14" style={{ animation: 'spin 1s linear infinite' }}>
+                        <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeDasharray="20 12" />
+                      </svg>
+                      Syncing...
+                    </span>
+                  ) : exportDone ? (
+                    <span className="flex items-center gap-6">
+                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 4 5.5 9.5 3 7" /></svg>
+                      Done
+                    </span>
+                  ) : 'Sync Files'}
+                </button>
+              </div>
+              {exportDone && (
+                <div style={{ fontSize: 11, padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--green-soft)', color: 'var(--green)', border: '1px solid rgba(34,197,94,0.1)' }}>
+                  Logos downloaded and PCOB files generated. Ready to start game client.
+                </div>
+              )}
+              {exportErr && (
+                <div style={{ fontSize: 11, padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--red-soft)', color: 'var(--red)', border: '1px solid rgba(239,68,68,0.1)' }}>
+                  {exportErr}
+                </div>
+              )}
+            </div>
+          )}
+
           {rosterMsg && (
             <div style={{ fontSize: 12, padding: '8px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--green-soft)', color: 'var(--green)', border: '1px solid rgba(34,197,94,0.1)' }}>{rosterMsg}</div>
           )}

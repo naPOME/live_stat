@@ -44,6 +44,17 @@ interface PlayerStat {
   team?: { name: string; short_name: string };
 }
 
+interface SyncResult {
+  ok: boolean;
+  roster_path?: string;
+  ini_path?: string;
+  logo_dir?: string;
+  downloaded?: number;
+  errors?: string[];
+  teams?: number;
+  error?: string;
+}
+
 /* ── Component ────────────────────────────────────── */
 export default function CloudDetailPage() {
   const [cloud, setCloud] = useState<CloudInfo | null>(null);
@@ -51,6 +62,8 @@ export default function CloudDetailPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'overview' | 'teams' | 'schedule' | 'players'>('overview');
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
 
   async function loadCloud() {
     try {
@@ -83,6 +96,25 @@ export default function CloudDetailPage() {
     });
     setCloud(null);
     setData(null);
+    setSyncResult(null);
+  }
+
+  async function syncExport() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch('/api/cloud/sync-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const d: SyncResult = await res.json();
+      setSyncResult(d);
+    } catch {
+      setSyncResult({ ok: false, error: 'Network error — is the server running?' });
+    } finally {
+      setSyncing(false);
+    }
   }
 
   useEffect(() => {
@@ -174,6 +206,79 @@ export default function CloudDetailPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Sync & Export ─────────────────────────── */}
+      {cloud?.bound && (
+        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="flex items-center gap-10">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--accent)' }}>
+                <path d="M8 1v10M4 7l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M2 13h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <span style={{ fontSize: 14, fontWeight: 700 }}>Sync & Export</span>
+            </div>
+            <button
+              className="btn btn-accent"
+              onClick={syncExport}
+              disabled={syncing}
+              style={{ fontSize: 12, padding: '6px 16px' }}
+            >
+              {syncing ? (
+                <span className="flex items-center gap-6">
+                  <svg width="14" height="14" viewBox="0 0 14 14" style={{ animation: 'spin 1s linear infinite' }}>
+                    <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeDasharray="20 12" />
+                  </svg>
+                  Syncing...
+                </span>
+              ) : 'Sync Logos & Generate Files'}
+            </button>
+          </div>
+          <div style={{ padding: '14px 20px', fontSize: 12, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+            Downloads team logos from cloud, generates <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-faint)', fontSize: 11 }}>TeamLogoAndColor.ini</span> and <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-faint)', fontSize: 11 }}>roster_mapping.json</span> to <span style={{ fontFamily: 'var(--mono)', color: 'var(--text-faint)', fontSize: 11 }}>C:/logo</span>
+          </div>
+
+          {/* Sync result */}
+          {syncResult && (
+            <div style={{ padding: '0 20px 16px' }}>
+              {syncResult.ok ? (
+                <div style={{ padding: '12px 16px', borderRadius: 'var(--radius)', background: 'var(--green-soft)', border: '1px solid rgba(34,197,94,0.15)' }}>
+                  <div className="flex items-center gap-8" style={{ marginBottom: 8 }}>
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: 'var(--green)' }}>
+                      <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.5"/>
+                      <path d="M4.5 7l1.8 1.8L9.5 5.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green)' }}>Export complete</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, fontSize: 11 }}>
+                    <div>
+                      <div style={{ color: 'var(--text-faint)', marginBottom: 2 }}>Logos downloaded</div>
+                      <div style={{ fontWeight: 700, color: 'var(--text)' }}>{syncResult.downloaded}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: 'var(--text-faint)', marginBottom: 2 }}>Teams</div>
+                      <div style={{ fontWeight: 700, color: 'var(--text)' }}>{syncResult.teams}</div>
+                    </div>
+                    <div>
+                      <div style={{ color: 'var(--text-faint)', marginBottom: 2 }}>Output</div>
+                      <div style={{ fontWeight: 700, color: 'var(--text)', fontFamily: 'var(--mono)', fontSize: 10 }}>{syncResult.logo_dir}</div>
+                    </div>
+                  </div>
+                  {syncResult.errors && syncResult.errors.length > 0 && (
+                    <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 'var(--radius)', background: 'rgba(251,191,36,0.08)', fontSize: 11, color: 'var(--amber)' }}>
+                      {syncResult.errors.length} warning{syncResult.errors.length > 1 ? 's' : ''}: {syncResult.errors.join(', ')}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ padding: '12px 16px', borderRadius: 'var(--radius)', background: 'var(--red-soft)', border: '1px solid rgba(239,68,68,0.1)', fontSize: 12, color: 'var(--red)' }}>
+                  {syncResult.error || 'Sync failed'}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Tabs ────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--border-subtle)' }}>

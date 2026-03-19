@@ -1248,6 +1248,96 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
             )}
           </div>
 
+          {/* ─── End-to-End Flow Guide ─── */}
+          <details className="surface overflow-hidden group">
+            <summary className="px-6 py-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[var(--accent)] flex-shrink-0">
+                  <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3"/>
+                  <path d="M8 5v4M8 11v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                <span className="text-sm font-medium text-[var(--text-primary)]">How it works — Cloud to Live Broadcast</span>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[var(--text-muted)] transition-transform group-open:rotate-180">
+                <path d="M3.5 5.5L7 9l3.5-3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </summary>
+            <div className="px-6 pb-6 border-t border-[var(--border)]">
+              <div className="pt-5 space-y-0">
+                {[
+                  {
+                    step: '1',
+                    title: 'Set up your tournament (Cloud)',
+                    desc: 'Create stages, assign teams to groups, and create matches. The setup checklist above tracks your progress.',
+                    active: setupProgress < 100,
+                  },
+                  {
+                    step: '2',
+                    title: 'Export a group or stage (Cloud)',
+                    desc: 'Go to Stages tab → expand a stage → click the export icon on a group card. This downloads a ZIP with roster_mapping.json, team logos, and an INI config file.',
+                    active: setupProgress >= 100 && stages.every(s => s.status === 'pending'),
+                  },
+                  {
+                    step: '3',
+                    title: 'Load on streamer PC (Local App)',
+                    desc: 'Extract the ZIP. Set the ROSTER_MAPPING_PATH environment variable to point to roster_mapping.json. Start the local app — it auto-loads the roster and watches for file changes.',
+                    active: false,
+                  },
+                  {
+                    step: '4',
+                    title: 'Start the stage (Cloud)',
+                    desc: 'Come back here and click "Start" on the stage. This marks it as active. You can start the stage before or after loading on the local app.',
+                    active: stages.some(s => s.status === 'pending') && setupProgress >= 100,
+                  },
+                  {
+                    step: '5',
+                    title: 'Go live (Local App)',
+                    desc: 'The game client sends telemetry to the local app. It scores kills and placements in real-time using the point system from the roster. OBS browser sources connect to localhost:3001/overlay/* for live overlays.',
+                    active: false,
+                  },
+                  {
+                    step: '6',
+                    title: 'Results sync back (Automatic)',
+                    desc: 'When a match ends, the local app automatically pushes final results to the cloud. You can view standings, team stats, and match history here on the cloud dashboard.',
+                    active: false,
+                  },
+                ].map((item, i, arr) => (
+                  <div key={item.step} className="flex gap-4">
+                    {/* Step indicator + line */}
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border ${
+                        item.active
+                          ? 'border-[var(--accent)]/40 text-[var(--accent)] bg-[var(--accent)]/10'
+                          : 'border-[var(--border)] text-[var(--text-muted)] bg-[var(--bg-elevated)]'
+                      }`}>
+                        {item.step}
+                      </div>
+                      {i < arr.length - 1 && (
+                        <div className="w-[1px] h-full min-h-[24px] bg-[var(--border)] my-1" />
+                      )}
+                    </div>
+                    {/* Content */}
+                    <div className="pb-5 min-w-0">
+                      <div className={`text-[13px] font-medium ${item.active ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
+                        {item.title}
+                      </div>
+                      <div className="text-[12px] text-[var(--text-muted)] mt-0.5 leading-relaxed">{item.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 pt-4 border-t border-[var(--border)] flex items-start gap-3">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[var(--text-muted)] flex-shrink-0 mt-0.5">
+                  <path d="M7 1v5l3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.3"/>
+                </svg>
+                <div className="text-[12px] text-[var(--text-muted)] leading-relaxed">
+                  <span className="font-medium text-[var(--text-secondary)]">Alternative:</span> Instead of exporting a ZIP, you can use <span className="font-medium text-[var(--text-secondary)]">device pairing</span> — the local app generates a 6-character code, you approve it here, then select a tournament live. No files needed.
+                </div>
+              </div>
+            </div>
+          </details>
+
           {/* Registered teams */}
           {tournamentTeams.length > 0 && (
             <div className="surface p-6">
