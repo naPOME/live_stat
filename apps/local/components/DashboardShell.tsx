@@ -173,9 +173,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         </div>
 
         <div className="titlebar-controls">
-          <button className="wc-btn">{icons.minimize}</button>
-          <button className="wc-btn">{icons.maximize}</button>
-          <button className="wc-btn wc-close">{icons.close}</button>
+          <button className="wc-btn" onClick={() => (window as any).electronAPI?.minimize()}>{icons.minimize}</button>
+          <button className="wc-btn" onClick={() => (window as any).electronAPI?.maximize()}>{icons.maximize}</button>
+          <button className="wc-btn wc-close" onClick={() => (window as any).electronAPI?.close()}>{icons.close}</button>
         </div>
       </div>
 

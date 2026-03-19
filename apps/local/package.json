@@ -1,13 +1,63 @@
 {
-  "name": "local",
+  "name": "live-stat-local",
   "version": "0.1.0",
   "private": true,
   "packageManager": "npm@11.6.0",
+  "main": "dist-electron/main.js",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3001",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start --port 3001",
+    "lint": "eslint",
+    "electron:compile": "tsc -p electron/tsconfig.json",
+    "electron:dev": "npm run electron:compile && concurrently -k \"npm run dev\" \"wait-on http://localhost:3001 && electron .\"",
+    "electron:build": "npm run build && npm run electron:compile && electron-builder",
+    "electron:pack": "npm run build && npm run electron:compile && electron-builder --dir"
+  },
+  "build": {
+    "appId": "com.livestat.local",
+    "productName": "Live Stat",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist-electron/**/*",
+      "electron/server.js"
+    ],
+    "extraResources": [
+      {
+        "from": ".next/standalone",
+        "to": "next-server",
+        "filter": ["**/*"]
+      },
+      {
+        "from": ".next/static",
+        "to": "next-server/.next/static",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "public",
+        "to": "next-server/public",
+        "filter": ["**/*"]
+      }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "public/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "mac": {
+      "target": ["dmg"],
+      "icon": "public/icon.png"
+    },
+    "linux": {
+      "target": ["AppImage"],
+      "icon": "public/icon.png"
+    }
   },
   "dependencies": {
     "@live-stat/shared": "*",
@@ -21,9 +71,13 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.1.2",
+    "electron": "^35.1.2",
+    "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "16.1.0",
     "tailwindcss": "^4",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "wait-on": "^8.0.3"
   }
 }
