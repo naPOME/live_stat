@@ -1450,29 +1450,54 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0 ml-4" onClick={(e) => e.stopPropagation()}>
-                      <button onClick={() => toggleStageAutoAdvance(stage.id, !stage.auto_advance)}
-                        title="When on, top teams automatically move to the next stage when this stage is completed"
-                        className={`text-[10px] font-display font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg border transition-colors ${
-                          stage.auto_advance ? 'border-[var(--accent)]/40 text-[var(--accent)] bg-[var(--accent)]/10' : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-[var(--bg-hover)]'
-                        }`}>
-                        Auto-advance {stage.auto_advance ? 'On' : 'Off'}
-                      </button>
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-4" onClick={(e) => e.stopPropagation()}>
+                      {/* Lifecycle actions */}
                       {canStart && (
-                        <button onClick={() => updateStageStatus(stage.id, 'active')}
-                          className="btn-primary text-xs py-1.5 px-3">
-                          Start Stage
+                        <button onClick={() => {
+                          if (warnings.length > 0) {
+                            setConfirmDialog({
+                              message: `Start "${stage.name}"? Warning: ${warnings.join(', ')}. You can still start but some configuration may be incomplete.`,
+                              onConfirm: () => { setConfirmDialog(null); updateStageStatus(stage.id, 'active'); },
+                            });
+                          } else {
+                            updateStageStatus(stage.id, 'active');
+                          }
+                        }}
+                          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-emerald-500/30 text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M3 2l7 4-7 4V2z" fill="currentColor"/></svg>
+                          Start
                         </button>
                       )}
                       {stage.status === 'active' && (
-                        <button onClick={() => updateStageStatus(stage.id, 'completed')}
-                          className="text-xs font-display font-bold uppercase tracking-widest text-[var(--amber)] hover:text-[var(--text-primary)] transition-colors px-2">
-                          Complete
+                        <button onClick={() => {
+                          const unfinished = stageMatchCount - stageFinished;
+                          setConfirmDialog({
+                            message: `End "${stage.name}" and mark as completed?${unfinished > 0 ? ` ${unfinished} match${unfinished !== 1 ? 'es' : ''} still not finished.` : ' All matches are finished.'} ${stage.auto_advance ? 'Top teams will auto-advance to the next stage.' : ''}`,
+                            onConfirm: () => { setConfirmDialog(null); updateStageStatus(stage.id, 'completed'); },
+                          });
+                        }}
+                          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-[var(--amber)]/30 text-[var(--amber)] bg-[var(--amber)]/10 hover:bg-[var(--amber)]/20 transition-colors">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="2" width="8" height="8" rx="1.5" fill="currentColor"/></svg>
+                          End Stage
                         </button>
                       )}
+                      {stage.status === 'completed' && (
+                        <span className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-emerald-500/20 text-emerald-400 bg-emerald-500/5">
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          Completed
+                        </span>
+                      )}
+                      {/* Export */}
+                      <button onClick={() => exportStage(stage.id, stage.name)}
+                        title="Export stage as ZIP"
+                        className="icon-btn">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v7m0 0L4.5 6.5M7 9l2.5-2.5M2 11h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                      {/* Delete */}
                       <button onClick={() => deleteStage(stage.id)}
-                        className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--red)] transition-colors px-2">
-                        Delete
+                        title="Delete stage"
+                        className="icon-btn icon-btn-danger">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 4h8M5.5 4V3a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1m2 0v7.5a1 1 0 01-1 1h-5a1 1 0 01-1-1V4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                       </button>
                     </div>
                   </div>
@@ -1480,15 +1505,86 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                   {/* Expanded content */}
                   {isExpanded && (
                     <div className="border-t border-[var(--border)]">
+                      {/* ─── Config readiness bar ─── */}
+                      {stage.status !== 'completed' && (
+                        <div className="px-6 py-3 bg-[var(--bg-hover)] border-b border-[var(--border)]">
+                          <div className="flex items-center gap-4 flex-wrap">
+                            <span className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)]">Setup</span>
+                            {/* Groups check */}
+                            {stage.stage_type !== 'finals' && (
+                              <div className={`flex items-center gap-1.5 text-[11px] ${stage.groups.length > 0 ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}>
+                                {stage.groups.length > 0 ? (
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                ) : (
+                                  <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/></svg>
+                                )}
+                                Groups ({stage.groups.length})
+                              </div>
+                            )}
+                            {/* Teams check */}
+                            {(() => {
+                              const teamsInGroups = stage.groups.reduce((s, g) => s + g.teams.length, 0);
+                              const hasTeams = teamsInGroups > 0 || stage.stage_type === 'finals';
+                              return (
+                                <div className={`flex items-center gap-1.5 text-[11px] ${hasTeams ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}>
+                                  {hasTeams ? (
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  ) : (
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/></svg>
+                                  )}
+                                  Teams ({teamsInGroups})
+                                </div>
+                              );
+                            })()}
+                            {/* Matches check */}
+                            <div className={`flex items-center gap-1.5 text-[11px] ${stageMatchCount > 0 ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}>
+                              {stageMatchCount > 0 ? (
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                              ) : (
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/></svg>
+                              )}
+                              Matches ({stageMatchCount})
+                            </div>
+                            {/* Map pool check */}
+                            {(() => {
+                              const poolSize = ((stage.map_rotation as string[] | null) ?? []).length;
+                              return (
+                                <div className={`flex items-center gap-1.5 text-[11px] ${poolSize > 0 ? 'text-emerald-400' : 'text-[var(--text-muted)]'}`}>
+                                  {poolSize > 0 ? (
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  ) : (
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.2"/></svg>
+                                  )}
+                                  Map Pool ({poolSize})
+                                </div>
+                              );
+                            })()}
+                            {/* Auto-advance toggle */}
+                            <div className="ml-auto">
+                              <button onClick={() => toggleStageAutoAdvance(stage.id, !stage.auto_advance)}
+                                title="When on, top teams automatically move to the next stage when this stage is completed"
+                                className={`flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md border transition-colors ${
+                                  stage.auto_advance ? 'border-[var(--accent)]/30 text-[var(--accent)] bg-[var(--accent)]/10' : 'border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] bg-transparent'
+                                }`}>
+                                <div className={`w-6 h-3.5 rounded-full relative transition-colors ${stage.auto_advance ? 'bg-[var(--accent)]/30' : 'bg-[var(--bg-base)]'}`}>
+                                  <div className={`absolute top-0.5 w-2.5 h-2.5 rounded-full transition-all ${stage.auto_advance ? 'left-3 bg-[var(--accent)]' : 'left-0.5 bg-[var(--text-muted)]'}`} />
+                                </div>
+                                Auto-advance
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
                       {/* ─── Group management (all stages except finals) ─── */}
                       {stage.stage_type !== 'finals' && (
-                        <div className="px-6 py-5 border-b border-[var(--border)] bg-black/20">
+                        <div className="px-6 py-5 border-b border-[var(--border)] bg-[var(--bg-hover)]">
                           <div className="flex items-center justify-between mb-4">
                             <div className="text-[10px] font-display font-bold text-[var(--text-muted)] uppercase tracking-widest">Groups</div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               {stage.groups.length > 0 && (
                                 <button onClick={() => autoDistributeTeams(stage.id)}
-                                  className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors">
+                                  className="btn-ghost btn-sm text-[11px]">
                                   Auto-distribute teams
                                 </button>
                               )}
@@ -1500,7 +1596,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                     setNewGroupMatchCount(stage.match_count ?? 6);
                                   }
                                 }}
-                                className="text-xs font-display font-bold uppercase tracking-widest text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors">
+                                className="btn-primary btn-sm text-[11px]">
                                 + Create Groups
                               </button>
                             </div>
@@ -1563,20 +1659,22 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                         <span className="text-white">{group.matches.length}</span> match{group.matches.length !== 1 ? 'es' : ''}
                                       </span>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                      <button
-                                        onClick={() => exportGroup(group.id, group.name)}
-                                        className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                                      >
-                                        Export
-                                      </button>
+                                    <div className="flex items-center gap-2">
                                       <button onClick={() => setAddingTeamToGroup(addingTeamToGroup === group.id ? null : group.id)}
-                                        className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors">
-                                        + Team
+                                        className="btn-ghost btn-sm text-[11px] flex items-center gap-1">
+                                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 2v6M2 5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                                        Team
                                       </button>
                                       <button onClick={() => { setAddingMatchTo(group.id); setMatchName(''); setMatchMap(''); }}
-                                        className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--accent)] hover:text-[var(--text-primary)] transition-colors">
-                                        + Match
+                                        className="btn-ghost btn-sm text-[11px] flex items-center gap-1">
+                                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 2v6M2 5h6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
+                                        Match
+                                      </button>
+                                      <button
+                                        onClick={() => exportGroup(group.id, group.name)}
+                                        title="Export group as ZIP"
+                                        className="icon-btn">
+                                        <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 2v7m0 0L4.5 6.5M7 9l2.5-2.5M2 11h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                       </button>
                                     </div>
                                   </div>

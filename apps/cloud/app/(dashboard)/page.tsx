@@ -24,7 +24,7 @@ export default async function DashboardPage() {
     supabase.from('organizations').select('name').eq('id', orgId).single(),
     supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'active'),
     supabase.from('teams').select('*', { count: 'exact', head: true }).eq('org_id', orgId),
-    supabase.from('tournaments').select('id,name,status,created_at').eq('org_id', orgId).order('created_at', { ascending: false }).limit(5),
+    supabase.from('tournaments').select('id,name,status,created_at').eq('org_id', orgId).neq('status', 'archived').order('created_at', { ascending: false }).limit(5),
     supabase.from('team_applications').select('id, tournament_id').eq('status', 'pending'),
   ]);
 
