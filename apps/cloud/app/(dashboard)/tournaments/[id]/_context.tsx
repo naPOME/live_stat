@@ -87,7 +87,7 @@ type TournamentContextValue = {
   updateStageAdvancing: (stageId: string, advancing: number | null, invitational: number) => Promise<void>;
 
   // Match actions
-  addMatch: (stageId: string, groupId?: string, name?: string, map?: string) => Promise<void>;
+  addMatch: (stageId: string, groupId?: string, name?: string, map?: string, scheduledAt?: string) => Promise<void>;
   duplicateMatch: (source: Match, stageId: string, groupId?: string) => Promise<void>;
   updateMatchMap: (matchId: string, mapName: string | null) => Promise<void>;
   generateFinalsRotation: (stage: StageWithDetails, sets: number) => Promise<void>;
@@ -117,6 +117,10 @@ type TournamentContextValue = {
 
   // Archive
   archiveTournament: () => void;
+
+  // Seeding
+  updateTeamSeed: (teamId: string, seed: number | null) => Promise<void>;
+  autoSeedTeams: () => Promise<void>;
 
   // Map pool
   updateMapPool: (stageId: string, pool: string[]) => Promise<void>;
@@ -430,20 +434,20 @@ export function TournamentProvider({ children, tournamentId: id, initialTourname
 
   // ─── Match actions ──────────────────────────────────────────────────────────
 
-  async function addMatch(stageId: string, groupId?: string, name = '', map = '') {
+  async function addMatch(stageId: string, groupId?: string, name = '', map = '', scheduledAt?: string) {
     if (!name.trim()) return;
     const tempId = `temp-${Date.now()}`;
     const optimistic: Match = {
       id: tempId, stage_id: stageId, group_id: groupId ?? null, name: name.trim(),
       map_name: map || null, status: 'pending', point_system_id: pointSystem?.id ?? null,
-      scheduled_at: null, created_at: new Date().toISOString(),
+      scheduled_at: scheduledAt ?? null, created_at: new Date().toISOString(),
     };
     setStages((prev) => prev.map((s) => {
       if (s.id !== stageId) return s;
       if (groupId) return { ...s, groups: s.groups.map((g) => g.id === groupId ? { ...g, matches: [...g.matches, optimistic] } : g) };
       return { ...s, matches: [...s.matches, optimistic] };
     }));
-    await supabase.from('matches').insert({ stage_id: stageId, group_id: groupId ?? null, name: name.trim(), map_name: map || null, point_system_id: pointSystem?.id ?? null });
+    await supabase.from('matches').insert({ stage_id: stageId, group_id: groupId ?? null, name: name.trim(), map_name: map || null, point_system_id: pointSystem?.id ?? null, scheduled_at: scheduledAt ?? null });
     await refreshStages(true);
   }
 
@@ -666,6 +670,19 @@ export function TournamentProvider({ children, tournamentId: id, initialTourname
     URL.revokeObjectURL(url);
   }
 
+  // ─── Seeding ─────────────────────────────────────────────────────────────────
+
+  async function updateTeamSeed(teamId: string, seed: number | null) {
+    setTournamentTeams((prev) => prev.map((t) => t.id === teamId ? { ...t, seed } : t));
+    await supabase.from('tournament_teams').update({ seed }).match({ tournament_id: id, team_id: teamId });
+  }
+
+  async function autoSeedTeams() {
+    const updates = tournamentTeams.map((t, i) => ({ ...t, seed: i + 1 }));
+    setTournamentTeams(updates);
+    await Promise.all(updates.map((t) => supabase.from('tournament_teams').update({ seed: t.seed }).match({ tournament_id: id, team_id: t.id })));
+  }
+
   // ─── Map pool ────────────────────────────────────────────────────────────────
 
   async function updateMapPool(stageId: string, pool: string[]) {
@@ -779,6 +796,7 @@ export function TournamentProvider({ children, tournamentId: id, initialTourname
     createTemplate,
     exportTournament, exportStage, exportGroup,
     archiveTournament,
+    updateTeamSeed, autoSeedTeams,
     updateMapPool,
     GAME_MAPS, MAP_NAMES, STAGE_PRESETS, generateRotation,
   };

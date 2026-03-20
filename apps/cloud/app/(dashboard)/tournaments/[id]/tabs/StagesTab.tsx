@@ -35,6 +35,7 @@ export default function StagesTab() {
   const [addingMatchTo, setAddingMatchTo] = useState<string | null>(null);
   const [matchName, setMatchName] = useState('');
   const [matchMap, setMatchMap] = useState('');
+  const [matchScheduledAt, setMatchScheduledAt] = useState('');
 
   // Group creation form state
   const [creatingGroupFor, setCreatingGroupFor] = useState<string | null>(null);
@@ -482,16 +483,18 @@ export default function StagesTab() {
                                   )}
                                   {/* Add match to group form */}
                                   {addingMatchTo === group.id && (
-                                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-[var(--border)]">
+                                    <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-[var(--border)]">
                                       <input type="text" autoFocus placeholder="Match name" value={matchName}
                                         onChange={(e) => setMatchName(e.target.value)}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') { addMatch(stage.id, group.id, matchName, matchMap); setMatchName(''); setMatchMap(''); } if (e.key === 'Escape') setAddingMatchTo(null); }}
-                                        className="input-premium flex-1 py-1 px-2 text-xs" />
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { addMatch(stage.id, group.id, matchName, matchMap, matchScheduledAt || undefined); setMatchName(''); setMatchMap(''); setMatchScheduledAt(''); } if (e.key === 'Escape') setAddingMatchTo(null); }}
+                                        className="input-premium flex-1 min-w-[120px] py-1 px-2 text-xs" />
                                       <select value={matchMap} onChange={(e) => setMatchMap(e.target.value)} className="input-premium py-1 px-2 text-xs">
                                         <option value="">Map</option>
                                         {MAP_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
                                       </select>
-                                      <button onClick={() => { addMatch(stage.id, group.id, matchName, matchMap); setMatchName(''); setMatchMap(''); }}
+                                      <input type="datetime-local" value={matchScheduledAt} onChange={(e) => setMatchScheduledAt(e.target.value)}
+                                        className="input-premium py-1 px-2 text-xs w-auto" title="Schedule date/time (optional)" />
+                                      <button onClick={() => { addMatch(stage.id, group.id, matchName, matchMap, matchScheduledAt || undefined); setMatchName(''); setMatchMap(''); setMatchScheduledAt(''); }}
                                         className="btn-primary py-1 px-3 text-[10px]">Add</button>
                                       <button onClick={() => setAddingMatchTo(null)}
                                         className="text-[12px] font-display font-bold text-[var(--text-muted)] hover:text-[var(--red)] transition-colors px-1">&times;</button>
@@ -689,16 +692,18 @@ export default function StagesTab() {
 
                       {/* Add match form */}
                       {addingMatchTo === stage.id && (
-                        <div className="border-t border-[var(--border)] px-5 py-3 bg-[var(--bg-hover)] flex items-center gap-3">
+                        <div className="border-t border-[var(--border)] px-5 py-3 bg-[var(--bg-hover)] flex flex-wrap items-center gap-3">
                           <input type="text" autoFocus placeholder="Match name (e.g. Game 1)" value={matchName}
                             onChange={(e) => setMatchName(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') { addMatch(stage.id, undefined, matchName, matchMap); setMatchName(''); setMatchMap(''); } if (e.key === 'Escape') setAddingMatchTo(null); }}
-                            className="input-premium flex-1 py-2 text-sm" />
+                            onKeyDown={(e) => { if (e.key === 'Enter') { addMatch(stage.id, undefined, matchName, matchMap, matchScheduledAt || undefined); setMatchName(''); setMatchMap(''); setMatchScheduledAt(''); } if (e.key === 'Escape') setAddingMatchTo(null); }}
+                            className="input-premium flex-1 min-w-[140px] py-2 text-sm" />
                           <select value={matchMap} onChange={(e) => setMatchMap(e.target.value)} className="input-premium py-2 text-sm w-auto">
                             <option value="">Map (optional)</option>
                             {MAP_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
                           </select>
-                          <button onClick={() => { addMatch(stage.id, undefined, matchName, matchMap); setMatchName(''); setMatchMap(''); }}
+                          <input type="datetime-local" value={matchScheduledAt} onChange={(e) => setMatchScheduledAt(e.target.value)}
+                            className="input-premium py-2 text-sm w-auto" title="Schedule date/time (optional)" />
+                          <button onClick={() => { addMatch(stage.id, undefined, matchName, matchMap, matchScheduledAt || undefined); setMatchName(''); setMatchMap(''); setMatchScheduledAt(''); }}
                             className="btn-primary py-2 px-4 text-xs">Add</button>
                           <button onClick={() => setAddingMatchTo(null)}
                             className="text-[var(--text-muted)] hover:text-[var(--text-primary)] text-sm px-2 transition-colors">&times;</button>

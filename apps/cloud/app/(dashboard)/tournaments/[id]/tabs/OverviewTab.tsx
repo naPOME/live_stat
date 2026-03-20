@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { useState } from 'react';
 import { useTournament } from '../_context';
 
 export default function OverviewTab() {
@@ -9,7 +9,11 @@ export default function OverviewTab() {
     totalMatches, liveMatches, finishedMatches,
     setupSteps, completedSteps, setupProgress, nextAction,
     setActiveTab, linkCopied, copyRegistrationLink,
+    updateTeamSeed, autoSeedTeams,
   } = useTournament();
+
+  const [editingSeedFor, setEditingSeedFor] = useState<string | null>(null);
+  const [seedInput, setSeedInput] = useState('');
 
   if (!tournament) return null;
 
@@ -272,13 +276,41 @@ export default function OverviewTab() {
       {/* ─── Registered Teams ─── */}
       {tournamentTeams.length > 0 && (
         <div className="surface p-6">
-          <h2 className="text-sm font-display font-bold uppercase tracking-widest text-[var(--text-primary)] mb-4 flex items-center justify-between">
-            <span>Registered Teams</span>
-            <div className="bg-[var(--bg-hover)] text-[var(--text-secondary)] px-2 py-0.5 rounded text-[10px]">{tournamentTeams.length} TOTAL</div>
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-display font-bold uppercase tracking-widest text-[var(--text-primary)]">Registered Teams</h2>
+            <div className="flex items-center gap-2">
+              <button onClick={autoSeedTeams} className="btn-ghost text-xs py-1 px-2">Seed by join order</button>
+              <div className="bg-[var(--bg-hover)] text-[var(--text-secondary)] px-2 py-0.5 rounded text-[10px]">{tournamentTeams.length} TOTAL</div>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
             {tournamentTeams.map((team) => (
               <div key={team.id} className="flex items-center gap-2.5 bg-[var(--bg-elevated)] border border-[var(--border)] hover:border-[var(--border-hover)] rounded-lg px-3 py-2 transition-colors min-w-0">
+                {/* Seed badge / inline edit */}
+                {editingSeedFor === team.id ? (
+                  <input
+                    type="number" min={1} autoFocus value={seedInput}
+                    onChange={(e) => setSeedInput(e.target.value)}
+                    onBlur={() => { updateTeamSeed(team.id, seedInput ? Number(seedInput) : null); setEditingSeedFor(null); }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { updateTeamSeed(team.id, seedInput ? Number(seedInput) : null); setEditingSeedFor(null); }
+                      if (e.key === 'Escape') setEditingSeedFor(null);
+                    }}
+                    className="w-9 text-center text-[10px] font-bold rounded border border-[var(--accent)] bg-[var(--bg-base)] text-[var(--accent)] py-0.5 flex-shrink-0"
+                  />
+                ) : (
+                  <button
+                    onClick={() => { setEditingSeedFor(team.id); setSeedInput(team.seed != null ? String(team.seed) : ''); }}
+                    title="Click to set seed"
+                    className={`w-9 h-6 text-[10px] font-bold rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                      team.seed != null
+                        ? 'border-[var(--accent)]/40 text-[var(--accent)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20'
+                        : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--border-hover)]'
+                    }`}
+                  >
+                    {team.seed != null ? `#${team.seed}` : '—'}
+                  </button>
+                )}
                 {team.logo_url ? (
                   <img src={team.logo_url} alt={team.name} className="w-7 h-7 rounded-md object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : (

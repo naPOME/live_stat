@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "tournament_id": "7cb316bd-6ee1-445d-881a-39fa19f5678c",
+  "stage_id": "2a80b519-32e8-4dfd-959f-19452778c19c",
+  "match_id": "a4c1af0c-9a76-4ed2-babc-5294b9624835",
+  "cloud_endpoint": "https://live-stat-beta.vercel.app/api/match-results",
+  "cloud_api_key": "f7e66478-5140-4b2c-944f-4d72ccfd6007",
+  "point_system": {
+    "kill_points": 1,
+    "placement_points": {
+      "1": 10,
+      "2": 6,
+      "3": 5,
+      "4": 4,
+      "5": 3,
+      "6": 2,
+      "7": 1,
+      "8": 1,
+      "9": 0,
+      "10": 0,
+      "11": 0,
+      "12": 0,
+      "13": 0,
+      "14": 0,
+      "15": 0,
+      "16": 0,
+      "17": 0,
+      "18": 0,
+      "19": 0,
+      "20": 0,
+      "21": 0,
+      "22": 0
+    }
+  },
+  "org": {
+    "id": "7f103a55-8143-412c-b3bc-d8668f51ad66",
+    "name": "tee",
+    "brand_color": "#1a5fb4",
+    "logo_path": "C:/logo/org_logo.png",
+    "theme": {
+      "bg_color": "#865e3c",
+      "accent_color": "#ffa348",
+      "font": "Inter"
+    }
+  },
+  "teams": [],
+  "player_index": {}
+}
