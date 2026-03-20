@@ -208,7 +208,10 @@ export function TournamentProvider({ children, tournamentId: id, initialTourname
 
   function setActiveTab(tab: Tab) {
     setActiveTabState(tab);
-    if (tab === 'standings' && stageStandings.length === 0) fetchStandings();
+    if (tab === 'standings') {
+      if (stageStandings.length === 0) fetchStandings();
+      if (!stagesLoaded) refreshStages(true);
+    }
     if (tab === 'applications' && !applicationsLoaded) refreshApplications();
     if (tab === 'stages') {
       if (!stagesLoaded) refreshStages(true);

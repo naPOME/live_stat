@@ -149,7 +149,8 @@ function FinalsBracket({ stageStanding }: Props) {
 export default function BracketView({ stageStanding, stageInfo }: Props) {
   if (stageStanding.standings.length === 0) return null;
 
-  if (stageInfo.stage_type === 'group') {
+  // Group bracket needs group data — fall back to finals view if not loaded yet
+  if (stageInfo.stage_type === 'group' && stageInfo.groups.length > 0) {
     return <GroupBracket stageStanding={stageStanding} stageInfo={stageInfo} />;
   }
 
