@@ -130,7 +130,7 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
                   const team = teamMap.get(player.team_id);
                   const color = team?.brand_color || '#7a8ba8';
                   return (
-                    <Link key={player.id} href={`/teams/${player.team_id}`}
+                    <Link key={player.id} href={`/players/${player.id}`}
                       className="data-table-row group transition-colors"
                       style={{ gridTemplateColumns: rosterCols }}>
                       <span className="text-[12px] font-mono text-[var(--text-muted)] tabular-nums">{i + 1}</span>
