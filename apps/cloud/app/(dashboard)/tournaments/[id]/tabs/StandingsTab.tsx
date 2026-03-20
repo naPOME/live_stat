@@ -37,7 +37,7 @@ function buildMockStandings(teams: { id: string; name: string; short_name: strin
 export default function StandingsTab() {
   const { stages, tournamentTeams, stageStandings, standingsLoading, standingsStageId, setStandingsStageId, fetchStandings } = useTournament();
 
-  const hasData = stageStandings.length > 0;
+  const hasData = stageStandings.some((s) => s.standings.length > 0);
   const mockStandings = buildMockStandings(tournamentTeams);
   const firstStage = stages[stages.length - 1]; // default to last stage for mock (likely finals)
 
