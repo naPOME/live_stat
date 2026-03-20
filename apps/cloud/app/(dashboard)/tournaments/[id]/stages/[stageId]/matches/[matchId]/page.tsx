@@ -4,6 +4,7 @@ import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/components/AuthProvider';
 import type { MatchDispute, Team } from '@/lib/types';
 import { getSlotColor } from '@/lib/config/tournament';
 
@@ -19,6 +20,7 @@ export default function MatchPage({
   const { id: tournamentId, stageId, matchId } = use(params);
   const supabase = createClient();
   const router = useRouter();
+  const { orgId } = useAuth();
 
   const [match, setMatch] = useState<{
     id: string;
@@ -48,11 +50,18 @@ export default function MatchPage({
 
   useEffect(() => {
     async function load() {
-      const [{ data: m }, { data: s }, { data: ts }, { data: existingSlots }] = await Promise.all([
+      // Filter teams by org to avoid fetching all teams globally.
+      // Also load sibling matches in the same Promise.all to avoid sequential waterfall.
+      const teamsQuery = orgId
+        ? supabase.from('teams').select('*').eq('org_id', orgId).order('name')
+        : supabase.from('teams').select('*').order('name');
+
+      const [{ data: m }, { data: s }, { data: ts }, { data: existingSlots }, { data: siblings }] = await Promise.all([
         supabase.from('matches').select('*').eq('id', matchId).single(),
         supabase.from('stages').select('name').eq('id', stageId).single(),
-        supabase.from('teams').select('*').order('name'),
+        teamsQuery,
         supabase.from('match_slots').select('*').eq('match_id', matchId),
+        supabase.from('matches').select('id, name').eq('stage_id', stageId).neq('id', matchId).order('created_at'),
       ]);
 
       if (!m) { router.push(`/tournaments/${tournamentId}`); return; }
@@ -60,6 +69,7 @@ export default function MatchPage({
       setMatch(m);
       setStage(s);
       setTeams(ts ?? []);
+      setSiblingMatches(siblings ?? []);
 
       // Build initial slots
       const initial: SlotAssignment[] = Array.from({ length: SLOT_COUNT }, () => ({ teamId: null }));
@@ -71,20 +81,11 @@ export default function MatchPage({
       }
       setSlots(initial);
 
-      // Load sibling matches in same stage (for "copy from" feature)
-      const { data: siblings } = await supabase
-        .from('matches')
-        .select('id, name')
-        .eq('stage_id', stageId)
-        .neq('id', matchId)
-        .order('created_at');
-      setSiblingMatches(siblings ?? []);
-
       await refreshDisputes();
       setLoading(false);
     }
     load();
-  }, [matchId]);
+  }, [matchId, orgId]);
 
   async function refreshDisputes() {
     const { data } = await supabase

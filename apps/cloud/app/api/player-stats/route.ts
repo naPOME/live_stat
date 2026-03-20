@@ -27,32 +27,40 @@ export async function GET(req: NextRequest) {
   const { data: players } = await supabase.from('players').select('id, team_id, display_name, player_open_id').in('team_id', teamIds);
   const playerMap = new Map((players ?? []).map((p) => [p.player_open_id, p]));
 
-  // Get finished match IDs — optionally filter by tournament
-  let matchQuery = supabase
-    .from('matches')
-    .select('id, stage:stages(tournament_id)')
-    .eq('status', 'finished');
-
-  const { data: rawMatches } = await matchQuery;
+  // Get finished match IDs — filter by tournament in SQL when possible
   let matchIds: string[] = [];
-
   if (tournamentId) {
+    const { data: rawMatches } = await supabase
+      .from('matches')
+      .select('id, stage:stages!inner(tournament_id)')
+      .eq('status', 'finished')
+      .eq('stage.tournament_id', tournamentId);
+    matchIds = (rawMatches ?? []).map((m) => m.id);
+  } else {
+    const { data: rawMatches } = await supabase
+      .from('matches')
+      .select('id, stage:stages!inner(tournament_id)')
+      .eq('status', 'finished');
+    // filter to matches belonging to this org's tournaments via teamIds
+    const { data: orgTournaments } = await supabase
+      .from('tournaments')
+      .select('id')
+      .eq('org_id', profile.org_id);
+    const orgTournamentIds = new Set((orgTournaments ?? []).map((t) => t.id));
     matchIds = (rawMatches ?? [])
       .filter((m) => {
         const stage = Array.isArray(m.stage) ? m.stage[0] : m.stage;
-        return (stage as any)?.tournament_id === tournamentId;
+        return orgTournamentIds.has((stage as any)?.tournament_id);
       })
       .map((m) => m.id);
-  } else {
-    matchIds = (rawMatches ?? []).map((m) => m.id);
   }
 
   if (matchIds.length === 0) return NextResponse.json({ players: [] });
 
-  // Get player match results
+  // Get player match results — include match_id so we can compute top-fragger without a second query
   const { data: results } = await supabase
     .from('player_match_results')
-    .select('player_open_id, team_id, kills, damage, survived')
+    .select('match_id, player_open_id, team_id, kills, damage, survived')
     .in('match_id', matchIds);
 
   // Aggregate per player
@@ -86,22 +94,9 @@ export async function GET(req: NextRequest) {
     if (!r.survived) a.deaths += 1;
   }
 
-  // Count top fraggers per match
-  const matchPlayerKills = new Map<string, { openId: string; kills: number }[]>();
-  for (const r of results ?? []) {
-    // We need match_id for grouping — re-query with match_id
-    // Actually we already lost match_id in the select. Let's skip top-fragger for now
-    // or compute from the full results. We'll add this field with a separate query.
-  }
-
-  // For top fragger, re-query with match_id
-  const { data: fullResults } = await supabase
-    .from('player_match_results')
-    .select('match_id, player_open_id, kills')
-    .in('match_id', matchIds);
-
+  // Count top fraggers per match using the already-fetched results
   const matchKillMap = new Map<string, { openId: string; kills: number }[]>();
-  for (const r of fullResults ?? []) {
+  for (const r of results ?? []) {
     if (!matchKillMap.has(r.match_id)) matchKillMap.set(r.match_id, []);
     matchKillMap.get(r.match_id)!.push({ openId: r.player_open_id, kills: r.kills });
   }

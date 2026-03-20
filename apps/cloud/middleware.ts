@@ -2,6 +2,16 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const isAuthRoute = pathname === '/login' || pathname === '/register';
+  const isApiRoute = pathname.startsWith('/api/');
+  const isPublicRoute = pathname.startsWith('/apply') || pathname.startsWith('/t/') || pathname.startsWith('/standings');
+
+  // API and public routes don't need auth redirect logic — skip the DB round-trip
+  if (isApiRoute || isPublicRoute) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
   type CookieToSet = { name: string; value: string; options?: any };
 
@@ -30,12 +40,7 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-  const isAuthRoute = pathname === '/login' || pathname === '/register';
-  const isApiRoute = pathname.startsWith('/api/');
-  const isPublicRoute = pathname.startsWith('/apply') || pathname.startsWith('/t/') || pathname.startsWith('/standings');
-
-  if (!user && !isAuthRoute && !isApiRoute && !isPublicRoute) {
+  if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     return NextResponse.redirect(url);

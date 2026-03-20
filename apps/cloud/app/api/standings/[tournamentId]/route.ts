@@ -18,9 +18,11 @@ export async function GET(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Verify tournament belongs to user's org
-  const { data: profile } = await supabase.from('profiles').select('org_id').eq('id', user.id).single();
-  const { data: tournament } = await supabase.from('tournaments').select('id, org_id').eq('id', tournamentId).single();
+  // Verify tournament belongs to user's org — fetch profile and tournament in parallel
+  const [{ data: profile }, { data: tournament }] = await Promise.all([
+    supabase.from('profiles').select('org_id').eq('id', user.id).single(),
+    supabase.from('tournaments').select('id, org_id').eq('id', tournamentId).single(),
+  ]);
   if (!tournament || tournament.org_id !== profile?.org_id) {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }

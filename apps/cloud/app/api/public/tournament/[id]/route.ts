@@ -25,45 +25,32 @@ export async function GET(
     return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
   }
 
-  const { data: org } = await supabase
-    .from('organizations')
-    .select('name, logo_url, brand_color')
-    .eq('id', tournament.org_id)
-    .single();
-
-  // ── Stages ────────────────────────────────────────────────────
-  const { data: stages } = await supabase
-    .from('stages')
-    .select('id, name, stage_order, stage_type, status, map_rotation')
-    .eq('tournament_id', tournamentId)
-    .order('stage_order');
+  // ── Fetch org, stages, and tournament_teams in parallel ───────
+  const [
+    { data: org },
+    { data: stages },
+    { data: tournamentTeams },
+  ] = await Promise.all([
+    supabase.from('organizations').select('name, logo_url, brand_color').eq('id', tournament.org_id).single(),
+    supabase.from('stages').select('id, name, stage_order, stage_type, status, map_rotation').eq('tournament_id', tournamentId).order('stage_order'),
+    supabase.from('tournament_teams').select('team_id, seed').eq('tournament_id', tournamentId).order('seed'),
+  ]);
 
   const stageIds = (stages ?? []).map((s) => s.id);
-
-  // ── Matches (schedule) ────────────────────────────────────────
-  const { data: matches } = stageIds.length > 0
-    ? await supabase
-        .from('matches')
-        .select('id, stage_id, name, map_name, status, scheduled_at')
-        .in('stage_id', stageIds)
-        .order('scheduled_at', { ascending: true, nullsFirst: false })
-    : { data: [] };
-
-  // ── Teams in tournament ───────────────────────────────────────
-  const { data: tournamentTeams } = await supabase
-    .from('tournament_teams')
-    .select('team_id, seed')
-    .eq('tournament_id', tournamentId)
-    .order('seed');
-
   const teamIds = (tournamentTeams ?? []).map((tt) => tt.team_id);
 
-  const { data: teams } = teamIds.length > 0
-    ? await supabase
-        .from('teams')
-        .select('id, name, short_name, logo_url, brand_color')
-        .in('id', teamIds)
-    : { data: [] };
+  // ── Fetch matches and teams in parallel ───────────────────────
+  const [matchesRes, teamsRes] = await Promise.all([
+    stageIds.length > 0
+      ? supabase.from('matches').select('id, stage_id, name, map_name, status, scheduled_at').in('stage_id', stageIds).order('scheduled_at', { ascending: true, nullsFirst: false })
+      : Promise.resolve({ data: [] as any[] }),
+    teamIds.length > 0
+      ? supabase.from('teams').select('id, name, short_name, logo_url, brand_color').in('id', teamIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const matches = matchesRes.data ?? [];
+  const teams = teamsRes.data ?? [];
 
   const teamMap = new Map((teams ?? []).map((t) => [t.id, t]));
 
@@ -78,16 +65,14 @@ export async function GET(
         .in('match_id', matchIds)
     : { data: [] };
 
-  // Also include teams from results that might not be in tournament_teams
-  for (const r of results ?? []) {
-    if (!teamMap.has(r.team_id)) {
-      const { data: t } = await supabase
-        .from('teams')
-        .select('id, name, short_name, logo_url, brand_color')
-        .eq('id', r.team_id)
-        .single();
-      if (t) teamMap.set(t.id, t);
-    }
+  // Batch-fetch any teams from results not already in the map (avoids N+1)
+  const missingTeamIds = [...new Set((results ?? []).map((r) => r.team_id).filter((id) => !teamMap.has(id)))];
+  if (missingTeamIds.length > 0) {
+    const { data: missingTeams } = await supabase
+      .from('teams')
+      .select('id, name, short_name, logo_url, brand_color')
+      .in('id', missingTeamIds);
+    for (const t of missingTeams ?? []) teamMap.set(t.id, t);
   }
 
   const matchStageMap = new Map(finishedMatches.map((m) => [m.id, m.stage_id]));
