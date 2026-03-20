@@ -3,15 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useTeams, useCreateTeam, useDeleteTeam } from '@/lib/hooks/use-teams';
-import { createClient } from '@/lib/supabase/client';
 import type { Team } from '@/lib/types';
-
-interface Player {
-  id: string;
-  display_name: string;
-  player_open_id: string;
-  team_id: string;
-}
 
 type TeamsClientProps = {
   initialTeams: Team[];
@@ -21,15 +13,12 @@ type TeamsClientProps = {
 };
 
 export default function TeamsClient({ initialTeams, initialHasTournaments, initialPlayerCounts, orgId }: TeamsClientProps) {
-  const supabase = createClient();
   const { data: teams = [] } = useTeams(orgId, initialTeams);
   const createTeamMutation = useCreateTeam(orgId);
   const deleteTeamMutation = useDeleteTeam();
 
-  const [playersByTeam, setPlayersByTeam] = useState<Record<string, Player[]>>({});
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: '', short_name: '', brand_color: '#00ffc3' });
-  const [expanded, setExpanded] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
@@ -41,7 +30,6 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
   async function handleCreateTeam(e: React.FormEvent) {
     e.preventDefault();
     if (!form.name.trim()) return;
-
     createTeamMutation.mutate(
       { name: form.name.trim(), short_name: form.short_name.trim() || null, brand_color: form.brand_color },
       {
@@ -62,11 +50,6 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
       message: `Delete "${team?.name ?? 'this team'}"? This will also remove all their players.`,
       onConfirm: () => {
         setConfirmDialog(null);
-        setPlayersByTeam((prev) => {
-          const next = { ...prev };
-          delete next[teamId];
-          return next;
-        });
         deleteTeamMutation.mutate(teamId, {
           onSuccess: () => showToast('Team deleted'),
           onError: (err) => showToast(err.message, 'error'),
@@ -75,30 +58,11 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
     });
   }
 
-  async function ensureTeamPlayers(teamId: string) {
-    if (playersByTeam[teamId]) return;
-    const { data } = await supabase
-      .from('players')
-      .select('id, display_name, player_open_id, team_id')
-      .eq('team_id', teamId)
-      .order('display_name');
-    setPlayersByTeam((prev) => ({ ...prev, [teamId]: (data as Player[]) ?? [] }));
-  }
-
-  function getPlayerCount(teamId: string): number {
-    // If we've loaded the full roster, use that (most accurate)
-    if (playersByTeam[teamId]) return playersByTeam[teamId].length;
-    // Fall back to server-side count
-    return initialPlayerCounts[teamId] ?? 0;
-  }
-
   return (
-    <div className="p-8 max-w-[1100px] page-enter">
+    <div className="p-10 max-w-[900px] page-enter">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">
-            Teams
-          </h1>
+          <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Teams</h1>
           <p className="text-[var(--text-secondary)] text-sm font-body">
             {teams.length} team{teams.length !== 1 ? 's' : ''} registered
           </p>
@@ -128,63 +92,53 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
 
       {/* New team form */}
       {adding && (
-        <div className="surface mb-8 animate-slide-down">
+        <div className="surface mb-6 animate-slide-down">
           <form onSubmit={handleCreateTeam} className="p-6 space-y-6">
             <div className="font-body text-[14px] font-medium text-[var(--text-primary)] flex items-center gap-2 border-b border-[var(--border)] pb-4">
               <svg width="16" height="16" viewBox="0 0 14 14" fill="none" className="text-[var(--text-muted)]"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
               Register New Team
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div>
                 <label className="label">Team Name *</label>
                 <input autoFocus type="text" value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  required placeholder="e.g. Sentinels"
-                  className="input-premium" />
+                  required placeholder="e.g. Sentinels" className="input-premium" />
               </div>
-
               <div>
                 <label className="label">Tag (Optional)</label>
                 <input type="text" value={form.short_name}
                   onChange={(e) => setForm((f) => ({ ...f, short_name: e.target.value.toUpperCase().slice(0, 5) }))}
-                  placeholder="SEN"
-                  className="input-premium uppercase" />
+                  placeholder="SEN" className="input-premium uppercase" />
               </div>
-
               <div>
                 <label className="label">Brand Color</label>
                 <div className="flex items-center gap-3">
-                  <div className="relative group/color">
-                    <label className="relative cursor-pointer w-10 h-10 shrink-0 block z-10">
-                      <input type="color" value={form.brand_color}
-                        onChange={(e) => setForm((f) => ({ ...f, brand_color: e.target.value }))}
-                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer z-20" />
-                      <div className="w-10 h-10 rounded-lg border border-[var(--border)] absolute inset-0 transition-transform hover:scale-[1.05]"
-                        style={{ backgroundColor: form.brand_color }} />
-                    </label>
-                  </div>
+                  <label className="relative cursor-pointer w-10 h-10 shrink-0 block">
+                    <input type="color" value={form.brand_color}
+                      onChange={(e) => setForm((f) => ({ ...f, brand_color: e.target.value }))}
+                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                    <div className="w-10 h-10 rounded-lg border border-[var(--border)]"
+                      style={{ backgroundColor: form.brand_color }} />
+                  </label>
                   <span className="text-[13px] font-mono text-[var(--text-secondary)] uppercase">{form.brand_color}</span>
                 </div>
               </div>
             </div>
-
             <div className="flex gap-3 pt-2">
               <button type="submit" disabled={createTeamMutation.isPending} className="btn-primary flex-1 sm:flex-none">
                 {createTeamMutation.isPending ? 'Saving...' : 'Save Team'}
               </button>
-              <button type="button" onClick={() => setAdding(false)} className="btn-ghost flex-1 sm:flex-none">
-                Cancel
-              </button>
+              <button type="button" onClick={() => setAdding(false)} className="btn-ghost flex-1 sm:flex-none">Cancel</button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Teams grid / empty state */}
+      {/* Teams table */}
       {teams.length === 0 ? (
         <div className="surface animate-slide-up mt-8">
-          <div className="p-16 text-center relative overflow-hidden flex flex-col items-center">
+          <div className="p-16 text-center flex flex-col items-center">
             <div className="w-16 h-16 rounded-2xl mb-6 flex items-center justify-center border border-[var(--border)] bg-[var(--bg-surface)]">
               <svg width="24" height="24" viewBox="0 0 26 26" fill="none">
                 <circle cx="9" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-muted)]"/>
@@ -193,7 +147,9 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
               </svg>
             </div>
             <h3 className="font-display text-lg font-semibold mb-2 text-[var(--text-primary)]">No Teams Registered</h3>
-            <p className="text-[var(--text-secondary)] text-[14px] mb-8 max-w-sm">Create your teams and add players with their in-game IDs so they can be matched during live games.</p>
+            <p className="text-[var(--text-secondary)] text-[14px] mb-8 max-w-sm">
+              Create your teams and add players with their in-game IDs so they can be matched during live games.
+            </p>
             <button onClick={() => setAdding(true)} className="btn-primary inline-flex items-center gap-2">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
               <span>Register Team</span>
@@ -201,99 +157,72 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
-          {teams.map((team) => {
-            const isOpen = expanded === team.id;
-            const color = team.brand_color || '#7a8ba8';
-            const playerCount = getPlayerCount(team.id);
-            const teamPlayers = playersByTeam[team.id];
+        <div className="surface overflow-hidden stagger">
+          {/* Table header */}
+          <div className="grid grid-cols-[48px_1fr_80px_80px] items-center gap-4 px-5 py-2.5 border-b border-[var(--border)] bg-[var(--bg-base)]">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Logo</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Team</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] text-center">Players</span>
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)] text-right">Actions</span>
+          </div>
 
-            return (
-              <div key={team.id} className="surface overflow-hidden flex flex-col">
-                {/* Card header — colored accent bar */}
-                <div className="h-1 w-full flex-shrink-0" style={{ backgroundColor: color }} />
+          <div className="divide-y divide-[var(--border)]">
+            {teams.map((team) => {
+              const color = team.brand_color || '#7a8ba8';
+              const playerCount = initialPlayerCounts[team.id] ?? 0;
 
-                {/* Main card body */}
-                <div className="p-5 flex flex-col flex-1">
-                  {/* Logo + team info row */}
-                  <div className="flex items-start gap-4 mb-4">
-                    {/* Logo — large and prominent */}
-                    <div className="flex-shrink-0">
-                      {team.logo_url ? (
-                        <img
-                          src={team.logo_url}
-                          alt={team.name}
-                          className="w-20 h-20 rounded-xl object-cover border border-[var(--border)] shadow-sm"
-                        />
-                      ) : (
-                        <div
-                          className="w-20 h-20 rounded-xl flex items-center justify-center font-display font-bold text-2xl flex-shrink-0 border shadow-sm select-none"
-                          style={{ backgroundColor: color + '18', borderColor: `${color}35`, color }}
-                        >
-                          {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Name, tag, player count */}
-                    <div className="min-w-0 flex-1 pt-1">
-                      <div className="font-display font-semibold text-[16px] text-[var(--text-primary)] truncate leading-tight mb-1">
-                        {team.name}
+              return (
+                <div key={team.id} className="grid grid-cols-[48px_1fr_80px_80px] items-center gap-4 px-5 py-3 hover:bg-[var(--bg-hover)] transition-colors group">
+                  {/* Logo */}
+                  <div className="flex-shrink-0">
+                    {team.logo_url ? (
+                      <img
+                        src={team.logo_url}
+                        alt={team.name}
+                        className="w-10 h-10 rounded-lg object-cover border border-[var(--border)]"
+                      />
+                    ) : (
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center font-display font-bold text-[13px] border select-none"
+                        style={{ backgroundColor: color + '18', borderColor: `${color}35`, color }}
+                      >
+                        {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
                       </div>
+                    )}
+                  </div>
+
+                  {/* Name + tag */}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-[15px] text-[var(--text-primary)] truncate">{team.name}</span>
                       {team.short_name && (
                         <span
-                          className="inline-block text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md mb-2"
+                          className="text-[11px] font-mono font-semibold px-1.5 py-0.5 rounded flex-shrink-0"
                           style={{ backgroundColor: color + '18', color }}
                         >
                           {team.short_name}
                         </span>
                       )}
-                      <div className="flex items-center gap-1.5 mt-1">
-                        <svg width="13" height="13" viewBox="0 0 20 20" fill="none" className="text-[var(--text-muted)] flex-shrink-0">
-                          <circle cx="8" cy="6" r="3" stroke="currentColor" strokeWidth="1.5"/>
-                          <path d="M2 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                          <circle cx="15" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.4" opacity="0.5"/>
-                          <path d="M17 17c0-2.2-1.3-4-3-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.5"/>
-                        </svg>
-                        <span className="text-[13px] text-[var(--text-secondary)]">
-                          <span className="font-semibold text-[var(--text-primary)]">{playerCount}</span> player{playerCount !== 1 ? 's' : ''}
-                        </span>
-                      </div>
                     </div>
                   </div>
 
-                  {/* Action buttons */}
-                  <div className="flex gap-2 mt-auto pt-3 border-t border-[var(--border)]">
+                  {/* Player count */}
+                  <div className="text-center">
+                    <span className="text-[14px] font-medium text-[var(--text-primary)]">{playerCount}</span>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-2">
                     <Link
                       href={`/teams/${team.id}`}
-                      className="btn-ghost btn-sm flex-1 text-center justify-center"
+                      className="btn-ghost btn-sm"
                     >
-                      Configure
+                      Manage
                     </Link>
                     <button
-                      onClick={async () => {
-                        const nextId = isOpen ? null : team.id;
-                        setExpanded(nextId);
-                        if (nextId) await ensureTeamPlayers(nextId);
-                      }}
-                      className={`btn-sm flex items-center gap-1.5 flex-shrink-0 transition-colors ${
-                        isOpen
-                          ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]'
-                          : 'btn-ghost'
-                      }`}
-                    >
-                      <svg
-                        width="13" height="13" viewBox="0 0 16 16" fill="none"
-                        className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                      >
-                        <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      Roster
-                    </button>
-                    <button
                       onClick={() => deleteTeam(team.id)}
-                      className="btn-ghost btn-sm flex-shrink-0 text-[var(--text-muted)] hover:text-[var(--red)] hover:bg-[var(--red-soft)] border-transparent hover:border-transparent transition-colors"
                       title="Delete team"
+                      className="w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-muted)] hover:text-[var(--red)] hover:bg-[var(--red-soft)] transition-colors opacity-0 group-hover:opacity-100"
                     >
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
@@ -301,47 +230,9 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
                     </button>
                   </div>
                 </div>
-
-                {/* Expandable roster panel */}
-                {isOpen && (
-                  <div className="border-t border-[var(--border)] bg-[var(--bg-surface)] animate-slide-down">
-                    {!teamPlayers ? (
-                      <div className="px-5 py-6 text-center text-[var(--text-muted)] text-[13px]">Loading…</div>
-                    ) : teamPlayers.length === 0 ? (
-                      <div className="px-5 py-6 text-center">
-                        <p className="text-[var(--text-muted)] text-[13px] mb-3">No players added yet</p>
-                        <Link href={`/teams/${team.id}`} className="btn-ghost btn-sm">
-                          Manage Roster
-                        </Link>
-                      </div>
-                    ) : (
-                      <div className="px-4 py-3 space-y-1 max-h-52 overflow-y-auto">
-                        {teamPlayers.map((player) => (
-                          <div
-                            key={player.id}
-                            className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
-                          >
-                            <div
-                              className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                              style={{ background: color + '20', color }}
-                            >
-                              {(player.display_name || '?').substring(0, 2).toUpperCase()}
-                            </div>
-                            <span className="text-[13px] font-medium text-[var(--text-primary)] flex-1 min-w-0 truncate">
-                              {player.display_name}
-                            </span>
-                            <span className="badge badge-muted font-mono text-[11px] truncate max-w-[130px] flex-shrink-0">
-                              {player.player_open_id || 'PENDING'}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
