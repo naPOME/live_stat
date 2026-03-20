@@ -968,27 +968,34 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-[var(--border)]">
-        {(['overview', 'stages', 'standings', 'applications', 'ops'] as Tab[]).map((tab) => (
+      <div className="flex gap-1 mb-8 border-b border-[var(--border)]">
+        {([
+          { id: 'overview' as Tab, label: 'Overview', icon: <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="8" y="1" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="1" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/><rect x="8" y="8" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/></svg> },
+          { id: 'stages' as Tab, label: 'Stages', icon: <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M7 2v10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/><circle cx="7" cy="7" r="2.5" stroke="currentColor" strokeWidth="1.3"/></svg> },
+          { id: 'standings' as Tab, label: 'Standings', icon: <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M2 11V6m3.5 5V3M9 11V5m3.5 6V8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> },
+          { id: 'applications' as Tab, label: 'Applications', icon: <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M9 2H5a1 1 0 00-1 1v8a1 1 0 001 1h4a1 1 0 001-1V3a1 1 0 00-1-1z" stroke="currentColor" strokeWidth="1.3"/><path d="M5 5h4M5 7h4M5 9h2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> },
+          { id: 'ops' as Tab, label: 'Disputes & Flags', icon: <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><path d="M7 1.5L12.5 11H1.5L7 1.5z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/><path d="M7 5.5v2.5M7 9.5v.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg> },
+        ]).map(({ id, label, icon }) => (
           <button
-            key={tab}
+            key={id}
             onClick={() => {
-              setActiveTab(tab);
-              if (tab === 'standings' && stageStandings.length === 0) fetchStandings();
+              setActiveTab(id);
+              if (id === 'standings' && stageStandings.length === 0) fetchStandings();
             }}
-            className={`px-4 py-2 text-sm font-semibold transition-colors relative flex items-center gap-2 ${
-              activeTab === tab ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+            className={`px-4 py-2.5 text-sm font-semibold transition-colors relative flex items-center gap-1.5 ${
+              activeTab === id ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
             }`}
           >
-            <span className="relative z-10 block translate-y-px">
-              {tab === 'overview' ? 'Overview' : tab === 'stages' ? 'Stages' : tab === 'standings' ? 'Standings' : tab === 'applications' ? 'Applications' : 'Disputes & Flags'}
+            <span className="relative z-10 flex items-center gap-1.5">
+              {icon}
+              {label}
             </span>
-            {tab === 'applications' && pendingApps > 0 && (
-              <span className="relative z-10 bg-[var(--accent)] text-black text-[10px] font-semibold w-5 h-5 rounded-full flex items-center justify-center ml-1">
+            {id === 'applications' && pendingApps > 0 && (
+              <span className="relative z-10 bg-[var(--accent)] text-black text-[10px] font-semibold w-5 h-5 rounded-full flex items-center justify-center">
                 {pendingApps}
               </span>
             )}
-            {activeTab === tab && (
+            {activeTab === id && (
               <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[var(--accent)]" />
             )}
           </button>
@@ -1145,93 +1152,102 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {[
-                  { rank: '1st', pts: 10 }, { rank: '2nd', pts: 6 }, { rank: '3rd', pts: 5 },
-                  { rank: '4th', pts: 4 }, { rank: '5th', pts: 3 }, { rank: '6th', pts: 2 },
-                  { rank: '7th', pts: 1 }, { rank: '8th', pts: 1 }, { rank: '9th+', pts: 0 },
-                ].map(({ rank, pts }) => (
-                  <div key={rank} className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2 text-center min-w-[60px]">
-                    <div className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-1">{rank}</div>
-                    <div className={`text-base font-display font-black ${pts > 0 ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>{pts}</div>
-                  </div>
-                ))}
+                {(() => {
+                  const placements = pointSystem.placement_points as Record<string, number> | number[] | null;
+                  const ordinals = ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th+'];
+                  const entries: { rank: string; pts: number }[] = [];
+                  if (Array.isArray(placements)) {
+                    ordinals.forEach((rank, i) => {
+                      const pts = placements[i + 1] ?? 0;
+                      entries.push({ rank, pts });
+                    });
+                  } else if (placements && typeof placements === 'object') {
+                    ordinals.forEach((rank, i) => {
+                      const pts = placements[String(i + 1)] ?? 0;
+                      entries.push({ rank, pts });
+                    });
+                  } else {
+                    [10,6,5,4,3,2,1,1,0].forEach((pts, i) => entries.push({ rank: ordinals[i], pts }));
+                  }
+                  return entries.map(({ rank, pts }) => (
+                    <div key={rank} className="bg-[var(--bg-elevated)] border border-[var(--border)] rounded-lg px-4 py-2 text-center min-w-[60px]">
+                      <div className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-secondary)] mb-1">{rank}</div>
+                      <div className={`text-base font-display font-black ${pts > 0 ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>{pts}</div>
+                    </div>
+                  ));
+                })()}
               </div>
             </div>
           )}
 
           {/* Stage Pipeline with progress indicators */}
           <div className="surface p-6">
-            <h2 className="text-sm font-display font-bold uppercase tracking-widest text-[var(--text-primary)] mb-4">Stage Pipeline</h2>
+            <h2 className="text-sm font-display font-bold uppercase tracking-widest text-[var(--text-primary)] mb-5">Stage Pipeline</h2>
             {stages.length > 0 ? (
-              <div className="space-y-3">
-                {stages.map((stage, i) => {
-                  const stageMatchCount = stage.matches.length;
-                  const stageFinished = stage.matches.filter(m => m.status === 'finished').length;
-                  const stageLive = stage.matches.filter(m => m.status === 'live').length;
-                  const totalTeamsInGroups = stage.groups.reduce((sum, g) => sum + g.teams.length, 0);
-                  const totalGroupSlots = stage.groups.reduce((sum, g) => sum + (g.team_count || 0), 0);
-                  const matchProgress = stageMatchCount > 0 ? Math.round((stageFinished / stageMatchCount) * 100) : 0;
-                  const typeLabel = stage.stage_type === 'group' ? 'GROUP' : stage.stage_type === 'elimination' ? 'ELIM' : 'FINALS';
+              <div className="relative">
+                {/* Vertical connector line */}
+                {stages.length > 1 && (
+                  <div className="absolute left-[15px] top-8 bottom-8 w-[1px] bg-[var(--border)]" />
+                )}
+                <div className="space-y-3">
+                  {stages.map((stage, i) => {
+                    const stageMatchCount = stage.matches.length;
+                    const stageFinished = stage.matches.filter(m => m.status === 'finished').length;
+                    const stageLive = stage.matches.filter(m => m.status === 'live').length;
+                    const totalTeamsInGroups = stage.groups.reduce((sum, g) => sum + g.teams.length, 0);
+                    const totalGroupSlots = stage.groups.reduce((sum, g) => sum + (g.team_count || 0), 0);
+                    const matchProgress = stageMatchCount > 0 ? Math.round((stageFinished / stageMatchCount) * 100) : 0;
+                    const typeLabel = stage.stage_type === 'group' ? 'GROUP' : stage.stage_type === 'elimination' ? 'ELIM' : 'FINALS';
+                    const isActive = stage.status === 'active';
+                    const isDone = stage.status === 'completed';
 
-                  return (
-                    <div key={stage.id} className="flex items-center gap-4">
-                      {/* Stage number */}
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 border ${
-                        stage.status === 'completed' ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                        : stage.status === 'active' ? 'bg-[var(--accent)]/15 border-[var(--accent-border)] text-[var(--accent)]'
-                        : 'bg-[var(--bg-elevated)] border-[var(--border)] text-[var(--text-muted)]'
-                      }`}>
-                        {stage.status === 'completed' ? (
-                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        ) : (i + 1)}
-                      </div>
-
-                      {/* Stage info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-sm font-medium text-[var(--text-primary)]">{stage.name}</span>
-                          <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border border-[var(--border)] text-[var(--text-muted)]">
-                            {typeLabel}
-                          </span>
-                          <span className={`text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border ${
-                            stage.status === 'active' ? 'border-[var(--accent-border)] text-[var(--accent)] bg-[var(--accent)]/10'
-                            : stage.status === 'completed' ? 'border-emerald-500/20 text-emerald-400 bg-emerald-500/10'
-                            : 'border-[var(--amber)]/20 text-[var(--amber)] bg-[var(--amber)]/10'
-                          }`}>
-                            {stage.status}
-                          </span>
+                    return (
+                      <div key={stage.id} className="flex items-start gap-4">
+                        {/* Stage bubble */}
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 border relative z-10 ${
+                          isDone ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400'
+                          : isActive ? 'bg-[var(--accent)]/15 border-[var(--accent-border)] text-[var(--accent)]'
+                          : 'bg-[var(--bg-elevated)] border-[var(--border)] text-[var(--text-muted)]'
+                        }`}>
+                          {isDone ? (
+                            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 6l2.5 2.5 4.5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                          ) : (i + 1)}
                         </div>
-                        <div className="flex items-center gap-3 text-[11px] text-[var(--text-muted)]">
-                          <span>{stageMatchCount} match{stageMatchCount !== 1 ? 'es' : ''}</span>
-                          {stage.groups.length > 0 && <span>{stage.groups.length} group{stage.groups.length !== 1 ? 's' : ''}</span>}
-                          {totalTeamsInGroups > 0 && <span>{totalTeamsInGroups}{totalGroupSlots > 0 ? `/${totalGroupSlots}` : ''} teams</span>}
-                          {stageFinished > 0 && <span className="text-emerald-400">{stageFinished} done</span>}
-                          {stageLive > 0 && <span className="text-[var(--red)]">{stageLive} live</span>}
-                        </div>
-                      </div>
 
-                      {/* Match progress bar */}
-                      {stageMatchCount > 0 && (
-                        <div className="w-24 flex-shrink-0">
-                          <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] mb-1">
-                            <span>{stageFinished}/{stageMatchCount}</span>
-                            <span>{matchProgress}%</span>
+                        {/* Stage card */}
+                        <div className={`flex-1 min-w-0 rounded-xl border px-4 py-3 transition-colors ${
+                          isActive ? 'border-[var(--accent-border)] bg-[var(--accent)]/5'
+                          : isDone ? 'border-emerald-500/20 bg-emerald-500/5'
+                          : 'border-[var(--border)] bg-[var(--bg-elevated)]'
+                        }`}>
+                          <div className="flex items-center justify-between gap-3 flex-wrap">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`text-sm font-semibold truncate ${isActive ? 'text-[var(--text-primary)]' : isDone ? 'text-[var(--text-secondary)]' : 'text-[var(--text-secondary)]'}`}>{stage.name}</span>
+                              <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded border border-[var(--border)] text-[var(--text-muted)] flex-shrink-0">{typeLabel}</span>
+                              {isActive && <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent-border)] flex-shrink-0">LIVE</span>}
+                              {isDone && <span className="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex-shrink-0">DONE</span>}
+                            </div>
+                            {stageMatchCount > 0 && (
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <span className="text-[11px] text-[var(--text-muted)] tabular-nums">{stageFinished}/{stageMatchCount}</span>
+                                <div className="w-20 h-1.5 bg-[var(--bg-base)] rounded-full overflow-hidden">
+                                  <div className={`h-full rounded-full transition-all ${isDone ? 'bg-emerald-400' : 'bg-[var(--accent)]'}`} style={{ width: `${matchProgress}%` }} />
+                                </div>
+                                <span className="text-[10px] text-[var(--text-muted)] tabular-nums w-7 text-right">{matchProgress}%</span>
+                              </div>
+                            )}
                           </div>
-                          <div className="h-1 bg-[var(--bg-base)] rounded-full overflow-hidden">
-                            <div className={`h-full rounded-full transition-all ${stage.status === 'completed' ? 'bg-emerald-400' : 'bg-[var(--accent)]'}`} style={{ width: `${matchProgress}%` }} />
+                          <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[var(--text-muted)]">
+                            <span>{stageMatchCount} match{stageMatchCount !== 1 ? 'es' : ''}</span>
+                            {stage.groups.length > 0 && <><span className="text-[var(--border)]">&bull;</span><span>{stage.groups.length} group{stage.groups.length !== 1 ? 's' : ''}</span></>}
+                            {totalTeamsInGroups > 0 && <><span className="text-[var(--border)]">&bull;</span><span>{totalTeamsInGroups}{totalGroupSlots > 0 ? `/${totalGroupSlots}` : ''} teams</span></>}
+                            {stageLive > 0 && <><span className="text-[var(--border)]">&bull;</span><span className="text-[var(--red)] font-medium">{stageLive} live</span></>}
                           </div>
                         </div>
-                      )}
-
-                      {/* Arrow connector (except last) */}
-                      {i < stages.length - 1 && (
-                        <div className="text-[var(--text-muted)] flex-shrink-0">
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-4 py-4">
@@ -1249,7 +1265,7 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
           </div>
 
           {/* ─── End-to-End Flow Guide ─── */}
-          <details className="surface overflow-hidden group">
+          <details className="surface overflow-hidden group" open={setupProgress < 100}>
             <summary className="px-6 py-4 cursor-pointer hover:bg-[var(--bg-hover)] transition-colors flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-[var(--accent)] flex-shrink-0">
@@ -1347,12 +1363,20 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                   {tournamentTeams.length} TOTAL
                 </div>
               </h2>
-              <div className="flex flex-wrap gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                 {tournamentTeams.map((team) => (
-                  <div key={team.id} className="flex items-center gap-2 bg-[var(--bg-elevated)] border border-[var(--border)] hover:border-[var(--border-hover)] rounded-md px-3 py-1.5 transition-colors">
-                    <div className="w-2.5 h-2.5 rounded flex-shrink-0" style={{ backgroundColor: team.brand_color }} />
-                    <span className="text-xs text-[var(--text-primary)] font-medium">{team.name}</span>
-                    {team.short_name && <span className="text-[10px] text-[var(--text-muted)] font-bold">[{team.short_name}]</span>}
+                  <div key={team.id} className="flex items-center gap-2.5 bg-[var(--bg-elevated)] border border-[var(--border)] hover:border-[var(--border-hover)] rounded-lg px-3 py-2 transition-colors min-w-0">
+                    {team.logo_url ? (
+                      <img src={team.logo_url} alt={team.name} className="w-7 h-7 rounded-md object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    ) : (
+                      <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ backgroundColor: team.brand_color + '25', color: team.brand_color }}>
+                        {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="text-[12px] text-[var(--text-primary)] font-medium truncate leading-tight">{team.name}</div>
+                      {team.short_name && <div className="text-[10px] text-[var(--text-muted)] font-mono leading-tight">{team.short_name}</div>}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1794,7 +1818,13 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                           {group.teams.map((team) => (
                                             <div key={team.id} className="flex items-center justify-between py-1 group/team hover:bg-white/5 px-2 -mx-2 rounded transition-colors">
                                               <div className="flex items-center gap-2 min-w-0">
-                                                <div className="w-2 h-2 rounded flex-shrink-0" style={{ backgroundColor: team.brand_color }} />
+                                                {team.logo_url ? (
+                                                  <img src={team.logo_url} alt={team.name} className="w-5 h-5 rounded object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                                                ) : (
+                                                  <div className="w-5 h-5 rounded flex items-center justify-center text-[8px] font-bold flex-shrink-0" style={{ backgroundColor: team.brand_color + '30', color: team.brand_color }}>
+                                                    {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
+                                                  </div>
+                                                )}
                                                 <span className="text-[12px] text-[var(--text-primary)] truncate font-medium">{team.short_name || team.name}</span>
                                               </div>
                                               <button onClick={() => removeTeamFromGroup(group.id, team.id)}
@@ -1843,17 +1873,17 @@ export default function TournamentPage({ params }: { params: Promise<{ id: strin
                                                     : <span className="text-[9px] text-[var(--text-muted)] font-mono">{new Date(match.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>;
                                                 })()}
                                               </div>
-                                              <div className="flex items-center gap-2 flex-shrink-0 opacity-0 group-hover/match:opacity-100 transition-all">
+                                              <div className="flex items-center gap-2 flex-shrink-0">
                                                 <button
                                                   onClick={() => duplicateMatch(match, stage.id, group.id)}
-                                                  className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                                                  className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors opacity-0 group-hover/match:opacity-100"
                                                   title="Duplicate match with same map & slots"
                                                 >
-                                                  Duplicate
+                                                  Dup
                                                 </button>
                                                 <Link href={`/tournaments/${id}/stages/${stage.id}/matches/${match.id}`}
-                                                  className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-white transition-colors">
-                                                  View
+                                                  className="text-[10px] font-display font-bold uppercase tracking-widest px-2 py-0.5 rounded border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-colors">
+                                                  Open →
                                                 </Link>
                                               </div>
                                             </div>
