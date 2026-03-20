@@ -25,6 +25,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
   const [playerForm, setPlayerForm] = useState({ display_name: '', player_open_id: '' });
   const [editTeam, setEditTeam] = useState(false);
   const [teamForm, setTeamForm] = useState({ name: initialTeam.name, short_name: initialTeam.short_name ?? '', brand_color: initialTeam.brand_color });
+  const [logoImgError, setLogoImgError] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [playerPhotoUploading, setPlayerPhotoUploading] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -102,6 +103,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
       const { error: updateError } = await supabase.from('teams').update({ logo_url: publicUrl }).eq('id', teamId);
       if (!updateError) {
         URL.revokeObjectURL(localPreview);
+        setLogoImgError(false);
         setTeam((t) => ({ ...t, logo_url: `${publicUrl}?t=${Date.now()}` }));
         showToast('Logo updated');
       } else {
@@ -203,8 +205,8 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
             <div className="flex items-center gap-4">
               {/* Logo */}
               <div className="relative group/logo">
-                {team.logo_url ? (
-                  <img src={team.logo_url} alt={team.name} className="w-16 h-16 rounded-xl object-cover border border-[var(--border)]" />
+                {team.logo_url && !logoImgError ? (
+                  <img src={team.logo_url} alt={team.name} className="w-16 h-16 rounded-xl object-cover border border-[var(--border)]" onError={() => setLogoImgError(true)} />
                 ) : (
                   <div
                     className="w-16 h-16 rounded-xl flex items-center justify-center text-xl font-bold border"

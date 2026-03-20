@@ -49,7 +49,7 @@ export function useTeamPlayers(teamId: string, initialData?: Player[]) {
 export function useCreateTeam(orgId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { name: string; short_name: string | null; brand_color: string }) => {
+    mutationFn: async (input: { name: string; short_name: string | null; brand_color: string; logo_url?: string | null }) => {
       const { data, error } = await supabase
         .from('teams')
         .insert({ org_id: orgId, ...input })

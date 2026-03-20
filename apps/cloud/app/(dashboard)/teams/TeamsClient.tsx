@@ -18,7 +18,8 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
   const deleteTeamMutation = useDeleteTeam();
 
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: '', short_name: '', brand_color: '#00ffc3' });
+  const [form, setForm] = useState({ name: '', short_name: '', brand_color: '#00ffc3', logo_url: '' });
+  const [imgErrors, setImgErrors] = useState<Set<string>>(new Set());
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
@@ -31,10 +32,10 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
     e.preventDefault();
     if (!form.name.trim()) return;
     createTeamMutation.mutate(
-      { name: form.name.trim(), short_name: form.short_name.trim() || null, brand_color: form.brand_color },
+      { name: form.name.trim(), short_name: form.short_name.trim() || null, brand_color: form.brand_color, logo_url: form.logo_url.trim() || null },
       {
         onSuccess: () => {
-          setForm({ name: '', short_name: '', brand_color: '#00ffc3' });
+          setForm({ name: '', short_name: '', brand_color: '#00ffc3', logo_url: '' });
           setAdding(false);
           showToast('Team created');
         },
@@ -125,6 +126,13 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
                 </div>
               </div>
             </div>
+            <div>
+              <label className="label">Logo URL <span className="text-[var(--text-muted)] font-normal normal-case tracking-normal">(optional)</span></label>
+              <input type="url" value={form.logo_url}
+                onChange={(e) => setForm((f) => ({ ...f, logo_url: e.target.value }))}
+                placeholder="https://example.com/logo.png"
+                className="input-premium" />
+            </div>
             <div className="flex gap-3 pt-2">
               <button type="submit" disabled={createTeamMutation.isPending} className="btn-primary flex-1 sm:flex-none">
                 {createTeamMutation.isPending ? 'Saving...' : 'Save Team'}
@@ -171,15 +179,17 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
               const color = team.brand_color || '#7a8ba8';
               const playerCount = initialPlayerCounts[team.id] ?? 0;
 
+              const hasImgError = imgErrors.has(team.id);
               return (
                 <div key={team.id} className="grid grid-cols-[48px_1fr_80px_80px] items-center gap-4 px-5 py-3 hover:bg-[var(--bg-hover)] transition-colors group">
                   {/* Logo */}
                   <div className="flex-shrink-0">
-                    {team.logo_url ? (
+                    {team.logo_url && !hasImgError ? (
                       <img
                         src={team.logo_url}
                         alt={team.name}
                         className="w-10 h-10 rounded-lg object-cover border border-[var(--border)]"
+                        onError={() => setImgErrors((prev) => new Set(prev).add(team.id))}
                       />
                     ) : (
                       <div
