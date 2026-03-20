@@ -16,10 +16,11 @@ interface Player {
 type TeamsClientProps = {
   initialTeams: Team[];
   initialHasTournaments: boolean;
+  initialPlayerCounts: Record<string, number>;
   orgId: string;
 };
 
-export default function TeamsClient({ initialTeams, initialHasTournaments, orgId }: TeamsClientProps) {
+export default function TeamsClient({ initialTeams, initialHasTournaments, initialPlayerCounts, orgId }: TeamsClientProps) {
   const supabase = createClient();
   const { data: teams = [] } = useTeams(orgId, initialTeams);
   const createTeamMutation = useCreateTeam(orgId);
@@ -84,12 +85,15 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, orgId
     setPlayersByTeam((prev) => ({ ...prev, [teamId]: (data as Player[]) ?? [] }));
   }
 
-  function getTeamPlayers(teamId: string) {
-    return playersByTeam[teamId] ?? [];
+  function getPlayerCount(teamId: string): number {
+    // If we've loaded the full roster, use that (most accurate)
+    if (playersByTeam[teamId]) return playersByTeam[teamId].length;
+    // Fall back to server-side count
+    return initialPlayerCounts[teamId] ?? 0;
   }
 
   return (
-    <div className="p-10 max-w-[900px] page-enter">
+    <div className="p-8 max-w-[1100px] page-enter">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">
@@ -177,7 +181,7 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, orgId
         </div>
       )}
 
-      {/* Teams list */}
+      {/* Teams grid / empty state */}
       {teams.length === 0 ? (
         <div className="surface animate-slide-up mt-8">
           <div className="p-16 text-center relative overflow-hidden flex flex-col items-center">
@@ -197,119 +201,147 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, orgId
           </div>
         </div>
       ) : (
-        <div className="surface overflow-hidden stagger">
-          <div className="divide-y divide-[var(--border)]">
-            {teams.map((team) => {
-              const teamPlayers = getTeamPlayers(team.id);
-              const isOpen = expanded === team.id;
-              const color = team.brand_color || '#7a8ba8';
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
+          {teams.map((team) => {
+            const isOpen = expanded === team.id;
+            const color = team.brand_color || '#7a8ba8';
+            const playerCount = getPlayerCount(team.id);
+            const teamPlayers = playersByTeam[team.id];
 
-              return (
-                <div key={team.id} className="group/row">
-                  {/* Team row — clickable to expand */}
-                  <button
-                    onClick={async () => {
-                      const nextId = isOpen ? null : team.id;
-                      setExpanded(nextId);
-                      if (nextId) await ensureTeamPlayers(nextId);
-                    }}
-                    className="w-full grid grid-cols-[auto_auto_1fr_auto_auto_auto] items-center gap-6 px-6 py-4 text-left hover:bg-[var(--bg-hover)] transition-colors"
-                  >
-                    {/* Color dot */}
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: color }} />
+            return (
+              <div key={team.id} className="surface overflow-hidden flex flex-col">
+                {/* Card header — colored accent bar */}
+                <div className="h-1 w-full flex-shrink-0" style={{ backgroundColor: color }} />
 
-                    {/* Logo / initials */}
-                    {team.logo_url ? (
-                      <img src={team.logo_url} alt={team.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0 border border-[var(--border)]" />
-                    ) : (
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center font-display font-semibold text-[13px] flex-shrink-0 border"
-                        style={{ backgroundColor: color + '15', borderColor: `${color}30`, color }}>
-                        {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
-                      </div>
-                    )}
-
-                    {/* Name + tag */}
-                    <div className="min-w-0">
-                      <div className="font-medium text-[15px] text-[var(--text-primary)] truncate">{team.name}</div>
-                      {team.short_name && (
-                        <span className="text-[12px] text-[var(--text-secondary)]">{team.short_name}</span>
+                {/* Main card body */}
+                <div className="p-5 flex flex-col flex-1">
+                  {/* Logo + team info row */}
+                  <div className="flex items-start gap-4 mb-4">
+                    {/* Logo — large and prominent */}
+                    <div className="flex-shrink-0">
+                      {team.logo_url ? (
+                        <img
+                          src={team.logo_url}
+                          alt={team.name}
+                          className="w-20 h-20 rounded-xl object-cover border border-[var(--border)] shadow-sm"
+                        />
+                      ) : (
+                        <div
+                          className="w-20 h-20 rounded-xl flex items-center justify-center font-display font-bold text-2xl flex-shrink-0 border shadow-sm select-none"
+                          style={{ backgroundColor: color + '18', borderColor: `${color}35`, color }}
+                        >
+                          {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
+                        </div>
                       )}
                     </div>
 
-                    {/* Player count */}
-                    <div className="flex flex-col items-end justify-center px-4">
-                      <span className="text-[15px] font-medium text-[var(--text-primary)] leading-none mb-1">{teamPlayers.length}</span>
-                      <span className="text-[11px] text-[var(--text-muted)]">Players</span>
+                    {/* Name, tag, player count */}
+                    <div className="min-w-0 flex-1 pt-1">
+                      <div className="font-display font-semibold text-[16px] text-[var(--text-primary)] truncate leading-tight mb-1">
+                        {team.name}
+                      </div>
+                      {team.short_name && (
+                        <span
+                          className="inline-block text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md mb-2"
+                          style={{ backgroundColor: color + '18', color }}
+                        >
+                          {team.short_name}
+                        </span>
+                      )}
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <svg width="13" height="13" viewBox="0 0 20 20" fill="none" className="text-[var(--text-muted)] flex-shrink-0">
+                          <circle cx="8" cy="6" r="3" stroke="currentColor" strokeWidth="1.5"/>
+                          <path d="M2 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          <circle cx="15" cy="6" r="2.5" stroke="currentColor" strokeWidth="1.4" opacity="0.5"/>
+                          <path d="M17 17c0-2.2-1.3-4-3-5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" opacity="0.5"/>
+                        </svg>
+                        <span className="text-[13px] text-[var(--text-secondary)]">
+                          <span className="font-semibold text-[var(--text-primary)]">{playerCount}</span> player{playerCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
                     </div>
+                  </div>
 
-                    {/* Manage link */}
+                  {/* Action buttons */}
+                  <div className="flex gap-2 mt-auto pt-3 border-t border-[var(--border)]">
                     <Link
                       href={`/teams/${team.id}`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="btn-ghost btn-sm flex-shrink-0"
+                      className="btn-ghost btn-sm flex-1 text-center justify-center"
                     >
                       Configure
                     </Link>
-
-                    {/* Expand chevron */}
-                    <div className={`w-8 h-8 rounded-md flex items-center justify-center transition-all duration-200 flex-shrink-0 ${isOpen ? 'rotate-180 text-[var(--text-primary)]' : 'text-[var(--text-muted)] group-hover/row:text-[var(--text-primary)]'}`}>
-                      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <button
+                      onClick={async () => {
+                        const nextId = isOpen ? null : team.id;
+                        setExpanded(nextId);
+                        if (nextId) await ensureTeamPlayers(nextId);
+                      }}
+                      className={`btn-sm flex items-center gap-1.5 flex-shrink-0 transition-colors ${
+                        isOpen
+                          ? 'bg-[var(--bg-hover)] text-[var(--text-primary)]'
+                          : 'btn-ghost'
+                      }`}
+                    >
+                      <svg
+                        width="13" height="13" viewBox="0 0 16 16" fill="none"
+                        className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                      >
                         <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                       </svg>
-                    </div>
-                  </button>
-
-                  {/* Expanded player list */}
-                  {isOpen && (
-                    <div className="border-t border-[var(--border)] bg-[var(--bg-surface)] animate-slide-down">
-                      {teamPlayers.length === 0 ? (
-                        <div className="px-6 py-8 text-center border-b border-[var(--border)]">
-                          <p className="text-[var(--text-muted)] text-[13px] mb-4">No players added yet</p>
-                          <Link href={`/teams/${team.id}`} className="btn-ghost btn-sm">
-                            Manage Roster
-                          </Link>
-                        </div>
-                      ) : (
-                        <div className="px-6 py-4 border-b border-[var(--border)]">
-                          <div className="grid grid-cols-[auto_1fr_auto] gap-4 mb-3 pb-2 border-b border-[var(--border)]">
-                            <span className="text-[12px] font-medium text-[var(--text-muted)] w-8 text-center">ID</span>
-                            <span className="text-[12px] font-medium text-[var(--text-muted)]">Display Name</span>
-                            <span className="text-[12px] font-medium text-[var(--text-muted)] text-right">Game ID</span>
-                          </div>
-                          {teamPlayers.map((player) => (
-                            <div key={player.id}
-                              className="grid grid-cols-[auto_1fr_auto] items-center gap-4 py-2 group/player hover:bg-[var(--bg-hover)] rounded-md px-2 -mx-2 transition-colors">
-                              <div className="w-8 h-8 rounded-md flex items-center justify-center text-[11px] font-semibold flex-shrink-0"
-                                style={{ background: color + '20', color: color }}>
-                                {(player.display_name || '?').substring(0, 2).toUpperCase()}
-                              </div>
-                              <span className="text-[14px] font-medium text-[var(--text-primary)] min-w-0 truncate">
-                                {player.display_name}
-                              </span>
-                              <span className="badge badge-muted font-mono truncate max-w-[180px]">
-                                {player.player_open_id || 'PENDING'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Delete action at bottom */}
-                      <div className="px-6 py-4 flex justify-between items-center bg-[var(--bg-base)]">
-                        <span className="text-[11px] font-mono text-[var(--text-muted)]">Team ID: {team.id.split('-')[0]}</span>
-                        <button onClick={() => deleteTeam(team.id)}
-                          className="btn-ghost btn-sm text-[var(--red)] hover:text-[var(--red)] hover:bg-[var(--red-soft)] border-transparent hover:border-transparent flex items-center gap-2">
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                          Delete Team
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                      Roster
+                    </button>
+                    <button
+                      onClick={() => deleteTeam(team.id)}
+                      className="btn-ghost btn-sm flex-shrink-0 text-[var(--text-muted)] hover:text-[var(--red)] hover:bg-[var(--red-soft)] border-transparent hover:border-transparent transition-colors"
+                      title="Delete team"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
+
+                {/* Expandable roster panel */}
+                {isOpen && (
+                  <div className="border-t border-[var(--border)] bg-[var(--bg-surface)] animate-slide-down">
+                    {!teamPlayers ? (
+                      <div className="px-5 py-6 text-center text-[var(--text-muted)] text-[13px]">Loading…</div>
+                    ) : teamPlayers.length === 0 ? (
+                      <div className="px-5 py-6 text-center">
+                        <p className="text-[var(--text-muted)] text-[13px] mb-3">No players added yet</p>
+                        <Link href={`/teams/${team.id}`} className="btn-ghost btn-sm">
+                          Manage Roster
+                        </Link>
+                      </div>
+                    ) : (
+                      <div className="px-4 py-3 space-y-1 max-h-52 overflow-y-auto">
+                        {teamPlayers.map((player) => (
+                          <div
+                            key={player.id}
+                            className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-[var(--bg-hover)] transition-colors"
+                          >
+                            <div
+                              className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0"
+                              style={{ background: color + '20', color }}
+                            >
+                              {(player.display_name || '?').substring(0, 2).toUpperCase()}
+                            </div>
+                            <span className="text-[13px] font-medium text-[var(--text-primary)] flex-1 min-w-0 truncate">
+                              {player.display_name}
+                            </span>
+                            <span className="badge badge-muted font-mono text-[11px] truncate max-w-[130px] flex-shrink-0">
+                              {player.player_open_id || 'PENDING'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

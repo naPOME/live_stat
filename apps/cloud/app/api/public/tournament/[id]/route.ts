@@ -218,16 +218,24 @@ export async function GET(
     })
     .filter(Boolean);
 
-  return NextResponse.json({
-    tournament: {
-      id: tournament.id, name: tournament.name, status: tournament.status,
-      registration_open: tournament.registration_open,
-      registration_mode: tournament.registration_mode,
-      created_at: tournament.created_at,
+  return NextResponse.json(
+    {
+      tournament: {
+        id: tournament.id, name: tournament.name, status: tournament.status,
+        registration_open: tournament.registration_open,
+        registration_mode: tournament.registration_mode,
+        created_at: tournament.created_at,
+      },
+      organization: org ? { name: org.name, logo_url: org.logo_url, brand_color: org.brand_color } : null,
+      stages: stageData,
+      teams: teamList,
+      playerStats,
     },
-    organization: org ? { name: org.name, logo_url: org.logo_url, brand_color: org.brand_color } : null,
-    stages: stageData,
-    teams: teamList,
-    playerStats,
-  });
+    {
+      headers: {
+        // Cache at CDN/browser for 20s, serve stale for up to 60s while revalidating
+        'Cache-Control': 'public, s-maxage=20, stale-while-revalidate=60',
+      },
+    },
+  );
 }

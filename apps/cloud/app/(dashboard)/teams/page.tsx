@@ -16,10 +16,22 @@ export default async function TeamsPage() {
     supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('status', 'active'),
   ]);
 
+  const teamIds = (teams ?? []).map((t: any) => t.id);
+  const { data: playerRows } = teamIds.length > 0
+    ? await supabase.from('players').select('team_id').in('team_id', teamIds)
+    : { data: [] };
+
+  // Single query for all player counts instead of N queries
+  const playerCounts: Record<string, number> = {};
+  for (const row of playerRows ?? []) {
+    playerCounts[(row as any).team_id] = (playerCounts[(row as any).team_id] ?? 0) + 1;
+  }
+
   return (
     <TeamsClient
       initialTeams={(teams as any[]) ?? []}
       initialHasTournaments={(count ?? 0) > 0}
+      initialPlayerCounts={playerCounts}
       orgId={profile.org_id}
     />
   );
