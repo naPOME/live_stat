@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ColumnDef } from '@tanstack/react-table';
 import { useTeams, useCreateTeam, useDeleteTeam } from '@/lib/hooks/use-teams';
 import type { Team } from '@/lib/types';
@@ -16,6 +17,7 @@ type TeamsClientProps = {
 };
 
 export default function TeamsClient({ initialTeams, initialHasTournaments, initialPlayerCounts, orgId }: TeamsClientProps) {
+  const router = useRouter();
   const { data: teams = [] } = useTeams(orgId, initialTeams);
   const createTeamMutation = useCreateTeam(orgId);
   const deleteTeamMutation = useDeleteTeam();
@@ -103,13 +105,12 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
       cell: ({ row }) => {
         const team = row.original;
         return (
-          <div className="flex items-center justify-end gap-2" onClick={(e) => e.preventDefault()}>
-            <Link
-              href={`/teams/${team.id}`}
-              onClick={(e) => e.stopPropagation()}
+          <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => router.push(`/teams/${team.id}`)}
               className="btn-ghost btn-sm text-xs">
               Manage
-            </Link>
+            </button>
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteTeam(team.id); }}
               title="Delete team"

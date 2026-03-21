@@ -5,7 +5,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="min-h-screen flex">
 
       {/* ── Left: cinematic image panel ───────────────────────── */}
-      <div className="hidden lg:flex flex-col flex-1 relative overflow-hidden"
+      <div className="hidden lg:flex flex-col relative overflow-hidden lg:w-[60%]"
         style={{ backgroundImage: `url(${BG})`, backgroundSize: 'cover', backgroundPosition: 'center 35%' }}>
 
         {/* Dark gradient overlays */}
@@ -38,7 +38,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       {/* ── Right: form panel ─────────────────────────────────── */}
-      <div className="w-full lg:w-[460px] flex-shrink-0 flex flex-col items-center justify-center p-8 bg-[var(--bg-base)] relative">
+      <div className="w-full lg:w-[40%] flex-shrink-0 flex flex-col items-center justify-center p-8 bg-[var(--bg-base)] relative">
         {/* Subtle top accent line */}
         <div className="absolute top-0 left-0 right-0 h-px"
           style={{ background: 'linear-gradient(to right, transparent, #00ffc330, transparent)' }} />
