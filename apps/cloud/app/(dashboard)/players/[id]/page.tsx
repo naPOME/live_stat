@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
-import { TeamAvatar } from '@/components/Avatar';
+import { PlayerAvatar } from '@/components/Avatar';
 
 export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -93,9 +93,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
           <div className="flex items-start gap-7">
             {/* Avatar */}
             <div className="relative flex-shrink-0">
-              <div style={{ width: 88, height: 88 }}>
-                <TeamAvatar logoUrl={team.logo_url} brandColor={accent} size="lg" className="w-full h-full !rounded-2xl" />
-              </div>
+              <PlayerAvatar name={player.display_name} logoUrl={team.logo_url} brandColor={accent} px={88} />
               {/* Online-style indicator dot */}
               <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[var(--bg-base)]"
                 style={{ backgroundColor: accent }} />
