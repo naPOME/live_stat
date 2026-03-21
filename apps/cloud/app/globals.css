@@ -332,7 +332,7 @@
     background-color: var(--bg-surface);
     background-image:
       linear-gradient(rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.88)),
-      url('https://i.redd.it/2gxxm37lrgy51.jpg');
+      url('/bg-1.jpeg');
     background-size: cover;
     background-position: center 30%;
   }
