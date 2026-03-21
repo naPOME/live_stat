@@ -65,38 +65,21 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
       accessorFn: (t) => t.name,
       cell: ({ row }) => {
         const team = row.original;
-        const color = team.brand_color || '#7a8ba8';
         return (
           <div className="flex items-center gap-3 min-w-0">
-            <TeamAvatar logoUrl={team.logo_url} brandColor={color} size="md" />
+            <TeamAvatar name={team.name} logoUrl={team.logo_url} size="md" />
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-[14px] text-[var(--text-primary)] truncate group-hover:text-white transition-colors">
                   {team.name}
                 </span>
                 {team.short_name && (
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0"
-                    style={{ backgroundColor: color + '18', color }}>
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0 text-[var(--text-muted)] bg-[var(--bg-elevated)] border border-[var(--border)]">
                     {team.short_name}
                   </span>
                 )}
               </div>
             </div>
-          </div>
-        );
-      },
-    },
-    {
-      id: 'color',
-      header: 'Color',
-      meta: { width: '90px' },
-      enableSorting: false,
-      cell: ({ row }) => {
-        const color = row.original.brand_color || '#7a8ba8';
-        return (
-          <div className="flex items-center gap-2">
-            <div className="w-3.5 h-3.5 rounded-sm flex-shrink-0" style={{ backgroundColor: color }} />
-            <span className="text-[11px] font-mono text-[var(--text-muted)] uppercase">{color}</span>
           </div>
         );
       },

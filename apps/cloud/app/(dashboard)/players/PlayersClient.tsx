@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import { useQuery } from '@tanstack/react-query';
 import DataTable from '@/components/DataTable';
-import { TeamAvatar } from '@/components/Avatar';
+import { TeamAvatar, PlayerAvatar } from '@/components/Avatar';
 
 type PlayerStat = {
   rank: number;
@@ -81,10 +81,13 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
       accessorKey: 'display_name',
       header: 'Player',
       meta: { width: '1.5fr' },
-      cell: ({ getValue }) => (
-        <span className="text-[14px] font-semibold text-[var(--text-primary)] truncate group-hover:text-white transition-colors">
-          {getValue() as string}
-        </span>
+      cell: ({ row }) => (
+        <div className="flex items-center gap-2.5 min-w-0">
+          <PlayerAvatar name={row.original.display_name} size="sm" />
+          <span className="text-[14px] font-semibold text-[var(--text-primary)] truncate group-hover:text-white transition-colors">
+            {row.original.display_name}
+          </span>
+        </div>
       ),
     },
     {
@@ -102,10 +105,9 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
       accessorFn: (p) => teamMap.get(p.team_id)?.name ?? '',
       cell: ({ row }) => {
         const team = teamMap.get(row.original.team_id);
-        const color = team?.brand_color || '#7a8ba8';
         return (
           <div className="flex items-center gap-2 min-w-0">
-            <TeamAvatar logoUrl={team?.logo_url} brandColor={color} size="xs" />
+            <TeamAvatar name={team?.name ?? ''} logoUrl={team?.logo_url} size="xs" />
             <span className="text-[13px] text-[var(--text-secondary)] truncate">{team?.name ?? 'Unknown'}</span>
           </div>
         );
@@ -135,9 +137,12 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
       cell: ({ row }) => {
         const p = row.original;
         return (
-          <div>
-            <div className="text-[14px] font-semibold text-[var(--text-primary)] truncate">{p.display_name}</div>
-            <div className="text-[10px] font-mono text-[var(--text-muted)]">{p.matches_played}M</div>
+          <div className="flex items-center gap-2.5 min-w-0">
+            <PlayerAvatar name={p.display_name} size="sm" />
+            <div className="min-w-0">
+              <div className="text-[14px] font-semibold text-[var(--text-primary)] truncate">{p.display_name}</div>
+              <div className="text-[10px] font-mono text-[var(--text-muted)]">{p.matches_played}M</div>
+            </div>
           </div>
         );
       },
@@ -149,10 +154,9 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
       accessorFn: (p) => p.team?.name ?? '',
       cell: ({ row }) => {
         const team = row.original.team;
-        const color = team?.brand_color || '#7a8ba8';
         return (
           <div className="flex items-center gap-2 min-w-0">
-            <TeamAvatar logoUrl={team?.logo_url} brandColor={color} size="xs" />
+            <TeamAvatar name={team?.name ?? ''} logoUrl={team?.logo_url} size="xs" />
             <span className="text-[13px] text-[var(--text-secondary)] truncate">{team?.short_name ?? team?.name ?? '—'}</span>
           </div>
         );
