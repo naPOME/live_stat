@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 
+const HERO_BG = 'https://images.wallpapersden.com/image/download/pubg-mobile-2021-new_bGpoa2WUmZqaraWkpJRobWllrWdma2U.jpg';
+
 export default async function TournamentsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -20,19 +22,39 @@ export default async function TournamentsPage() {
 
   return (
     <div className="max-w-[1100px] page-enter">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">
-            Tournaments
-          </h1>
-          <p className="text-[var(--text-secondary)] text-sm font-body">
-            {tournaments?.length ?? 0} active tournament{tournaments?.length !== 1 ? 's' : ''}
-          </p>
+
+      {/* ── Hero ──────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl mb-10"
+        style={{
+          backgroundImage: `url(${HERO_BG})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 40%',
+          minHeight: 240,
+        }}>
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.92) 100%)' }} />
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 60%)' }} />
+        <div className="relative z-10 flex flex-col justify-end p-8 pt-16" style={{ minHeight: 240 }}>
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40 mb-2">
+            Tournament Management
+          </div>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-black tracking-tight text-white leading-none mb-2">
+                Tournaments
+              </h1>
+              <p className="text-white/40 text-sm">
+                {tournaments?.length ?? 0} tournament{tournaments?.length !== 1 ? 's' : ''} in your organization
+              </p>
+            </div>
+            <Link href="/tournaments/new"
+              className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white border border-white/20 bg-black/30 hover:bg-black/50 transition-colors backdrop-blur-sm">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              Create Tournament
+            </Link>
+          </div>
         </div>
-        <Link href="/tournaments/new" className="btn-primary inline-flex items-center gap-2">
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-          <span>Create Tournament</span>
-        </Link>
       </div>
 
       {tournaments && tournaments.length > 0 ? (

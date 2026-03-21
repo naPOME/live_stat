@@ -4,6 +4,8 @@ import { useMemo, useState } from 'react';
 import { ColumnDef } from '@tanstack/react-table';
 import DataTable from '@/components/DataTable';
 
+const HERO_BG = 'https://images.wallpapersden.com/image/download/pubg-mobile-2021-new_bGpoa2WUmZqaraWkpJRobWllrWdma2U.jpg';
+
 type MatchRow = {
   id: string;
   stage_id: string;
@@ -145,24 +147,37 @@ export default function MatchesClient({ initialMatches, initialStages, initialTo
 
   return (
     <div className="max-w-[1100px] page-enter">
-      <div className="mb-8">
-        <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Matches</h1>
-        <p className="text-[var(--text-secondary)] text-sm">All matches across your tournaments</p>
-      </div>
-
-      {/* Summary bar — no individual cards, just a horizontal row */}
-      <div className="flex items-center gap-8 mb-8 pb-8 border-b border-[var(--border)]">
-        {[
-          { label: 'Total', value: initialMatches.length, color: 'var(--text-primary)' },
-          { label: 'Live', value: liveCount, color: 'var(--red)' },
-          { label: 'Finished', value: finishedCount, color: 'var(--accent)' },
-          { label: 'Scheduled', value: scheduledMatches.length, color: 'var(--text-muted)' },
-        ].map(({ label, value, color }) => (
-          <div key={label}>
-            <div className="text-3xl font-black tabular-nums leading-none" style={{ color }}>{value}</div>
-            <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mt-1.5">{label}</div>
+      {/* ── Hero ──────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl mb-10"
+        style={{
+          backgroundImage: `url(${HERO_BG})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 35%',
+          minHeight: 240,
+        }}>
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.92) 100%)' }} />
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 60%)' }} />
+        <div className="relative z-10 flex flex-col justify-end p-8 pt-16" style={{ minHeight: 240 }}>
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40 mb-2">
+            Match Overview
           </div>
-        ))}
+          <h1 className="text-4xl font-black tracking-tight text-white leading-none mb-6">Matches</h1>
+          <div className="flex items-end gap-10">
+            {[
+              { label: 'Total', value: initialMatches.length, color: 'white' },
+              { label: 'Live', value: liveCount, color: 'var(--red)' },
+              { label: 'Finished', value: finishedCount, color: 'var(--accent)' },
+              { label: 'Scheduled', value: scheduledMatches.length, color: 'rgba(255,255,255,0.5)' },
+            ].map(({ label, value, color }) => (
+              <div key={label}>
+                <div className="text-4xl font-black tabular-nums leading-none" style={{ color }}>{value}</div>
+                <div className="text-[10px] uppercase tracking-widest text-white/35 mt-1.5">{label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Tabs */}
