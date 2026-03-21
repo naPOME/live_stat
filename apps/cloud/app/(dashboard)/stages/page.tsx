@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import StagesClient from './StagesClient';
 
+const HERO_BG = 'https://a-static.besthdwallpaper.com/playerunknown-s-battlegrounds-pubg-mobile-battle-in-mad-miramar-wallpaper-2560x1080-63448_14.jpg';
+
 export default async function StagesPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -35,9 +37,32 @@ export default async function StagesPage() {
 
   return (
     <div className="max-w-[1100px] page-enter">
-      <div className="mb-8">
-        <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Stages</h1>
-        <p className="text-[var(--text-secondary)] text-sm">All stages across your tournaments</p>
+
+      {/* ── Hero ──────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl mb-10"
+        style={{
+          backgroundImage: `url(${HERO_BG})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 55%',
+          minHeight: 220,
+        }}>
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.92) 100%)' }} />
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.35) 0%, transparent 60%)' }} />
+        <div className="relative z-10 flex flex-col justify-end p-8 pt-14" style={{ minHeight: 220 }}>
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40 mb-2">
+            Tournament Structure
+          </div>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-black tracking-tight text-white leading-none mb-2">Stages</h1>
+              <p className="text-white/40 text-sm">
+                {stages.length} stage{stages.length !== 1 ? 's' : ''} across your tournaments
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {stages.length === 0 ? (
