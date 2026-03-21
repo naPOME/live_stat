@@ -208,23 +208,66 @@ export default function StagesTab() {
 
       {/* Pipeline builder toolbar — when stages exist */}
       {stages.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 mb-6 p-4 surface">
-          <span className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] mr-2">Pipeline Builder</span>
-          <select value={stagePreset} onChange={(e) => setStagePreset(e.target.value)} className="input-premium w-auto text-sm">
-            {STAGE_PRESETS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-            <option value="custom">Custom</option>
-          </select>
-          {stagePreset === 'custom' && (
-            <input type="text" value={customStageNames} onChange={(e) => setCustomStageNames(e.target.value)}
-              placeholder="Stage names (comma-separated)" className="input-premium w-64 text-sm" />
-          )}
-          <button onClick={() => createStagesFromPreset(stagePreset, customStageNames, matchesPerStageInput)} className="btn-primary">
-            + Add Stages
-          </button>
-          <div className="w-[1px] h-6 bg-[var(--border)] mx-1" />
-          <button onClick={linkAllTeamsToTournament} disabled={linkingTeams} className="btn-ghost text-xs">
-            {linkingTeams ? 'Linking...' : 'Link registered teams'}
-          </button>
+        <div className="surface p-5 mb-2">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[10px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)]">Pipeline</span>
+            <button onClick={linkAllTeamsToTournament} disabled={linkingTeams}
+              className="text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors font-medium disabled:opacity-50">
+              {linkingTeams ? 'Linking…' : 'Link registered teams →'}
+            </button>
+          </div>
+
+          {/* Stage flow visualization */}
+          <div className="flex items-center gap-1.5 flex-wrap mb-5">
+            {stages.map((s, i) => (
+              <div key={s.id} className="flex items-center gap-1.5">
+                {i > 0 && (
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[var(--border)] flex-shrink-0">
+                    <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                )}
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                  s.status === 'live'
+                    ? 'border-[var(--red)]/30 bg-[var(--red)]/5 text-[var(--red)]'
+                    : s.status === 'completed'
+                      ? 'border-emerald-500/20 bg-emerald-500/5 text-emerald-400'
+                      : 'border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-secondary)]'
+                }`}>
+                  {s.status === 'live' && <span className="w-1.5 h-1.5 rounded-full bg-[var(--red)] animate-pulse flex-shrink-0" />}
+                  {s.status === 'completed' && (
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className="flex-shrink-0">
+                      <path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                  <span>{s.name}</span>
+                  <span className="opacity-30 text-[9px] font-normal">{s.stage_type}</span>
+                </div>
+              </div>
+            ))}
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="text-[var(--border)] flex-shrink-0">
+              <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <div className="px-3 py-1.5 rounded-lg border border-dashed border-[var(--border)] text-[var(--text-muted)] text-[11px] flex items-center gap-1">
+              <span className="opacity-40">+</span> stage
+            </div>
+          </div>
+
+          {/* Add stages form */}
+          <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-[var(--border)]">
+            <select value={stagePreset} onChange={(e) => setStagePreset(e.target.value)} className="input-premium w-auto text-xs">
+              {STAGE_PRESETS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+              <option value="custom">Custom</option>
+            </select>
+            {stagePreset === 'custom' && (
+              <input type="text" value={customStageNames} onChange={(e) => setCustomStageNames(e.target.value)}
+                placeholder="Stage names, comma-separated" className="input-premium w-56 text-xs" />
+            )}
+            <button onClick={() => createStagesFromPreset(stagePreset, customStageNames, matchesPerStageInput)}
+              className="btn-primary text-xs py-1.5 px-3">
+              + Add Stages
+            </button>
+          </div>
         </div>
       )}
 
@@ -672,37 +715,91 @@ export default function StagesTab() {
 
                   {/* Map Pool */}
                   <div className="border-b border-[var(--border)]">
-                    <div className="flex items-center justify-between px-5 py-2.5 bg-[var(--bg-hover)] border-b border-[var(--border)]">
-                      <span className="text-xs font-display font-bold text-[var(--text-muted)] uppercase tracking-widest">Map Pool</span>
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-5 py-3 border-b border-[var(--border)]">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs font-display font-bold text-[var(--text-muted)] uppercase tracking-widest">Map Pool</span>
+                        {mapPool.length > 0 && (
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[var(--accent)]/10 text-[var(--accent)] border border-[var(--accent)]/20">
+                            {mapPool.length} selected
+                          </span>
+                        )}
+                      </div>
                       <button
                         onClick={() => {
                           const competitive = GAME_MAPS.filter((m) => m.competitive).map((m) => m.name);
                           const allEnabled = competitive.every((n) => mapPool.includes(n));
                           updateMapPool(stage.id, allEnabled ? [] : competitive);
                         }}
-                        className="text-[10px] text-[var(--accent)] hover:text-[var(--text-primary)] font-display font-bold transition-colors uppercase tracking-widest">
+                        className="text-[10px] text-[var(--accent)] hover:text-[var(--text-primary)] font-bold transition-colors uppercase tracking-widest">
                         {mapPool.length === GAME_MAPS.filter((m) => m.competitive).length ? 'Clear All' : 'Select All'}
                       </button>
                     </div>
-                    <div className="px-5 py-3 flex flex-wrap gap-2">
-                      {GAME_MAPS.map((gm) => {
-                        const enabled = mapPool.includes(gm.name);
-                        return (
-                          <button key={gm.id}
-                            onClick={() => updateMapPool(stage.id, enabled ? mapPool.filter((n) => n !== gm.name) : [...mapPool, gm.name])}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                              enabled ? 'border-transparent text-black' : 'border-[var(--border)] text-[var(--text-muted)] hover:border-[var(--border-hover)] hover:text-[var(--text-primary)] bg-transparent'
-                            }`}
-                            style={enabled ? { background: gm.color } : undefined}>
-                            {gm.name}
-                            {gm.size && <span className="ml-1 opacity-60 text-[9px]">{gm.size}</span>}
-                          </button>
-                        );
-                      })}
+
+                    {/* Competitive map tiles */}
+                    <div className="px-5 pt-4 pb-3">
+                      <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2.5">Competitive</div>
+                      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                        {GAME_MAPS.filter((m) => m.competitive).map((gm) => {
+                          const enabled = mapPool.includes(gm.name);
+                          return (
+                            <button key={gm.id}
+                              onClick={() => updateMapPool(stage.id, enabled ? mapPool.filter((n) => n !== gm.name) : [...mapPool, gm.name])}
+                              className="relative flex flex-col items-start justify-between p-2.5 rounded-xl border transition-all text-left"
+                              style={{
+                                borderColor: enabled ? gm.color + '55' : 'var(--border)',
+                                background: enabled ? gm.color + '14' : 'var(--bg-elevated)',
+                              }}>
+                              {enabled && (
+                                <span className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0"
+                                  style={{ background: gm.color }}>
+                                  <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                    <path d="M1.5 4l2 2L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                </span>
+                              )}
+                              <span className="text-[12px] font-bold leading-tight pr-5"
+                                style={{ color: enabled ? gm.color : 'var(--text-secondary)' }}>
+                                {gm.name}
+                              </span>
+                              {gm.size && (
+                                <span className="text-[9px] font-mono mt-1.5 opacity-40">{gm.size}</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
+
+                    {/* Casual / non-competitive maps */}
+                    <div className="px-5 pb-4">
+                      <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2.5">Casual</div>
+                      <div className="flex flex-wrap gap-2">
+                        {GAME_MAPS.filter((m) => !m.competitive).map((gm) => {
+                          const enabled = mapPool.includes(gm.name);
+                          return (
+                            <button key={gm.id}
+                              onClick={() => updateMapPool(stage.id, enabled ? mapPool.filter((n) => n !== gm.name) : [...mapPool, gm.name])}
+                              className="flex items-center gap-2 px-3 py-2 rounded-lg border transition-all"
+                              style={{
+                                borderColor: enabled ? gm.color + '55' : 'var(--border)',
+                                background: enabled ? gm.color + '14' : 'var(--bg-elevated)',
+                              }}>
+                              {enabled && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: gm.color }} />}
+                              <span className="text-[11px] font-semibold" style={{ color: enabled ? gm.color : 'var(--text-muted)' }}>
+                                {gm.name}
+                              </span>
+                              {gm.size && <span className="text-[9px] font-mono opacity-40">{gm.size}</span>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Generate rotation (finals only) */}
                     {stage.stage_type === 'finals' && mapPool.length > 0 && (
-                      <div className="px-5 pb-3 flex items-center gap-2">
-                        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-display font-bold">Generate Random Rotation</span>
+                      <div className="px-5 py-3 border-t border-[var(--border)] flex items-center gap-3">
+                        <span className="text-[10px] text-[var(--text-muted)] uppercase tracking-widest font-bold">Generate Random Rotation</span>
                         {[6, 12, 18].map((n) => (
                           <button key={n}
                             onClick={async () => {
@@ -715,13 +812,12 @@ export default function StagesTab() {
                                 map_name: mapName,
                                 point_system_id: pointSystem?.id ?? null,
                               }));
-                              // Insert via addMatch loop to keep context consistent
                               for (const row of rows) {
                                 await addMatch(stage.id, undefined, row.name, row.map_name ?? undefined);
                               }
                             }}
-                            className="text-xs text-[var(--accent)] hover:text-[var(--text-primary)] font-medium transition-colors">
-                            +{n}
+                            className="text-xs font-semibold px-2.5 py-1 rounded-lg border border-[var(--border)] text-[var(--accent)] hover:bg-[var(--accent)]/5 transition-colors">
+                            +{n} matches
                           </button>
                         ))}
                       </div>
