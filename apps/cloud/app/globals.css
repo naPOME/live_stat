@@ -323,20 +323,26 @@
 
   /* ─── Data Table ─── */
   .data-table {
-    background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: 12px;
     overflow: hidden;
     width: 100%;
     display: block;
     box-shadow: var(--shadow-card);
+    background-color: var(--bg-surface);
+    background-image:
+      linear-gradient(rgba(15, 23, 42, 0.94), rgba(15, 23, 42, 0.94)),
+      url('https://i.redd.it/2gxxm37lrgy51.jpg');
+    background-size: cover;
+    background-position: center 30%;
   }
 
   .data-table-header {
     display: grid;
     align-items: center;
     border-bottom: 1px solid var(--border);
-    background: var(--bg-elevated);
+    background: rgba(30, 41, 59, 0.85);
+    backdrop-filter: blur(4px);
   }
 
   .data-table-header span {

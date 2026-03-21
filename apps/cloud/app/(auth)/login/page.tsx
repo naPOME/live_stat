@@ -23,60 +23,70 @@ export default function LoginPage() {
   }
 
   return (
-    <div>
-      {/* Logo */}
-      <div className="text-center mb-10">
-        <div className="inline-flex items-center gap-3.5 mb-5">
-          <div className="relative">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #00ffc3, #00b89c)' }}>
-              <svg width="20" height="20" viewBox="0 0 18 18" fill="none">
-                <path d="M2 9L5.5 5.5L9 9L12.5 5.5L16 9" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M2 13L5.5 9.5L9 13L12.5 9.5L16 13" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4"/>
-              </svg>
-            </div>
-            <div className="absolute -inset-2 rounded-2xl blur-xl opacity-30"
-              style={{ background: 'linear-gradient(135deg, #00ffc3, #00b89c)' }} />
-          </div>
-          <span className="font-display text-2xl font-bold tracking-wider uppercase text-transparent bg-clip-text"
-            style={{ backgroundImage: 'linear-gradient(135deg, #00ffc3 0%, #6d5efc 50%, #ff4e4e 100%)' }}>
-            Tournyx
-          </span>
-        </div>
-        <p className="text-[var(--text-muted)] text-sm font-medium">Sign in to your organization</p>
+    <>
+      <div className="mb-10">
+        <h1 className="text-3xl font-black text-[var(--text-primary)] tracking-tight leading-tight">
+          Welcome back
+        </h1>
+        <p className="text-[var(--text-muted)] text-sm mt-2">
+          Sign in to your organization dashboard
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit}
-        className="relative surface-elevated p-8 space-y-6 rounded-2xl accent-top">
+      <form onSubmit={handleSubmit} className="space-y-5">
         {error && (
-          <div className="bg-[#ff4e4e]/6 border border-[#ff4e4e]/15 text-[#ff4e4e] text-sm px-4 py-3 rounded-xl animate-slide-down font-medium">
+          <div className="bg-[#ff4e4e]/8 border border-[#ff4e4e]/20 text-[#ff4e4e] text-sm px-4 py-3 rounded-xl font-medium">
             {error}
           </div>
         )}
 
-        <div>
-          <label className="label">Email</label>
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-            required autoFocus className="input-premium" placeholder="admin@org.com" />
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            autoFocus
+            className="input-premium w-full"
+            placeholder="admin@org.com"
+          />
         </div>
 
-        <div>
-          <label className="label">Password</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-            required className="input-premium" placeholder="••••••••" />
+        <div className="space-y-1.5">
+          <label className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Password</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="input-premium w-full"
+            placeholder="••••••••"
+          />
         </div>
 
-        <button type="submit" disabled={loading} className="btn-primary w-full">
-          {loading ? 'Signing in...' : 'Sign In'}
+        <button
+          type="submit"
+          disabled={loading}
+          className="btn-primary w-full py-3 text-sm font-bold mt-2"
+        >
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+              Signing in...
+            </span>
+          ) : 'Sign In'}
         </button>
       </form>
 
-      <p className="text-center text-[var(--text-muted)] text-sm mt-7">
-        New organization?{' '}
-        <Link href="/register" className="text-[#00ffc3] hover:text-[#6d5efc] transition-colors font-semibold">
-          Create account
-        </Link>
-      </p>
-    </div>
+      <div className="mt-8 pt-8 border-t border-[var(--border)]">
+        <p className="text-[var(--text-muted)] text-sm text-center">
+          New organization?{' '}
+          <Link href="/register" className="text-[#00ffc3] hover:opacity-80 transition-opacity font-semibold">
+            Create account
+          </Link>
+        </p>
+      </div>
+    </>
   );
 }

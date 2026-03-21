@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import { PlayerAvatar } from '@/components/Avatar';
 
+const HERO_BG = 'https://i.redd.it/2gxxm37lrgy51.jpg';
+
 export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -25,15 +27,11 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   if (!team || team.org_id !== profile.org_id) notFound();
 
   const { data: orgTournaments } = await supabase
-    .from('tournaments')
-    .select('id, name')
-    .eq('org_id', profile.org_id);
+    .from('tournaments').select('id, name').eq('org_id', profile.org_id);
   const orgTournamentIds = new Set((orgTournaments ?? []).map((t) => t.id));
 
   const { data: rawMatches } = await supabase
-    .from('matches')
-    .select('id, stage:stages!inner(tournament_id)')
-    .eq('status', 'finished');
+    .from('matches').select('id, stage:stages!inner(tournament_id)').eq('status', 'finished');
 
   const matchIds = (rawMatches ?? [])
     .filter((m) => {
@@ -75,126 +73,130 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   return (
     <div className="max-w-5xl mx-auto page-enter">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-8 text-xs text-[var(--text-muted)]">
+      <div className="flex items-center gap-2 mb-6 text-xs text-[var(--text-muted)]">
         <Link href="/players" className="hover:text-[var(--text-primary)] transition-colors">Players</Link>
         <span className="opacity-30">/</span>
         <span className="text-[var(--text-primary)]">{player.display_name}</span>
       </div>
 
-      {/* ── Hero ────────────────────────────────────────────────────── */}
+      {/* ── Hero ─────────────────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-2xl mb-10"
         style={{
-          backgroundImage: 'url(https://images.wallpapersden.com/image/download/pubg-mobile-2021-new_bGpoa2WUmZqaraWkpJRobWllrWdma2U.jpg)',
+          backgroundImage: `url(${HERO_BG})`,
           backgroundSize: 'cover',
-          backgroundPosition: 'center 20%',
+          backgroundPosition: 'center 25%',
+          minHeight: 340,
         }}>
-        {/* Dark overlay */}
+
+        {/* Overlays */}
         <div className="absolute inset-0"
-          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.75) 60%, rgba(0,0,0,0.92) 100%)' }} />
-        {/* Subtle accent tint */}
-        <div className="absolute inset-0 opacity-20 pointer-events-none"
-          style={{ background: `linear-gradient(135deg, ${accent}60 0%, transparent 60%)` }} />
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.65) 45%, rgba(0,0,0,0.93) 100%)' }} />
+        <div className="absolute inset-0"
+          style={{ background: `linear-gradient(120deg, ${accent}35 0%, transparent 55%)` }} />
 
-        <div className="relative p-8 pb-0">
-          <div className="flex items-start gap-7">
-            {/* Avatar */}
-            <div className="relative flex-shrink-0">
-              <PlayerAvatar name={player.display_name} logoUrl={team.logo_url} brandColor={accent} px={88} />
-              {/* Online-style indicator dot */}
-              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[var(--bg-base)]"
-                style={{ backgroundColor: accent }} />
-            </div>
-
-            {/* Identity */}
-            <div className="flex-1 min-w-0 pt-0.5">
-              <h1 className="text-[2.25rem] font-black tracking-tight text-white leading-none">
-                {player.display_name}
-              </h1>
-              <div className="font-mono text-[11px] text-white/40 mt-2 tracking-wider">
-                {player.player_open_id}
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-end" style={{ minHeight: 340 }}>
+          <div className="px-8 pt-8 pb-0">
+            <div className="flex items-end gap-6">
+              {/* Avatar */}
+              <div className="relative flex-shrink-0 mb-1">
+                <PlayerAvatar name={player.display_name} logoUrl={team.logo_url} brandColor={accent} px={96} />
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-black/60"
+                  style={{ backgroundColor: accent }} />
               </div>
-              <Link
-                href={`/teams/${team.id}`}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold mt-3 px-2.5 py-1 rounded-full transition-all hover:opacity-80"
-                style={{ color: accent, backgroundColor: accent + '25', border: `1px solid ${accent}50` }}>
-                {team.logo_url && <img src={team.logo_url} alt="" className="w-3.5 h-3.5 rounded-sm object-cover" />}
-                {team.name}
-                {team.short_name && <span className="opacity-50 font-normal">[{team.short_name}]</span>}
-              </Link>
-            </div>
 
-            {/* Dominant stat: total kills */}
-            {matchesPlayed > 0 && (
-              <div className="text-right flex-shrink-0 pt-1">
-                <div className="text-[3.5rem] font-black leading-none tabular-nums" style={{ color: accent }}>
-                  {totalKills}
+              {/* Name + meta */}
+              <div className="flex-1 min-w-0 pb-1">
+                <div className="font-mono text-[10px] text-white/35 uppercase tracking-widest mb-1.5">
+                  {player.player_open_id}
                 </div>
-                <div className="text-[10px] uppercase tracking-widest text-white/40 mt-1.5">Total Kills</div>
+                <h1 className="text-4xl font-black tracking-tight text-white leading-none">
+                  {player.display_name}
+                </h1>
+                <Link
+                  href={`/teams/${team.id}`}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold mt-3 px-2.5 py-1 rounded-full transition-all hover:opacity-80"
+                  style={{ color: accent, backgroundColor: 'rgba(0,0,0,0.4)', border: `1px solid ${accent}55` }}>
+                  {team.logo_url && <img src={team.logo_url} alt="" className="w-3.5 h-3.5 rounded-sm object-cover" />}
+                  {team.name}
+                  {team.short_name && <span className="opacity-50 font-normal ml-1">[{team.short_name}]</span>}
+                </Link>
               </div>
+
+              {/* Hero stat */}
+              {matchesPlayed > 0 && (
+                <div className="text-right flex-shrink-0 pb-1">
+                  <div className="text-5xl font-black tabular-nums leading-none" style={{ color: accent }}>
+                    {totalKills}
+                  </div>
+                  <div className="text-[9px] uppercase tracking-widest text-white/35 mt-1.5">Total Kills</div>
+                </div>
+              )}
+            </div>
+
+            {/* Stats row */}
+            {matchesPlayed > 0 && (
+              <div className="flex items-end gap-8 mt-7 pb-6 border-b border-white/10">
+                {[
+                  { label: 'Matches', value: String(matchesPlayed) },
+                  { label: 'K/D', value: kd.toFixed(2), hi: kd >= 2 },
+                  { label: 'Avg Dmg', value: avgDamage.toLocaleString() },
+                  { label: 'Survival', value: `${survivalRate}%`, hi: survivalRate >= 60 },
+                  { label: 'Avg Place', value: avgPlacement > 0 ? `#${avgPlacement}` : '—' },
+                  { label: 'Tournaments', value: String(playedTournaments.length) },
+                ].map(({ label, value, hi }) => (
+                  <div key={label}>
+                    <div className="text-xl font-bold tabular-nums leading-none"
+                      style={{ color: hi ? accent : 'white' }}>
+                      {value}
+                    </div>
+                    <div className="text-[9px] uppercase tracking-widest text-white/35 mt-1.5">{label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {matchesPlayed === 0 && (
+              <div className="pb-6 mt-4 text-sm text-white/30">No match data recorded yet.</div>
             )}
           </div>
 
-          {/* Stats row */}
-          {matchesPlayed > 0 ? (
-            <div className="flex items-end gap-10 mt-8 pb-7 border-b border-white/10">
-              {[
-                { label: 'Matches', value: String(matchesPlayed), hi: false },
-                { label: 'K/D Ratio', value: kd.toFixed(2), hi: kd >= 2 },
-                { label: 'Avg Damage', value: avgDamage.toLocaleString(), hi: false },
-                { label: 'Survival', value: `${survivalRate}%`, hi: survivalRate >= 60 },
-                { label: 'Avg Placement', value: avgPlacement > 0 ? `#${avgPlacement}` : '—', hi: false },
-                { label: 'Tournaments', value: String(playedTournaments.length), hi: false },
-              ].map(({ label, value, hi }) => (
-                <div key={label}>
-                  <div className="text-2xl font-bold tabular-nums leading-none"
-                    style={{ color: hi ? accent : 'white' }}>
-                    {value}
-                  </div>
-                  <div className="text-[10px] uppercase tracking-widest text-white/40 mt-1.5">{label}</div>
-                </div>
+          {/* Tournament pills */}
+          {playedTournaments.length > 0 && (
+            <div className="flex items-center gap-2.5 px-8 py-3.5 overflow-x-auto">
+              <span className="text-[9px] uppercase tracking-widest text-white/25 flex-shrink-0 mr-1">In</span>
+              {playedTournaments.map((t) => (
+                <Link key={t.id} href={`/tournaments/${t.id}`}
+                  className="flex-shrink-0 text-[11px] font-medium px-2.5 py-1 rounded-full border border-white/15 text-white/50 hover:text-white hover:border-white/35 transition-colors whitespace-nowrap">
+                  {t.name}
+                </Link>
               ))}
             </div>
-          ) : (
-            <div className="pb-7 mt-6 text-sm text-white/40">No match data recorded yet.</div>
           )}
         </div>
-
-        {/* Tournaments strip */}
-        {playedTournaments.length > 0 && (
-          <div className="flex items-center gap-3 px-8 py-3 overflow-x-auto border-t border-white/10">
-            <span className="text-[10px] uppercase tracking-widest text-white/30 flex-shrink-0">Played in</span>
-            {playedTournaments.map((t) => (
-              <Link
-                key={t.id}
-                href={`/tournaments/${t.id}`}
-                className="flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border border-white/20 text-white/60 hover:text-white hover:border-white/40 transition-colors">
-                {t.name}
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
 
-      {/* ── Career Stats ─────────────────────────────────────────────── */}
+      {/* ── Career Stats ─────────────────────────────────────────── */}
       {matchesPlayed > 0 && (
         <>
-          <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-6">Career Stats</div>
-          <div className="grid grid-cols-2 gap-x-16 gap-y-0">
+          <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-5">
+            Career Stats
+          </div>
+          <div className="grid grid-cols-2 gap-x-12">
             {[
-              { label: 'Total Kills', value: totalKills.toLocaleString(), primary: true },
-              { label: 'Avg Damage per Match', value: avgDamage.toLocaleString(), primary: false },
-              { label: 'Total Damage Dealt', value: totalDamage.toLocaleString(), primary: false },
-              { label: 'Deaths', value: deaths.toString(), primary: false },
-              { label: 'K/D Ratio', value: kd.toFixed(2), primary: kd >= 2 },
-              { label: 'Matches Survived', value: `${matchesPlayed - deaths} of ${matchesPlayed}`, primary: false },
-              { label: 'Survival Rate', value: `${survivalRate}%`, primary: survivalRate >= 60 },
-              { label: 'Average Placement', value: avgPlacement > 0 ? `#${avgPlacement}` : '—', primary: false },
-            ].map(({ label, value, primary }) => (
-              <div key={label} className="flex items-baseline justify-between py-3.5 border-b border-[var(--border)]/50">
+              { label: 'Total Kills', value: totalKills.toLocaleString(), hi: true },
+              { label: 'Avg Damage / Match', value: avgDamage.toLocaleString(), hi: false },
+              { label: 'Total Damage Dealt', value: totalDamage.toLocaleString(), hi: false },
+              { label: 'Deaths', value: deaths.toString(), hi: false },
+              { label: 'K/D Ratio', value: kd.toFixed(2), hi: kd >= 2 },
+              { label: 'Matches Survived', value: `${matchesPlayed - deaths} / ${matchesPlayed}`, hi: false },
+              { label: 'Survival Rate', value: `${survivalRate}%`, hi: survivalRate >= 60 },
+              { label: 'Average Placement', value: avgPlacement > 0 ? `#${avgPlacement}` : '—', hi: false },
+            ].map(({ label, value, hi }) => (
+              <div key={label} className="flex items-center justify-between py-3.5 border-b border-[var(--border)]/40">
                 <span className="text-[13px] text-[var(--text-secondary)]">{label}</span>
-                <span
-                  className="text-[13px] font-semibold tabular-nums ml-8"
-                  style={{ color: primary ? accent : 'var(--text-primary)' }}>
+                <span className="text-[13px] font-semibold tabular-nums"
+                  style={{ color: hi ? accent : 'var(--text-primary)' }}>
                   {value}
                 </span>
               </div>
