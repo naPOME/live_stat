@@ -1,8 +1,115 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
+import { ColumnDef } from '@tanstack/react-table';
+import DataTable from '@/components/DataTable';
+import type { Match } from '@/lib/types';
 import { useTournament } from '../_context';
+
+type FinalsMatchesTableProps = {
+  matches: Match[];
+  stageId: string;
+  tournamentId: string;
+  MAP_NAMES: string[];
+  updateMatchMap: (matchId: string, map: string | null) => void;
+  duplicateMatch: (match: Match, stageId: string) => void;
+  matchCountdown: (scheduledAt: string) => string | null;
+};
+
+function FinalsMatchesTable({ matches, stageId, tournamentId, MAP_NAMES, updateMatchMap, duplicateMatch, matchCountdown }: FinalsMatchesTableProps) {
+  const columns = useMemo<ColumnDef<Match, unknown>[]>(() => [
+    {
+      id: 'index',
+      header: '#',
+      meta: { width: '40px' },
+      enableSorting: false,
+      cell: ({ row }) => (
+        <span className="text-[11px] font-mono text-[var(--text-muted)] tabular-nums">{row.index + 1}</span>
+      ),
+    },
+    {
+      accessorKey: 'name',
+      header: 'Match',
+      meta: { width: '1.5fr' },
+      cell: ({ row }) => {
+        const m = row.original;
+        const cd = m.scheduled_at && m.status === 'pending' ? matchCountdown(m.scheduled_at) : null;
+        return (
+          <div className="min-w-0">
+            <span className="text-[13px] font-medium text-[var(--text-primary)]">{m.name}</span>
+            {cd && <span className="ml-2 text-[10px] text-[var(--accent)] font-mono">{cd}</span>}
+            {!cd && m.scheduled_at && m.status === 'pending' && (
+              <span className="ml-2 text-[10px] text-[var(--text-muted)] font-mono">
+                {new Date(m.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'map_name',
+      header: 'Map',
+      meta: { width: '160px' },
+      cell: ({ row }) => {
+        const m = row.original;
+        return (
+          <select
+            value={m.map_name ?? ''}
+            onChange={(e) => updateMatchMap(m.id, e.target.value || null)}
+            onClick={(e) => e.stopPropagation()}
+            className="input-premium py-0.5 px-1.5 text-[11px] w-full">
+            <option value="">No map</option>
+            {MAP_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        );
+      },
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      meta: { width: '90px' },
+      cell: ({ getValue }) => {
+        const s = getValue() as string;
+        const cls = s === 'finished'
+          ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+          : s === 'live'
+            ? 'bg-[var(--red)]/10 text-[var(--red)] border-[var(--red)]/20'
+            : 'bg-[var(--bg-elevated)] text-[var(--text-muted)] border-[var(--border)]';
+        return (
+          <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${cls}`}>{s}</span>
+        );
+      },
+    },
+    {
+      id: 'actions',
+      header: '',
+      meta: { width: '120px' },
+      enableSorting: false,
+      cell: ({ row }) => {
+        const m = row.original;
+        return (
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={(e) => { e.stopPropagation(); duplicateMatch(m, stageId); }}
+              className="text-[11px] text-[var(--text-muted)] hover:text-[var(--accent)] font-medium transition-colors">
+              Dup
+            </button>
+            <Link
+              href={`/tournaments/${tournamentId}/stages/${stageId}/matches/${m.id}`}
+              onClick={(e) => e.stopPropagation()}
+              className="text-[11px] font-medium px-2.5 py-1 rounded border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-colors">
+              Open →
+            </Link>
+          </div>
+        );
+      },
+    },
+  ], [stageId, tournamentId, MAP_NAMES, updateMatchMap, duplicateMatch, matchCountdown]);
+
+  return <DataTable columns={columns} data={matches} pageSize={15} />;
+}
 
 export default function StagesTab() {
   const {
@@ -646,41 +753,17 @@ export default function StagesTab() {
                       </div>
 
                       {stage.matches.length > 0 ? (
-                        stage.matches.map((match, i) => (
-                          <div key={match.id}
-                            className={`flex items-center justify-between px-5 py-3 hover:bg-[var(--bg-hover)] transition-colors ${i > 0 ? 'border-t border-[var(--border)]' : ''}`}>
-                            <div className="flex items-center gap-3">
-                              <span className="text-sm font-medium text-[var(--text-primary)]">{match.name}</span>
-                              <select value={match.map_name ?? ''} onChange={(e) => updateMatchMap(match.id, e.target.value || null)}
-                                className="input-premium py-1 px-2 text-xs w-auto">
-                                <option value="">No map</option>
-                                {MAP_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
-                              </select>
-                              <span className={`text-[10px] font-display font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${
-                                match.status === 'finished' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                : match.status === 'live' ? 'bg-[var(--red)]/10 text-[var(--red)] border-[var(--red)]/20'
-                                : 'bg-[var(--bg-elevated)] text-[var(--text-muted)] border-[var(--border)]'
-                              }`}>
-                                {match.status}
-                              </span>
-                              {match.status === 'pending' && match.scheduled_at && (() => {
-                                const cd = matchCountdown(match.scheduled_at);
-                                return cd
-                                  ? <span className="text-[10px] text-[var(--accent)] font-mono">{cd}</span>
-                                  : <span className="text-[10px] text-[var(--text-muted)] font-mono">{new Date(match.scheduled_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>;
-                              })()}
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <button onClick={() => duplicateMatch(match, stage.id)}
-                                className="text-xs text-[var(--text-muted)] hover:text-[var(--accent)] font-medium transition-colors"
-                                title="Duplicate match">Duplicate</button>
-                              <Link href={`/tournaments/${id}/stages/${stage.id}/matches/${match.id}`}
-                                className="text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] font-medium transition-colors">
-                                View
-                              </Link>
-                            </div>
-                          </div>
-                        ))
+                        <div className="p-4">
+                          <FinalsMatchesTable
+                            matches={stage.matches}
+                            stageId={stage.id}
+                            tournamentId={id}
+                            MAP_NAMES={MAP_NAMES}
+                            updateMatchMap={updateMatchMap}
+                            duplicateMatch={duplicateMatch}
+                            matchCountdown={matchCountdown}
+                          />
+                        </div>
                       ) : (
                         <div className="px-5 py-4 text-center text-[var(--text-muted)] text-sm">
                           No matches yet.{' '}

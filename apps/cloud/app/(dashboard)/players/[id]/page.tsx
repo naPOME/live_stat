@@ -75,124 +75,131 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   return (
     <div className="max-w-5xl mx-auto page-enter">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6 text-xs text-[var(--text-muted)]">
+      <div className="flex items-center gap-2 mb-8 text-xs text-[var(--text-muted)]">
         <Link href="/players" className="hover:text-[var(--text-primary)] transition-colors">Players</Link>
         <span className="opacity-30">/</span>
         <span className="text-[var(--text-primary)]">{player.display_name}</span>
       </div>
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] mb-8"
-        style={{ background: `linear-gradient(135deg, ${accent}14 0%, transparent 55%)` }}>
+      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] mb-10"
+        style={{ background: `linear-gradient(135deg, ${accent}28 0%, ${accent}08 50%, transparent 80%)` }}>
 
-        {/* Top section: identity */}
-        <div className="flex items-start gap-6 p-8 pb-6">
-          {/* Avatar */}
-          <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-bold flex-shrink-0 border-2"
-            style={{ backgroundColor: accent + '20', borderColor: accent + '50', color: accent }}>
-            {initials}
-          </div>
+        {/* Decorative accent circle */}
+        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full opacity-10 pointer-events-none"
+          style={{ background: `radial-gradient(circle, ${accent}, transparent 70%)` }} />
 
-          <div className="flex-1 min-w-0 pt-1">
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)] leading-none">{player.display_name}</h1>
-            <div className="font-mono text-xs text-[var(--text-muted)] mt-1.5">{player.player_open_id}</div>
-            <Link href={`/teams/${team.id}`}
-              className="inline-flex items-center gap-1.5 text-xs font-medium mt-3 px-2.5 py-1 rounded-full border transition-colors hover:opacity-80"
-              style={{ borderColor: accent + '40', color: accent, backgroundColor: accent + '12' }}>
-              {team.logo_url && <img src={team.logo_url} alt="" className="w-3.5 h-3.5 rounded object-cover" />}
-              {team.name}
-              {team.short_name && <span className="opacity-50">[{team.short_name}]</span>}
-            </Link>
-          </div>
-
-          {/* Headline numbers top-right */}
-          {matchesPlayed > 0 && (
-            <div className="flex items-start gap-8 pt-1 text-right flex-shrink-0">
-              <div>
-                <div className="text-4xl font-bold tabular-nums text-[var(--text-primary)]">{matchesPlayed}</div>
-                <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mt-1">Matches</div>
-              </div>
-              <div>
-                <div className="text-4xl font-bold tabular-nums" style={{ color: accent }}>{totalKills}</div>
-                <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mt-1">Kills</div>
-              </div>
+        <div className="relative p-8 pb-0">
+          <div className="flex items-start gap-7">
+            {/* Avatar */}
+            <div className="w-[88px] h-[88px] rounded-2xl flex items-center justify-center text-3xl font-black flex-shrink-0 relative"
+              style={{ backgroundColor: accent + '22', color: accent }}>
+              {team.logo_url
+                ? <img src={team.logo_url} alt="" className="w-full h-full object-cover rounded-2xl" />
+                : initials}
+              {/* Online-style indicator dot */}
+              <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[var(--bg-base)]"
+                style={{ backgroundColor: accent }} />
             </div>
+
+            {/* Identity */}
+            <div className="flex-1 min-w-0 pt-0.5">
+              <h1 className="text-[2.25rem] font-black tracking-tight text-[var(--text-primary)] leading-none">
+                {player.display_name}
+              </h1>
+              <div className="font-mono text-[11px] text-[var(--text-muted)] mt-2 tracking-wider">
+                {player.player_open_id}
+              </div>
+              <Link
+                href={`/teams/${team.id}`}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold mt-3 px-2.5 py-1 rounded-full transition-all hover:opacity-80"
+                style={{ color: accent, backgroundColor: accent + '15', border: `1px solid ${accent}35` }}>
+                {team.logo_url && <img src={team.logo_url} alt="" className="w-3.5 h-3.5 rounded-sm object-cover" />}
+                {team.name}
+                {team.short_name && <span className="opacity-50 font-normal">[{team.short_name}]</span>}
+              </Link>
+            </div>
+
+            {/* Dominant stat: total kills */}
+            {matchesPlayed > 0 && (
+              <div className="text-right flex-shrink-0 pt-1">
+                <div className="text-[3.5rem] font-black leading-none tabular-nums" style={{ color: accent }}>
+                  {totalKills}
+                </div>
+                <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mt-1.5">Total Kills</div>
+              </div>
+            )}
+          </div>
+
+          {/* Stats row — flows naturally without boxes or dividers */}
+          {matchesPlayed > 0 ? (
+            <div className="flex items-end gap-10 mt-8 pb-7 border-b border-[var(--border)]/60">
+              {[
+                { label: 'Matches', value: String(matchesPlayed), accent: false },
+                { label: 'K/D Ratio', value: kd.toFixed(2), accent: kd >= 2 },
+                { label: 'Avg Damage', value: avgDamage.toLocaleString(), accent: false },
+                { label: 'Survival', value: `${survivalRate}%`, accent: survivalRate >= 60 },
+                { label: 'Avg Placement', value: avgPlacement > 0 ? `#${avgPlacement}` : '—', accent: false },
+                { label: 'Tournaments', value: String(playedTournaments.length), accent: false },
+              ].map(({ label, value, accent: isAccent }) => (
+                <div key={label}>
+                  <div
+                    className="text-2xl font-bold tabular-nums leading-none"
+                    style={{ color: isAccent ? accent : 'var(--text-primary)' }}>
+                    {value}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mt-1.5">{label}</div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="pb-7 mt-6 text-sm text-[var(--text-muted)]">No match data recorded yet.</div>
           )}
         </div>
 
-        {/* Bottom strip: secondary metrics */}
-        {matchesPlayed > 0 && (
-          <div className="grid grid-cols-4 divide-x divide-[var(--border)] border-t border-[var(--border)]">
-            {[
-              { label: 'K/D Ratio', value: kd.toFixed(2), highlight: kd >= 2 },
-              { label: 'Avg Damage', value: avgDamage.toLocaleString(), highlight: false },
-              { label: 'Survival Rate', value: `${survivalRate}%`, highlight: survivalRate >= 50 },
-              { label: 'Avg Placement', value: avgPlacement > 0 ? `#${avgPlacement}` : '—', highlight: false },
-            ].map(({ label, value, highlight }) => (
-              <div key={label} className="px-6 py-4">
-                <div className="text-xl font-bold tabular-nums" style={{ color: highlight ? accent : 'var(--text-primary)' }}>
-                  {value}
-                </div>
-                <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mt-0.5">{label}</div>
-              </div>
+        {/* Tournaments strip */}
+        {playedTournaments.length > 0 && (
+          <div className="flex items-center gap-3 px-8 py-3 overflow-x-auto">
+            <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] flex-shrink-0">Played in</span>
+            {playedTournaments.map((t) => (
+              <Link
+                key={t.id}
+                href={`/tournaments/${t.id}`}
+                className="flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors">
+                {t.name}
+              </Link>
             ))}
           </div>
         )}
-
-        {matchesPlayed === 0 && (
-          <div className="px-8 pb-6 text-xs text-[var(--text-muted)]">No match data recorded yet.</div>
-        )}
       </div>
 
-      {/* ── Body ─────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-8">
-
-        {/* Career stats — left 2/3 */}
-        <div className="col-span-2">
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4">Career Stats</h2>
-          <div className="divide-y divide-[var(--border)]">
+      {/* ── Career Stats ─────────────────────────────────────────────── */}
+      {matchesPlayed > 0 && (
+        <>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-6">Career Stats</div>
+          <div className="grid grid-cols-2 gap-x-16 gap-y-0">
             {[
-              { label: 'Total Kills', value: totalKills.toLocaleString(), accent: true },
-              { label: 'Total Damage', value: totalDamage.toLocaleString(), accent: false },
-              { label: 'Avg Damage / Match', value: avgDamage.toLocaleString(), accent: false },
-              { label: 'Deaths', value: deaths.toString(), accent: false },
-              { label: 'Matches Survived', value: `${matchesPlayed - deaths} of ${matchesPlayed}`, accent: false },
-              { label: 'Avg Placement', value: avgPlacement > 0 ? `#${avgPlacement}` : '—', accent: false },
-              { label: 'Tournaments Played', value: playedTournaments.length.toString(), accent: false },
-            ].map(({ label, value, accent: isAccent }) => (
-              <div key={label} className="flex items-center justify-between py-3">
-                <span className="text-sm text-[var(--text-secondary)]">{label}</span>
-                <span className="text-sm font-semibold tabular-nums" style={{ color: isAccent ? accent : 'var(--text-primary)' }}>
+              { label: 'Total Kills', value: totalKills.toLocaleString(), primary: true },
+              { label: 'Avg Damage per Match', value: avgDamage.toLocaleString(), primary: false },
+              { label: 'Total Damage Dealt', value: totalDamage.toLocaleString(), primary: false },
+              { label: 'Deaths', value: deaths.toString(), primary: false },
+              { label: 'K/D Ratio', value: kd.toFixed(2), primary: kd >= 2 },
+              { label: 'Matches Survived', value: `${matchesPlayed - deaths} of ${matchesPlayed}`, primary: false },
+              { label: 'Survival Rate', value: `${survivalRate}%`, primary: survivalRate >= 60 },
+              { label: 'Average Placement', value: avgPlacement > 0 ? `#${avgPlacement}` : '—', primary: false },
+            ].map(({ label, value, primary }) => (
+              <div key={label} className="flex items-baseline justify-between py-3.5 border-b border-[var(--border)]/50">
+                <span className="text-[13px] text-[var(--text-secondary)]">{label}</span>
+                <span
+                  className="text-[13px] font-semibold tabular-nums ml-8"
+                  style={{ color: primary ? accent : 'var(--text-primary)' }}>
                   {value}
                 </span>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Tournaments — right 1/3 */}
-        <div>
-          <h2 className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4">Tournaments</h2>
-          {playedTournaments.length > 0 ? (
-            <div className="divide-y divide-[var(--border)]">
-              {playedTournaments.map((t) => (
-                <Link key={t.id} href={`/tournaments/${t.id}`}
-                  className="flex items-center justify-between py-3 group">
-                  <span className="text-sm text-[var(--text-secondary)] group-hover:text-[var(--text-primary)] transition-colors truncate pr-2">
-                    {t.name}
-                  </span>
-                  <svg className="w-3.5 h-3.5 text-[var(--text-muted)] flex-shrink-0 group-hover:text-[var(--text-primary)] transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-[var(--text-muted)] pt-1">No tournaments yet.</p>
-          )}
-        </div>
-
-      </div>
+        </>
+      )}
     </div>
   );
 }
