@@ -381,7 +381,7 @@ export default function StagesTab() {
                   <button onClick={() => exportStage(stage.id, stage.name)} title="Export stage as ZIP" className="icon-btn">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v7m0 0L4.5 6.5M7 9l2.5-2.5M2 11h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
-                  <button onClick={() => deleteStage(stage.id)} title="Delete stage" className="icon-btn icon-btn-danger">
+                  <button onClick={() => deleteStage(stage.id)} title="Delete stage" className="icon-btn icon-btn-danger opacity-40 hover:opacity-100">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 4h8M5.5 4V3a.5.5 0 01.5-.5h2a.5.5 0 01.5.5v1m2 0v7.5a1 1 0 01-1 1h-5a1 1 0 01-1-1V4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
                 </div>
@@ -640,7 +640,7 @@ export default function StagesTab() {
                                         className="input-premium flex-1 min-w-[120px] py-1 px-2 text-xs" />
                                       <select value={matchMap} onChange={(e) => setMatchMap(e.target.value)} className="input-premium py-1 px-2 text-xs">
                                         <option value="">Map</option>
-                                        {MAP_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
+                                        {(mapPool.length > 0 ? mapPool : MAP_NAMES).map((m) => <option key={m} value={m}>{m}</option>)}
                                       </select>
                                       <input type="datetime-local" value={matchScheduledAt} onChange={(e) => setMatchScheduledAt(e.target.value)}
                                         className="input-premium py-1 px-2 text-xs w-auto" title="Schedule date/time (optional)" />
@@ -854,7 +854,7 @@ export default function StagesTab() {
                             matches={stage.matches}
                             stageId={stage.id}
                             tournamentId={id}
-                            MAP_NAMES={MAP_NAMES}
+                            MAP_NAMES={mapPool.length > 0 ? mapPool : MAP_NAMES}
                             updateMatchMap={updateMatchMap}
                             duplicateMatch={duplicateMatch}
                             matchCountdown={matchCountdown}
@@ -878,7 +878,7 @@ export default function StagesTab() {
                             className="input-premium flex-1 min-w-[140px] py-2 text-sm" />
                           <select value={matchMap} onChange={(e) => setMatchMap(e.target.value)} className="input-premium py-2 text-sm w-auto">
                             <option value="">Map (optional)</option>
-                            {MAP_NAMES.map((m) => <option key={m} value={m}>{m}</option>)}
+                            {(mapPool.length > 0 ? mapPool : MAP_NAMES).map((m) => <option key={m} value={m}>{m}</option>)}
                           </select>
                           <input type="datetime-local" value={matchScheduledAt} onChange={(e) => setMatchScheduledAt(e.target.value)}
                             className="input-premium py-2 text-sm w-auto" title="Schedule date/time (optional)" />
