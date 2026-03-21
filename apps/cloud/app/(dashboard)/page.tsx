@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import SetupOrgPrompt from '@/components/SetupOrgPrompt';
 
+const HERO_IMG = 'https://a-static.besthdwallpaper.com/playerunknown-s-battlegrounds-pubg-mobile-battle-in-mad-miramar-wallpaper-2560x1080-63448_14.jpg';
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -32,12 +34,6 @@ export default async function DashboardPage() {
   const ourIds = new Set((allTournamentIds.data || []).map((t: any) => t.id));
   const pendingCount = (pendingApps || []).filter(a => ourIds.has(a.tournament_id)).length;
 
-  const stats = [
-    { label: 'Active Tournaments', value: tournamentCount ?? 0, accent: 'var(--accent)', href: '/tournaments' },
-    { label: 'Registered Teams', value: teamCount ?? 0, accent: 'var(--accent)', href: '/teams' },
-    { label: 'Pending Apps', value: pendingCount, accent: pendingCount > 0 ? 'var(--amber)' : 'var(--text-muted)', href: '/tournaments' },
-  ];
-
   const quickActions = [
     { label: 'New Tournament', href: '/tournaments/new', desc: 'Create & configure',
       icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg> },
@@ -51,83 +47,103 @@ export default async function DashboardPage() {
 
   return (
     <div className="max-w-[1100px] page-enter">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">
-          {org?.name ?? 'Dashboard'}
-        </h1>
-        <p className="text-[var(--text-secondary)] text-sm font-body">
-          Overview of your tournaments and teams
-        </p>
+
+      {/* ── Cinematic Hero ──────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl mb-10"
+        style={{
+          backgroundImage: `url(${HERO_IMG})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 30%',
+          minHeight: 300,
+        }}>
+        {/* Layered overlay: dark vignette + bottom fade to bg */}
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 50%, rgba(0,0,0,0.88) 100%)' }} />
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.4) 0%, transparent 50%, rgba(0,0,0,0.4) 100%)' }} />
+
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-end h-full p-8 pt-16">
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/40 mb-2">
+            Operations Dashboard
+          </div>
+          <h1 className="text-4xl font-black tracking-tight text-white leading-none mb-6">
+            {org?.name ?? 'Dashboard'}
+          </h1>
+
+          {/* Stats row */}
+          <div className="flex items-end gap-10">
+            {[
+              { label: 'Active Tournaments', value: tournamentCount ?? 0, href: '/tournaments' },
+              { label: 'Registered Teams', value: teamCount ?? 0, href: '/teams' },
+              { label: 'Pending Applications', value: pendingCount, href: '/tournaments', warn: pendingCount > 0 },
+            ].map(({ label, value, href, warn }) => (
+              <Link key={label} href={href} className="group">
+                <div className={`text-4xl font-black tabular-nums leading-none transition-colors ${warn && value > 0 ? 'text-[var(--amber)]' : 'text-white group-hover:text-[var(--accent)]'}`}>
+                  {value}
+                </div>
+                <div className="text-[10px] uppercase tracking-widest text-white/40 mt-1.5">{label}</div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10 stagger">
-        {stats.map((s) => (
-          <Link key={s.label} href={s.href}
-            className="surface p-6 card-hover flex flex-col justify-between min-h-[120px] group">
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-[var(--text-secondary)] text-[13px] font-medium">{s.label}</div>
-              <div className="w-2 h-2 rounded-full transition-all group-hover:scale-125" style={{ backgroundColor: s.accent }} />
-            </div>
-            <div className="stat-number text-4xl text-[var(--text-primary)]">{s.value}</div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Quick Actions */}
-      <div className="mb-10 animate-fade-in" style={{ animationDelay: '100ms', animationFillMode: 'both' }}>
-        <h2 className="font-body text-[13px] font-medium text-[var(--text-secondary)] mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {/* ── Quick Actions ────────────────────────────────────────────── */}
+      <div className="mb-10">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-4">Quick Actions</div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickActions.map((a) => (
-            <Link key={a.label} href={a.href} className="surface p-5 card-hover group flex flex-col items-start gap-4">
-              <div className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors">
+            <Link key={a.label} href={a.href}
+              className="surface p-5 card-hover group flex flex-col items-start gap-4">
+              <div className="text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors">
                 {a.icon}
               </div>
               <div>
-                <div className="font-body text-[14px] font-medium text-[var(--text-primary)] mb-1">{a.label}</div>
-                <div className="text-[var(--text-secondary)] text-[12px]">{a.desc}</div>
+                <div className="text-[14px] font-semibold text-[var(--text-primary)] mb-0.5">{a.label}</div>
+                <div className="text-[var(--text-muted)] text-[12px]">{a.desc}</div>
               </div>
             </Link>
           ))}
         </div>
       </div>
 
-      {/* Recent Tournaments */}
+      {/* ── Recent Tournaments ───────────────────────────────────────── */}
       {recentTournaments && recentTournaments.length > 0 && (
-        <div className="animate-slide-up" style={{ animationDelay: '200ms', animationFillMode: 'both' }}>
+        <div>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-body text-[13px] font-medium text-[var(--text-secondary)]">Recent Tournaments</h2>
-            <Link href="/tournaments" className="text-[12px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors font-medium">
-              View all
+            <div className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Recent Tournaments</div>
+            <Link href="/tournaments" className="text-[12px] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors font-medium">
+              View all →
             </Link>
           </div>
-          <div className="surface overflow-hidden">
-            <div className="grid grid-cols-[1fr_100px_100px] gap-4 px-6 py-3 border-b border-[var(--border)] bg-[var(--bg-surface)]">
-              {['Name', 'Status', 'Date'].map((h) => (
-                <span key={h} className="text-[12px] font-medium text-[var(--text-muted)]">{h}</span>
+          <div className="data-table">
+            <div className="data-table-header" style={{ gridTemplateColumns: '1fr 110px 110px' }}>
+              {['Name', 'Status', 'Created'].map((h) => (
+                <span key={h} className="text-[11px] font-medium text-[var(--text-muted)] uppercase tracking-wider">{h}</span>
               ))}
             </div>
-            <div className="divide-y divide-[var(--border)]">
+            <div>
               {recentTournaments.map((t) => (
                 <Link key={t.id} href={`/tournaments/${t.id}`}
-                  className="grid grid-cols-[1fr_100px_100px] gap-4 px-6 py-4 items-center group hover:bg-[var(--bg-hover)] transition-colors">
+                  className="data-table-row group"
+                  style={{ gridTemplateColumns: '1fr 110px 110px' }}>
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 border border-[var(--border)] bg-[var(--bg-surface)] group-hover:border-[var(--border-hover)] transition-colors">
-                      <svg width="14" height="14" viewBox="0 0 18 18" fill="none" className="text-[var(--text-muted)] group-hover:text-[var(--text-primary)] transition-colors">
+                    <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 border border-[var(--border)] bg-[var(--bg-surface)]">
+                      <svg width="13" height="13" viewBox="0 0 18 18" fill="none" className="text-[var(--text-muted)]">
                         <path d="M9 2L11 6.5H16L12 9.5L13.5 14L9 11L4.5 14L6 9.5L2 6.5H7L9 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
                       </svg>
                     </div>
-                    <span className="text-[14px] font-medium text-[var(--text-primary)] truncate">{t.name}</span>
+                    <span className="text-[14px] font-medium text-[var(--text-primary)] truncate group-hover:text-white transition-colors">{t.name}</span>
                   </div>
-                  <div>
-                    <span className={`badge ${
-                      t.status === 'active' ? 'badge-accent' : t.status === 'archived' ? 'badge-muted' : 'badge-warning'
-                    }`}>
+                  <span>
+                    <span className={`badge ${t.status === 'active' ? 'badge-accent' : t.status === 'archived' ? 'badge-muted' : 'badge-warning'}`}>
                       {t.status}
                     </span>
-                  </div>
-                  <span className="text-[var(--text-secondary)] text-[13px]">{new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                  </span>
+                  <span className="text-[var(--text-muted)] text-[13px]">
+                    {new Date(t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  </span>
                 </Link>
               ))}
             </div>
@@ -137,7 +153,7 @@ export default async function DashboardPage() {
 
       {!recentTournaments?.length && (
         <div className="surface animate-slide-up mt-8">
-          <div className="p-16 text-center relative overflow-hidden flex flex-col items-center">
+          <div className="p-16 text-center flex flex-col items-center">
             <div className="w-16 h-16 rounded-2xl mb-6 flex items-center justify-center border border-[var(--border)] bg-[var(--bg-surface)]">
               <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
                 <path d="M14 3L17 10H24L18.5 14.5L20.5 22L14 17.5L7.5 22L9.5 14.5L4 10H11L14 3Z" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-muted)]" strokeLinejoin="round"/>
@@ -147,7 +163,7 @@ export default async function DashboardPage() {
             <p className="text-[var(--text-secondary)] text-[14px] mb-8 max-w-sm">Create your first tournament to start managing teams, matches, and leaderboards.</p>
             <Link href="/tournaments/new" className="btn-primary inline-flex items-center gap-2">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-              <span>Create Tournament</span>
+              Create Tournament
             </Link>
           </div>
         </div>

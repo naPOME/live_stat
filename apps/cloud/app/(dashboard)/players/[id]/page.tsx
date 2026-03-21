@@ -82,12 +82,18 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
       </div>
 
       {/* ── Hero ────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-2xl border border-[var(--border)] mb-10"
-        style={{ background: `linear-gradient(135deg, ${accent}28 0%, ${accent}08 50%, transparent 80%)` }}>
-
-        {/* Decorative accent circle */}
-        <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full opacity-10 pointer-events-none"
-          style={{ background: `radial-gradient(circle, ${accent}, transparent 70%)` }} />
+      <div className="relative overflow-hidden rounded-2xl mb-10"
+        style={{
+          backgroundImage: 'url(https://images.wallpapersden.com/image/download/pubg-mobile-2021-new_bGpoa2WUmZqaraWkpJRobWllrWdma2U.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 20%',
+        }}>
+        {/* Dark overlay */}
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.75) 60%, rgba(0,0,0,0.92) 100%)' }} />
+        {/* Subtle accent tint */}
+        <div className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{ background: `linear-gradient(135deg, ${accent}60 0%, transparent 60%)` }} />
 
         <div className="relative p-8 pb-0">
           <div className="flex items-start gap-7">
@@ -101,16 +107,16 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
 
             {/* Identity */}
             <div className="flex-1 min-w-0 pt-0.5">
-              <h1 className="text-[2.25rem] font-black tracking-tight text-[var(--text-primary)] leading-none">
+              <h1 className="text-[2.25rem] font-black tracking-tight text-white leading-none">
                 {player.display_name}
               </h1>
-              <div className="font-mono text-[11px] text-[var(--text-muted)] mt-2 tracking-wider">
+              <div className="font-mono text-[11px] text-white/40 mt-2 tracking-wider">
                 {player.player_open_id}
               </div>
               <Link
                 href={`/teams/${team.id}`}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold mt-3 px-2.5 py-1 rounded-full transition-all hover:opacity-80"
-                style={{ color: accent, backgroundColor: accent + '15', border: `1px solid ${accent}35` }}>
+                style={{ color: accent, backgroundColor: accent + '25', border: `1px solid ${accent}50` }}>
                 {team.logo_url && <img src={team.logo_url} alt="" className="w-3.5 h-3.5 rounded-sm object-cover" />}
                 {team.name}
                 {team.short_name && <span className="opacity-50 font-normal">[{team.short_name}]</span>}
@@ -123,46 +129,45 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
                 <div className="text-[3.5rem] font-black leading-none tabular-nums" style={{ color: accent }}>
                   {totalKills}
                 </div>
-                <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mt-1.5">Total Kills</div>
+                <div className="text-[10px] uppercase tracking-widest text-white/40 mt-1.5">Total Kills</div>
               </div>
             )}
           </div>
 
-          {/* Stats row — flows naturally without boxes or dividers */}
+          {/* Stats row */}
           {matchesPlayed > 0 ? (
-            <div className="flex items-end gap-10 mt-8 pb-7 border-b border-[var(--border)]/60">
+            <div className="flex items-end gap-10 mt-8 pb-7 border-b border-white/10">
               {[
-                { label: 'Matches', value: String(matchesPlayed), accent: false },
-                { label: 'K/D Ratio', value: kd.toFixed(2), accent: kd >= 2 },
-                { label: 'Avg Damage', value: avgDamage.toLocaleString(), accent: false },
-                { label: 'Survival', value: `${survivalRate}%`, accent: survivalRate >= 60 },
-                { label: 'Avg Placement', value: avgPlacement > 0 ? `#${avgPlacement}` : '—', accent: false },
-                { label: 'Tournaments', value: String(playedTournaments.length), accent: false },
-              ].map(({ label, value, accent: isAccent }) => (
+                { label: 'Matches', value: String(matchesPlayed), hi: false },
+                { label: 'K/D Ratio', value: kd.toFixed(2), hi: kd >= 2 },
+                { label: 'Avg Damage', value: avgDamage.toLocaleString(), hi: false },
+                { label: 'Survival', value: `${survivalRate}%`, hi: survivalRate >= 60 },
+                { label: 'Avg Placement', value: avgPlacement > 0 ? `#${avgPlacement}` : '—', hi: false },
+                { label: 'Tournaments', value: String(playedTournaments.length), hi: false },
+              ].map(({ label, value, hi }) => (
                 <div key={label}>
-                  <div
-                    className="text-2xl font-bold tabular-nums leading-none"
-                    style={{ color: isAccent ? accent : 'var(--text-primary)' }}>
+                  <div className="text-2xl font-bold tabular-nums leading-none"
+                    style={{ color: hi ? accent : 'white' }}>
                     {value}
                   </div>
-                  <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mt-1.5">{label}</div>
+                  <div className="text-[10px] uppercase tracking-widest text-white/40 mt-1.5">{label}</div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="pb-7 mt-6 text-sm text-[var(--text-muted)]">No match data recorded yet.</div>
+            <div className="pb-7 mt-6 text-sm text-white/40">No match data recorded yet.</div>
           )}
         </div>
 
         {/* Tournaments strip */}
         {playedTournaments.length > 0 && (
-          <div className="flex items-center gap-3 px-8 py-3 overflow-x-auto">
-            <span className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] flex-shrink-0">Played in</span>
+          <div className="flex items-center gap-3 px-8 py-3 overflow-x-auto border-t border-white/10">
+            <span className="text-[10px] uppercase tracking-widest text-white/30 flex-shrink-0">Played in</span>
             {playedTournaments.map((t) => (
               <Link
                 key={t.id}
                 href={`/tournaments/${t.id}`}
-                className="flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors">
+                className="flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border border-white/20 text-white/60 hover:text-white hover:border-white/40 transition-colors">
                 {t.name}
               </Link>
             ))}
