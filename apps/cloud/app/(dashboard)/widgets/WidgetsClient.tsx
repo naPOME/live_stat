@@ -72,7 +72,7 @@ export default function WidgetsClient({ initialTournaments }: Props) {
   };
 
   return (
-    <div className="p-10 max-w-[1100px] page-enter">
+    <div className="max-w-[1100px] page-enter">
       <div className="mb-8">
         <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Widgets & API</h1>
         <p className="text-[var(--text-secondary)] text-sm font-body">OBS overlay widgets and API endpoints for the local engine</p>

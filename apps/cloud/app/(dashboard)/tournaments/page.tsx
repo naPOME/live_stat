@@ -19,7 +19,7 @@ export default async function TournamentsPage() {
   const cols = '40px 1fr 90px 120px';
 
   return (
-    <div className="p-10 max-w-[1100px] page-enter">
+    <div className="max-w-[1100px] page-enter">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">

@@ -141,7 +141,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
   }
 
   return (
-    <div className="p-10 max-w-[900px] page-enter">
+    <div className="max-w-[900px] page-enter">
       {/* Breadcrumb */}
       <div className="flex items-center gap-3 mb-6 text-sm">
         <Link href="/teams" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Teams</Link>

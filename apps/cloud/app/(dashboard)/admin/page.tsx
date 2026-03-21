@@ -45,7 +45,7 @@ export default async function AdminPage() {
   for (const o of orgs ?? []) orgNameMap[o.id] = o.name;
 
   return (
-    <div className="p-8 max-w-[1200px] mx-auto page-enter">
+    <div className="max-w-[1200px] mx-auto page-enter">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between">

@@ -72,7 +72,7 @@ export default function PlayersClient({ initialPlayers, initialTeams, initialTou
   const statsCols = '36px 1.2fr 1fr 70px 80px 60px 70px 80px 60px';
 
   return (
-    <div className="p-10 max-w-[1400px] page-enter">
+    <div className="max-w-[1400px] page-enter">
       <div className="mb-8">
         <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Players</h1>
         <p className="text-[var(--text-secondary)] text-sm font-body">

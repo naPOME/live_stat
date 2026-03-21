@@ -60,7 +60,7 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
   }
 
   return (
-    <div className="p-10 max-w-[900px] page-enter">
+    <div className="max-w-[900px] page-enter">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Teams</h1>

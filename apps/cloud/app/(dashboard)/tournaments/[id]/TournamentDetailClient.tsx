@@ -78,7 +78,7 @@ function TournamentDetail() {
   ];
 
   return (
-    <div className="p-10 max-w-[1400px] mx-auto page-enter">
+    <div className="max-w-[1400px] mx-auto page-enter">
       {/* Breadcrumb */}
       <div className="flex items-center gap-3 mb-8 text-xs text-[var(--text-muted)]">
         <Link href="/tournaments" className="hover:text-[var(--text-primary)] transition-colors">Tournaments</Link>

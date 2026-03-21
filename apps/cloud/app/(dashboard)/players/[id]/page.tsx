@@ -73,7 +73,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const accent = team.brand_color;
 
   return (
-    <div className="p-8 max-w-5xl mx-auto page-enter">
+    <div className="max-w-5xl mx-auto page-enter">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6 text-xs text-[var(--text-muted)]">
         <Link href="/players" className="hover:text-[var(--text-primary)] transition-colors">Players</Link>

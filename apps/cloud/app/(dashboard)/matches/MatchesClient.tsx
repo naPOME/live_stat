@@ -69,7 +69,7 @@ export default function MatchesClient({ initialMatches, initialStages, initialTo
   const cols = '40px 1.2fr 1.2fr 90px 110px';
 
   return (
-    <div className="p-10 max-w-[1100px] page-enter">
+    <div className="max-w-[1100px] page-enter">
       <div className="mb-8">
         <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Matches</h1>
         <p className="text-[var(--text-secondary)] text-sm font-body">All matches across your tournaments</p>

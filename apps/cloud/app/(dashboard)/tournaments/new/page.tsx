@@ -70,7 +70,7 @@ export default function NewTournamentPage() {
   ];
 
   return (
-    <div className="p-10 max-w-[700px] page-enter">
+    <div className="max-w-[700px] page-enter">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-8 text-xs text-[var(--text-muted)]">
         <Link href="/tournaments" className="hover:text-[var(--text-primary)] transition-colors">

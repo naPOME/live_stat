@@ -222,7 +222,7 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="p-10 flex items-center justify-center min-h-[50vh]">
+      <div className="flex items-center justify-center min-h-[50vh]">
         <span className="loader" aria-label="Loading" />
       </div>
     );
@@ -261,7 +261,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="p-10 max-w-[1200px] page-enter mx-auto">
+    <div className="max-w-[1200px] page-enter mx-auto">
       {/* HEADER */}
       <div className="mb-8">
         <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">Settings</h1>

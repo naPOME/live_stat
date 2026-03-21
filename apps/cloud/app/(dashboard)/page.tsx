@@ -50,7 +50,7 @@ export default async function DashboardPage() {
   ];
 
   return (
-    <div className="p-10 max-w-[1100px] page-enter">
+    <div className="max-w-[1100px] page-enter">
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-display font-semibold text-[var(--text-primary)] mb-1">
