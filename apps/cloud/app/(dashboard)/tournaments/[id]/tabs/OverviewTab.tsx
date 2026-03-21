@@ -72,18 +72,18 @@ export default function OverviewTab() {
       </div>
 
       {/* ─── Stats ─── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="flex items-center gap-10 px-6 py-5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)]">
         {[
-          { label: 'Teams', value: tournamentTeams.length, color: 'var(--text-primary)', sub: tournament.target_team_count ? `/ ${tournament.target_team_count} target` : '' },
-          { label: 'Stages', value: stages.length, color: 'var(--text-primary)', sub: stages.filter((s) => s.status === 'completed').length > 0 ? `${stages.filter((s) => s.status === 'completed').length} completed` : '' },
-          { label: 'Matches', value: totalMatches, color: 'var(--text-primary)', sub: finishedMatches > 0 ? `${finishedMatches} finished` : '' },
-          { label: 'Live Now', value: liveMatches, color: liveMatches > 0 ? 'var(--red)' : 'var(--text-muted)', sub: liveMatches > 0 ? 'In progress' : 'No active matches' },
-        ].map((stat) => (
-          <div key={stat.label} className="surface p-5 flex flex-col justify-between h-[100px]">
-            <div className="text-xs font-medium text-[var(--text-muted)]">{stat.label}</div>
+          { label: 'Teams', value: tournamentTeams.length, sub: tournament.target_team_count ? `/ ${tournament.target_team_count} target` : '', color: 'var(--text-primary)' },
+          { label: 'Stages', value: stages.length, sub: stages.filter((s) => s.status === 'completed').length > 0 ? `${stages.filter((s) => s.status === 'completed').length} done` : '', color: 'var(--text-primary)' },
+          { label: 'Matches', value: totalMatches, sub: finishedMatches > 0 ? `${finishedMatches} finished` : '', color: 'var(--text-primary)' },
+          { label: 'Live Now', value: liveMatches, sub: liveMatches > 0 ? 'In progress' : 'None active', color: liveMatches > 0 ? 'var(--red)' : 'var(--text-muted)' },
+        ].map((stat, i) => (
+          <div key={stat.label} className="flex items-center gap-10">
+            {i > 0 && <div className="w-px h-8 bg-[var(--border)]" />}
             <div>
-              <div className="text-2xl font-semibold tracking-tight" style={{ color: stat.color }}>{stat.value}</div>
-              {stat.sub && <div className="text-[11px] text-[var(--text-muted)] mt-0.5">{stat.sub}</div>}
+              <div className="text-2xl font-black tabular-nums leading-none" style={{ color: stat.color }}>{stat.value}</div>
+              <div className="text-[10px] uppercase tracking-widest text-[var(--text-muted)] mt-1">{stat.label}{stat.sub ? ` · ${stat.sub}` : ''}</div>
             </div>
           </div>
         ))}

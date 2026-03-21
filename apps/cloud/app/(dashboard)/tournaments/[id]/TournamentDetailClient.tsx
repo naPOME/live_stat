@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { TournamentProvider, useTournament } from './_context';
+
+const HERO_BG = 'https://a-static.besthdwallpaper.com/playerunknown-s-battlegrounds-pubg-mobile-battle-in-mad-miramar-wallpaper-2560x1080-63448_14.jpg';
 import type { TournamentData, PointSystem, Tab } from './_types';
 import OverviewTab from './tabs/OverviewTab';
 import StagesTab from './tabs/StagesTab';
@@ -79,43 +81,69 @@ function TournamentDetail() {
 
   return (
     <div className="max-w-[1400px] mx-auto page-enter">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-3 mb-8 text-xs text-[var(--text-muted)]">
-        <Link href="/tournaments" className="hover:text-[var(--text-primary)] transition-colors">Tournaments</Link>
-        <span className="opacity-40">/</span>
-        <span className="text-[var(--text-primary)]">{tournament.name}</span>
-      </div>
+      {/* ── Hero ──────────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden rounded-2xl mb-8"
+        style={{
+          backgroundImage: `url(${HERO_BG})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 40%',
+          minHeight: 260,
+        }}>
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.93) 100%)' }} />
+        <div className="absolute inset-0"
+          style={{ background: 'linear-gradient(to right, rgba(0,0,0,0.4) 0%, transparent 60%)' }} />
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8 pb-6 border-b border-[var(--border)]">
-        <div>
-          <div className="flex items-center gap-4 mb-2">
-            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-[var(--text-primary)]">{tournament.name}</h1>
-            <span className={`text-[11px] uppercase font-semibold tracking-wide px-2.5 py-1 rounded-full border ${
-              tournament.status === 'active'
-                ? 'bg-[var(--bg-hover)] text-[var(--accent)] border-[var(--accent-border)]'
-                : 'bg-[var(--bg-hover)] text-[var(--text-muted)] border-[var(--border)]'
-            }`}>
-              {tournament.status}
-            </span>
+        <div className="relative z-10 flex flex-col justify-between p-8 pt-8" style={{ minHeight: 260 }}>
+          {/* Top row: breadcrumb + actions */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-white/40">
+              <Link href="/tournaments" className="hover:text-white/70 transition-colors">Tournaments</Link>
+              <span>/</span>
+              <span className="text-white/60">{tournament.name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Link href={`/standings/${tournament.id}`} target="_blank"
+                className="text-[12px] font-medium px-3 py-1.5 rounded-lg border border-white/15 bg-black/30 text-white/60 hover:text-white hover:bg-black/50 transition-all backdrop-blur-sm">
+                Public Standings ↗
+              </Link>
+              {tournament.status === 'active' && (
+                <button onClick={archiveTournament}
+                  className="text-[12px] font-medium px-3 py-1.5 rounded-lg border border-white/15 bg-black/30 text-white/60 hover:text-white hover:bg-black/50 transition-all backdrop-blur-sm">
+                  Archive
+                </button>
+              )}
+            </div>
           </div>
-          <p className="text-[var(--text-secondary)] text-sm flex items-center gap-3">
-            <span>{stages.length} Stage{stages.length !== 1 ? 's' : ''}</span>
-            <span className="text-[var(--border)]">&bull;</span>
-            <span>{tournamentTeams.length} Team{tournamentTeams.length !== 1 ? 's' : ''}</span>
-            <span className="text-[var(--border)]">&bull;</span>
-            <span>{totalMatches} Match{totalMatches !== 1 ? 'es' : ''}</span>
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href={`/standings/${tournament.id}`} target="_blank" className="btn-ghost py-2">
-            Public Standings
-          </Link>
-          {tournament.status === 'active' && (
-            <button onClick={archiveTournament} className="btn-ghost py-2">
-              Archive Tournament
-            </button>
-          )}
+
+          {/* Bottom: name + meta */}
+          <div>
+            <div className="flex items-center gap-3 mb-2">
+              <span className={`text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full border ${
+                tournament.status === 'active'
+                  ? 'bg-black/40 text-[var(--accent)] border-[var(--accent)]/30'
+                  : 'bg-black/40 text-white/40 border-white/10'
+              }`}>
+                {tournament.status === 'active' && <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--accent)] animate-pulse mr-1.5" />}
+                {tournament.status}
+              </span>
+            </div>
+            <h1 className="text-4xl font-black tracking-tight text-white leading-none mb-5">
+              {tournament.name}
+            </h1>
+            <div className="flex items-center gap-6 text-white/40 text-[13px]">
+              {[
+                { label: 'Stages', value: stages.length },
+                { label: 'Teams', value: tournamentTeams.length },
+                { label: 'Matches', value: totalMatches },
+              ].map(({ label, value }, i) => (
+                <span key={label} className="flex items-center gap-6">
+                  {i > 0 && <span className="text-white/15">|</span>}
+                  <span><span className="font-bold text-white/70 mr-1">{value}</span>{label}</span>
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
