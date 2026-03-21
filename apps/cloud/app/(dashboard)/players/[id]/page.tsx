@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { TeamAvatar } from '@/components/Avatar';
 
 export default async function PlayerProfilePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -69,7 +70,6 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const playedTournamentIds = new Set([...matchIdSet].map((mid) => tournamentMatchMap.get(mid)).filter(Boolean));
   const playedTournaments = (orgTournaments ?? []).filter((t) => playedTournamentIds.has(t.id));
 
-  const initials = (team.short_name ?? team.name).substring(0, 2).toUpperCase();
   const accent = team.brand_color;
 
   return (
@@ -92,11 +92,10 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
         <div className="relative p-8 pb-0">
           <div className="flex items-start gap-7">
             {/* Avatar */}
-            <div className="w-[88px] h-[88px] rounded-2xl flex items-center justify-center text-3xl font-black flex-shrink-0 relative"
-              style={{ backgroundColor: accent + '22', color: accent }}>
-              {team.logo_url
-                ? <img src={team.logo_url} alt="" className="w-full h-full object-cover rounded-2xl" />
-                : initials}
+            <div className="relative flex-shrink-0">
+              <div style={{ width: 88, height: 88 }}>
+                <TeamAvatar logoUrl={team.logo_url} brandColor={accent} size="lg" className="w-full h-full !rounded-2xl" />
+              </div>
               {/* Online-style indicator dot */}
               <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-[var(--bg-base)]"
                 style={{ backgroundColor: accent }} />
