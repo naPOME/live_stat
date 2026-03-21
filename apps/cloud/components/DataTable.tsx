@@ -44,7 +44,7 @@ export default function DataTable<TData>({
 
   type ColMeta = { width?: string };
   const gridTemplateColumns = table
-    .getAllColumns()
+    .getVisibleLeafColumns()
     .map((col) => (col.columnDef.meta as ColMeta | undefined)?.width ?? '1fr')
     .join(' ');
 

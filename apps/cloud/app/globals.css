@@ -347,17 +347,18 @@
 
   .data-table-row {
     display: grid;
-    align-items: center;
+    align-items: stretch;
+    border-bottom: 1px solid var(--border);
     transition: background-color 0.15s ease;
     cursor: pointer;
   }
   .data-table-header > *,
   .data-table-row > * {
     padding: 12px 16px;
-    vertical-align: middle;
-    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
   }
-  .data-table-row:last-child > * { border-bottom: none; }
+  .data-table-row:last-child { border-bottom: none; }
   .data-table-row:hover { background: var(--bg-hover); }
 
   /* Icon action buttons (edit, delete, view) */
