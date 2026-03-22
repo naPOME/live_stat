@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -49,7 +49,7 @@ export default function LoginPage() {
             required
             autoFocus
             className="input-premium w-full"
-            placeholder="admin@org.com"
+            placeholder="admin@gmail.com"
           />
         </div>
 

@@ -53,6 +53,7 @@ export interface RosterMapping {
     name: string;
     brand_color: string;
     logo_path?: string;
+    sponsors?: string[];
     theme?: OverlayTheme;
   };
   teams: RosterTeam[];
@@ -181,4 +182,8 @@ export function getTheme(): OverlayTheme {
 
 export function getOrgBrandColor(): string {
   return roster?.org.brand_color ?? '#9b8afb';
+}
+
+export function getSponsors(): string[] {
+  return (roster?.org.sponsors ?? []).filter(Boolean) as string[];
 }

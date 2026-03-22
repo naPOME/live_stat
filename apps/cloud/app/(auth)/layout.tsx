@@ -4,17 +4,14 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
   return (
     <div className="min-h-screen flex">
 
-      {/* ── Left: cinematic image panel ───────────────────────── */}
-      <div className="hidden lg:flex flex-col relative overflow-hidden lg:w-[60%]"
+      <div className="hidden lg:flex flex-col relative overflow-hidden lg:w-[55%]"
         style={{ backgroundImage: `url(${BG})`, backgroundSize: 'cover', backgroundPosition: 'center 35%' }}>
 
-        {/* Dark gradient overlays */}
         <div className="absolute inset-0"
           style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.85) 100%)' }} />
         <div className="absolute inset-0"
           style={{ background: 'linear-gradient(to right, transparent 60%, rgba(0,0,0,0.6) 100%)' }} />
 
-        {/* Brand top-left */}
         <div className="relative z-10 p-10">
           <div className="flex items-center gap-3">
            
@@ -22,7 +19,6 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           </div>
         </div>
 
-        {/* Bottom tagline */}
         <div className="relative z-10 mt-auto p-10 pb-14">
           <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/30 mb-4">
             Esport Tournament Platform
@@ -37,14 +33,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
       </div>
 
-      {/* ── Right: form panel ─────────────────────────────────── */}
       <div className="w-full lg:w-[40%] flex-shrink-0 flex flex-col items-center justify-center p-8 bg-[var(--bg-base)] relative">
-        {/* Subtle top accent line */}
         <div className="absolute top-0 left-0 right-0 h-px"
           style={{ background: 'linear-gradient(to right, transparent, #00ffc330, transparent)' }} />
 
         <div className="w-full max-w-[360px]">
-          {/* Mobile logo (hidden on large screens where panel shows) */}
           <div className="flex items-center gap-2.5 mb-10 lg:hidden">
           
             <span className="font-display font-bold tracking-wider uppercase text-[var(--text-primary)]">Tournyx</span>

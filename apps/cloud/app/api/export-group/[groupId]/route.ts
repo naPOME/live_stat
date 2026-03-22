@@ -128,6 +128,7 @@ export async function GET(
       name: org.name,
       brand_color: org.brand_color,
       logo_path: 'c:/logo/org_logo.png',
+      sponsors: [org.sponsor1_url, org.sponsor2_url, org.sponsor3_url].filter(Boolean),
       theme: {
         bg_color: org.bg_color,
         accent_color: org.accent_color,

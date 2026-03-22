@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useAuth } from '@/components/AuthProvider';
 import { TournamentProvider, useTournament } from './_context';
 
 const HERO_BG = 'https://a-static.besthdwallpaper.com/playerunknown-s-battlegrounds-pubg-mobile-battle-in-mad-miramar-wallpaper-2560x1080-63448_14.jpg';
@@ -14,6 +15,7 @@ import OpsTab from './tabs/OpsTab';
 // ─── Inner component (has access to context) ──────────────────────────────────
 
 function TournamentDetail() {
+  const { sponsors } = useAuth();
   const {
     tournament, stages,
     activeTab, setActiveTab,
@@ -131,17 +133,28 @@ function TournamentDetail() {
             <h1 className="text-4xl font-black tracking-tight text-white leading-none mb-5">
               {tournament.name}
             </h1>
-            <div className="flex items-center gap-6 text-white/40 text-[13px]">
-              {[
-                { label: 'Stages', value: stages.length },
-                { label: 'Teams', value: tournamentTeams.length },
-                { label: 'Matches', value: totalMatches },
-              ].map(({ label, value }, i) => (
-                <span key={label} className="flex items-center gap-6">
-                  {i > 0 && <span className="text-white/15">|</span>}
-                  <span><span className="font-bold text-white/70 mr-1">{value}</span>{label}</span>
-                </span>
-              ))}
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-6 text-white/40 text-[13px]">
+                {[
+                  { label: 'Stages', value: stages.length },
+                  { label: 'Teams', value: tournamentTeams.length },
+                  { label: 'Matches', value: totalMatches },
+                ].map(({ label, value }, i) => (
+                  <span key={label} className="flex items-center gap-6">
+                    {i > 0 && <span className="text-white/15">|</span>}
+                    <span><span className="font-bold text-white/70 mr-1">{value}</span>{label}</span>
+                  </span>
+                ))}
+              </div>
+              {sponsors.length > 0 && (
+                <div className="flex items-center gap-3">
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-white/25">Presented by</span>
+                  {sponsors.map((url, i) => (
+                    <img key={i} src={url} alt={`Sponsor ${i + 1}`}
+                      className="h-7 w-auto max-w-[80px] object-contain opacity-60 hover:opacity-100 transition-opacity" />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -16,6 +16,7 @@ const WIDGET_IFRAMES: { key: string; src: string }[] = [
   { key: 'teamlist', src: '/overlay/teamlist' },
   { key: 'matchinfo', src: '/overlay/matchinfo' },
   { key: 'schedule', src: '/overlay/schedule' },
+  { key: 'sponsor_overlay', src: '/overlay/sponsor' },
 ];
 
 export default function MasterOverlay() {

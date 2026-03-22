@@ -20,8 +20,9 @@ const WIDGETS: WidgetDef[] = [
   { key: 'mvp',          label: 'MVP',               hotkey: 'F8', group: 'post' },
   { key: 'pointtable',   label: 'Point Table',       hotkey: 'F9', group: 'static' },
   { key: 'teamlist',     label: 'Team List',         hotkey: 'F10', group: 'static' },
-  { key: 'matchinfo',    label: 'Match Info',        hotkey: 'F11', group: 'static' },
-  { key: 'schedule',     label: 'Schedule',          hotkey: 'F12', group: 'static' },
+  { key: 'matchinfo',      label: 'Match Info',        hotkey: 'F11', group: 'static' },
+  { key: 'schedule',       label: 'Schedule',          hotkey: 'F12', group: 'static' },
+  { key: 'sponsor_overlay', label: 'Sponsor Bar',      hotkey: '',    group: 'static' },
 ];
 
 const GROUPS = [

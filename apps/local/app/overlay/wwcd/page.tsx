@@ -33,9 +33,14 @@ export default function WwcdOverlay() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [show, setShow] = useState(false);
   const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
+  const [sponsors, setSponsors] = useState<string[]>([]);
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
+    fetch('/api/theme').then(r => r.json()).then(r => {
+      const d = r?.data ?? r;
+      setTheme(d);
+      if (Array.isArray(d.sponsors)) setSponsors(d.sponsors.filter(Boolean));
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -152,6 +157,20 @@ export default function WwcdOverlay() {
           </div>
         ))}
       </div>
+
+      {/* Sponsor strip */}
+      {sponsors.length > 0 && (
+        <div className="flex items-center gap-3 mt-6">
+          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>
+            Presented by
+          </span>
+          <div style={{ width: 1, height: 20, background: `${accent}44` }} />
+          {sponsors.map((url, i) => (
+            <img key={i} src={url} alt={`Sponsor ${i + 1}`}
+              style={{ height: 28, width: 'auto', maxWidth: 100, objectFit: 'contain', opacity: 0.8 }} />
+          ))}
+        </div>
+      )}
 
       <style jsx global>{`
         body { background: transparent !important; margin: 0; overflow: hidden; }

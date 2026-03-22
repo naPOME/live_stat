@@ -95,7 +95,7 @@ const links = [
 ];
 
 export default function SidebarNav() {
-  const { orgName, isAdmin } = useAuth();
+  const { orgName, isAdmin, sponsors } = useAuth();
   const { theme, toggle } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
@@ -194,6 +194,19 @@ export default function SidebarNav() {
           </>
         )}
       </nav>
+
+      {/* Partners / Sponsors */}
+      {sponsors.length > 0 && (
+        <div className="px-6 py-3 border-t border-[var(--border)]">
+          <div className="text-[9px] font-display font-bold uppercase tracking-widest text-[var(--text-muted)] mb-2">Partners</div>
+          <div className="flex items-center gap-3 flex-wrap">
+            {sponsors.map((url, i) => (
+              <img key={i} src={url} alt={`Sponsor ${i + 1}`}
+                className="h-6 w-auto max-w-[64px] object-contain opacity-50 hover:opacity-90 transition-opacity rounded" />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Bottom: Theme toggle + Sign out */}
       <div className="px-3 py-4 sidebar-bottom-border">

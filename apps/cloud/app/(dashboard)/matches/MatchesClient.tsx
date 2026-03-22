@@ -147,7 +147,7 @@ export default function MatchesClient({ initialMatches, initialStages, initialTo
 
   return (
     <div className="max-w-[1100px] page-enter">
-      {/* ── Hero ──────────────────────────────────────────────────── */}
+      
       <div className="relative overflow-hidden rounded-2xl mb-10"
         style={{
           backgroundImage: `url(${HERO_BG})`,
