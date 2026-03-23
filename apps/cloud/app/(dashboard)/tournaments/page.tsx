@@ -17,6 +17,7 @@ export default async function TournamentsPage() {
     .from('tournaments')
     .select('id,name,status,created_at,api_key')
     .eq('org_id', profile.org_id)
+    .eq('format', 'tournament')
     .order('created_at', { ascending: false });
   const cols = '40px 1fr 90px 120px';
 

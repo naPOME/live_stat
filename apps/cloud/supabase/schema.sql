@@ -44,6 +44,7 @@ create table tournaments (
   org_id     uuid not null references organizations(id) on delete cascade,
   name       text not null,
   status     text not null default 'active' check (status in ('active', 'archived')),
+  format     text not null default 'tournament' check (format in ('tournament', 'quick_stream')),
   api_key    uuid not null default gen_random_uuid(),
   registration_open boolean not null default true,
   registration_mode text not null default 'open' check (registration_mode in ('open','cap','pick_first')),
@@ -125,15 +126,19 @@ create table match_slots (
 
 -- Pushed by local engine after match ends
 create table match_results (
-  id          uuid primary key default gen_random_uuid(),
-  match_id    uuid not null references matches(id) on delete cascade,
-  team_id     uuid references teams(id) on delete set null,
-  placement   int,
-  kill_count  int default 0,
-  total_pts   int default 0,
-  created_at  timestamptz not null default now(),
+  id                 uuid primary key default gen_random_uuid(),
+  match_id           uuid not null references matches(id) on delete cascade,
+  team_id            uuid references teams(id) on delete set null,
+  slot_number        int,
+  in_game_team_name  text,
+  placement          int,
+  kill_count         int default 0,
+  total_pts          int default 0,
+  created_at         timestamptz not null default now(),
   unique (match_id, team_id)
 );
+-- Quick Stream results use slot_number instead of team_id
+create unique index idx_match_results_slot on match_results(match_id, slot_number) where slot_number is not null;
 
 -- Per-player stats pushed by local engine alongside team results
 create table player_match_results (
@@ -142,8 +147,16 @@ create table player_match_results (
   player_id        uuid references players(id) on delete set null,
   player_open_id   text not null,
   team_id          uuid references teams(id) on delete set null,
+  in_game_name     text,
   kills            int not null default 0,
   damage           int not null default 0,
+  damage_taken     int not null default 0,
+  heal             int not null default 0,
+  headshots        int not null default 0,
+  assists          int not null default 0,
+  knockouts        int not null default 0,
+  rescues          int not null default 0,
+  survival_time    int not null default 0,
   survived         boolean not null default true,
   created_at       timestamptz not null default now(),
   unique (match_id, player_open_id)
@@ -492,4 +505,20 @@ create policy "Own team_applications" on team_applications for all
     select id from tournaments
     where org_id = (select org_id from profiles where id = auth.uid())
   ));
+
+-- ─── Migration: Quick Stream support ────────────────────────────────────────────
+-- Run these on existing databases that already have the tables created above.
+
+-- ALTER TABLE tournaments ADD COLUMN IF NOT EXISTS format text NOT NULL DEFAULT 'tournament' CHECK (format IN ('tournament', 'quick_stream'));
+-- ALTER TABLE match_results ADD COLUMN IF NOT EXISTS slot_number int;
+-- ALTER TABLE match_results ADD COLUMN IF NOT EXISTS in_game_team_name text;
+-- CREATE UNIQUE INDEX IF NOT EXISTS idx_match_results_slot ON match_results(match_id, slot_number) WHERE slot_number IS NOT NULL;
+-- ALTER TABLE player_match_results ADD COLUMN IF NOT EXISTS in_game_name text;
+-- ALTER TABLE player_match_results ADD COLUMN IF NOT EXISTS damage_taken int NOT NULL DEFAULT 0;
+-- ALTER TABLE player_match_results ADD COLUMN IF NOT EXISTS heal int NOT NULL DEFAULT 0;
+-- ALTER TABLE player_match_results ADD COLUMN IF NOT EXISTS headshots int NOT NULL DEFAULT 0;
+-- ALTER TABLE player_match_results ADD COLUMN IF NOT EXISTS assists int NOT NULL DEFAULT 0;
+-- ALTER TABLE player_match_results ADD COLUMN IF NOT EXISTS knockouts int NOT NULL DEFAULT 0;
+-- ALTER TABLE player_match_results ADD COLUMN IF NOT EXISTS rescues int NOT NULL DEFAULT 0;
+-- ALTER TABLE player_match_results ADD COLUMN IF NOT EXISTS survival_time int NOT NULL DEFAULT 0;
 

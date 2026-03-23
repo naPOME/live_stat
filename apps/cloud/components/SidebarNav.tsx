@@ -18,6 +18,15 @@ const links = [
     ),
   },
   {
+    href: '/quick-stream',
+    label: 'Quick Stream',
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M10 2L4 10.5H9L8 16L14 7.5H9L10 2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+      </svg>
+    ),
+  },
+  {
     href: '/tournaments',
     label: 'Tournaments',
     icon: (

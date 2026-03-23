@@ -3,10 +3,12 @@ import path from 'path';
 import { getState } from './gameStore';
 import { getRoster } from './rosterStore';
 import { calcTeamPoints } from './scorer';
+import { getLifecycleState } from './lifecycleStore';
 
 interface PlayerResult {
   player_open_id: string;
-  team_id: string;
+  team_id?: string;
+  in_game_name?: string;
   kills: number;
   damage: number;
   damage_taken: number;
@@ -19,17 +21,21 @@ interface PlayerResult {
   survived: boolean;
 }
 
+interface TeamResult {
+  team_id?: string;
+  slot_number?: number;
+  in_game_team_name?: string;
+  placement: number;
+  kill_count: number;
+  total_pts: number;
+}
+
 interface MatchResult {
   tournament_id: string;
   stage_id: string;
   match_id: string;
   game_id: string;
-  results: Array<{
-    team_id: string;
-    placement: number;
-    kill_count: number;
-    total_pts: number;
-  }>;
+  results: TeamResult[];
   player_results?: PlayerResult[];
 }
 
@@ -79,47 +85,88 @@ export async function pushMatchResult(): Promise<SyncResult> {
 
   const gs = getState();
   const teams = Array.from(gs.teams.values());
-
-  // Sort by rank to determine placement
   const sorted = [...teams].sort((a, b) => a.rank - b.rank);
 
-  const results = sorted
-    .filter(t => t.registeredTeamId)
-    .map((t) => ({
-      team_id: t.registeredTeamId!,
+  // Check if any teams have registered IDs (tournament mode) or not (quick stream)
+  const hasRegisteredTeams = sorted.some(t => t.registeredTeamId);
+
+  const results: TeamResult[] = sorted.map((t) => {
+    if (hasRegisteredTeams && t.registeredTeamId) {
+      return {
+        team_id: t.registeredTeamId,
+        placement: t.rank,
+        kill_count: t.killNum,
+        total_pts: calcTeamPoints(t.rank, t.killNum),
+      };
+    }
+    // Quick Stream mode: send slot + in-game name
+    return {
+      slot_number: t.slot,
+      in_game_team_name: t.inGameName || t.displayName || `Team ${t.slot}`,
       placement: t.rank,
       kill_count: t.killNum,
       total_pts: calcTeamPoints(t.rank, t.killNum),
-    }));
+    };
+  });
+
+  // Filter out registered-only results in tournament mode (keep all in quick stream)
+  const filteredResults = hasRegisteredTeams
+    ? results.filter(r => r.team_id)
+    : results;
 
   // Collect per-player stats
-  const teamIdBySlot = new Map(sorted.filter(t => t.registeredTeamId).map(t => [t.slot, t.registeredTeamId!]));
+  const teamIdBySlot = hasRegisteredTeams
+    ? new Map(sorted.filter(t => t.registeredTeamId).map(t => [t.slot, t.registeredTeamId!]))
+    : null;
+
   const playerResults: PlayerResult[] = [];
   for (const p of gs.players.values()) {
-    const teamId = teamIdBySlot.get(p.teamSlot);
-    if (!teamId) continue;
-    playerResults.push({
-      player_open_id: p.openId,
-      team_id: teamId,
-      kills: p.killNum,
-      damage: p.damage,
-      damage_taken: p.inDamage ?? 0,
-      heal: p.heal ?? 0,
-      headshots: p.headShotNum ?? 0,
-      assists: p.assists ?? 0,
-      knockouts: p.knockouts ?? 0,
-      rescues: p.rescueTimes ?? 0,
-      survival_time: p.survivalTime ?? 0,
-      survived: !p.bHasDied,
-    });
+    if (hasRegisteredTeams) {
+      const teamId = teamIdBySlot?.get(p.teamSlot);
+      if (!teamId) continue;
+      playerResults.push({
+        player_open_id: p.openId,
+        team_id: teamId,
+        kills: p.killNum,
+        damage: p.damage,
+        damage_taken: p.inDamage ?? 0,
+        heal: p.heal ?? 0,
+        headshots: p.headShotNum ?? 0,
+        assists: p.assists ?? 0,
+        knockouts: p.knockouts ?? 0,
+        rescues: p.rescueTimes ?? 0,
+        survival_time: p.survivalTime ?? 0,
+        survived: !p.bHasDied,
+      });
+    } else {
+      // Quick Stream: include all players with in-game name
+      playerResults.push({
+        player_open_id: p.openId || p.uId || `unknown_${p.teamSlot}`,
+        in_game_name: p.playerName || p.displayName || undefined,
+        kills: p.killNum,
+        damage: p.damage,
+        damage_taken: p.inDamage ?? 0,
+        heal: p.heal ?? 0,
+        headshots: p.headShotNum ?? 0,
+        assists: p.assists ?? 0,
+        knockouts: p.knockouts ?? 0,
+        rescues: p.rescueTimes ?? 0,
+        survival_time: p.survivalTime ?? 0,
+        survived: !p.bHasDied,
+      });
+    }
   }
+
+  // Resolve match_id: cycle through match_ids for multi-match sessions
+  const lifecycle = getLifecycleState();
+  const matchId = roster.match_ids?.[lifecycle.matchNumber - 1] ?? roster.match_id;
 
   const body: MatchResult = {
     tournament_id: roster.tournament_id,
     stage_id: roster.stage_id,
-    match_id: roster.match_id,
+    match_id: matchId,
     game_id: gs.gameId,
-    results,
+    results: filteredResults,
     player_results: playerResults,
   };
 

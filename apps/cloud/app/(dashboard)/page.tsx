@@ -24,9 +24,9 @@ export default async function DashboardPage() {
     { data: pendingApps },
   ] = await Promise.all([
     supabase.from('organizations').select('name').eq('id', orgId).single(),
-    supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'active'),
+    supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('org_id', orgId).eq('status', 'active').eq('format', 'tournament'),
     supabase.from('teams').select('*', { count: 'exact', head: true }).eq('org_id', orgId),
-    supabase.from('tournaments').select('id,name,status,created_at').eq('org_id', orgId).neq('status', 'archived').order('created_at', { ascending: false }).limit(5),
+    supabase.from('tournaments').select('id,name,status,created_at').eq('org_id', orgId).eq('format', 'tournament').neq('status', 'archived').order('created_at', { ascending: false }).limit(5),
     supabase.from('team_applications').select('id, tournament_id').eq('status', 'pending'),
   ]);
 
@@ -36,6 +36,11 @@ export default async function DashboardPage() {
   const isLive = (tournamentCount ?? 0) > 0;
 
   const quickActions = [
+    {
+      label: 'Quick Stream', href: '/quick-stream', desc: 'Stream in 30 seconds',
+      icon: <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><path d="M11 2L4.5 11.5H10L9 18L15.5 8.5H10L11 2Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>,
+      color: '#fbbf24',
+    },
     {
       label: 'New Tournament', href: '/tournaments/new', desc: 'Create & configure a new event',
       icon: <svg width="22" height="22" viewBox="0 0 20 20" fill="none"><path d="M10 4v12M4 10h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
