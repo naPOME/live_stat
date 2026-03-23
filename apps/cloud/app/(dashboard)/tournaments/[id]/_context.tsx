@@ -421,8 +421,22 @@ export function TournamentProvider({ children, tournamentId: id, initialTourname
   }
 
   async function updateStageStatus(stageId: string, status: 'pending' | 'active' | 'completed') {
+    // Enforce: only one stage active at a time, and previous stage must be completed to activate
+    if (status === 'active') {
+      const stageIdx = stages.findIndex((s) => s.id === stageId);
+      const prevStage = stageIdx > 0 ? stages[stageIdx - 1] : null;
+      if (prevStage && prevStage.status !== 'completed') {
+        showToast(`Cannot activate — "${prevStage.name}" must be completed first.`);
+        return;
+      }
+      if (stages.some((s) => s.status === 'active' && s.id !== stageId)) {
+        showToast('Another stage is already active. Complete it first.');
+        return;
+      }
+    }
     setStages((prev) => prev.map((s) => s.id === stageId ? { ...s, status } : s));
     await supabase.from('stages').update({ status }).eq('id', stageId);
+    await refreshStages(true);
   }
 
   async function toggleStageAutoAdvance(stageId: string, next: boolean) {
