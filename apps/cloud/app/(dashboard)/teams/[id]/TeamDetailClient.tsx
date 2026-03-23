@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useTeamPlayers, useAddPlayer, useDeletePlayer, useUpdateTeam } from '@/lib/hooks/use-teams';
 import type { Team, Player } from '@/lib/types';
+import { PlayerAvatar } from '@/components/Avatar';
 
 type TeamDetailClientProps = {
   teamId: string;
@@ -39,15 +40,10 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
   function handleAddPlayer(e: React.FormEvent) {
     e.preventDefault();
     if (!playerForm.display_name.trim() || !playerForm.player_open_id.trim()) return;
-
     addPlayerMutation.mutate(
       { display_name: playerForm.display_name.trim(), player_open_id: playerForm.player_open_id.trim() },
       {
-        onSuccess: () => {
-          setPlayerForm({ display_name: '', player_open_id: '' });
-          setAddingPlayer(false);
-          showToast('Player added');
-        },
+        onSuccess: () => { setPlayerForm({ display_name: '', player_open_id: '' }); setAddingPlayer(false); showToast('Player added'); },
         onError: (err) => showToast(err.message, 'error'),
       },
     );
@@ -74,7 +70,6 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
     const prevTeam = team;
     setTeam((t) => ({ ...t, ...updates }));
     setEditTeam(false);
-
     updateTeamMutation.mutate(updates, {
       onSuccess: () => showToast('Team updated'),
       onError: (err) => {
@@ -89,15 +84,12 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
     const file = e.target.files?.[0];
     if (!file) return;
     setLogoUploading(true);
-
     const prevUrl = team.logo_url;
     const localPreview = URL.createObjectURL(file);
     setTeam((t) => ({ ...t, logo_url: localPreview }));
-
     const ext = file.name.split('.').pop();
     const path = `teams/${teamId}/logo.${ext}`;
     const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
-
     if (!error) {
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
       const { error: updateError } = await supabase.from('teams').update({ logo_url: publicUrl }).eq('id', teamId);
@@ -106,14 +98,8 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
         setLogoImgError(false);
         setTeam((t) => ({ ...t, logo_url: `${publicUrl}?t=${Date.now()}` }));
         showToast('Logo updated');
-      } else {
-        setTeam((t) => ({ ...t, logo_url: prevUrl }));
-        showToast(updateError.message, 'error');
-      }
-    } else {
-      setTeam((t) => ({ ...t, logo_url: prevUrl }));
-      showToast(error.message, 'error');
-    }
+      } else { setTeam((t) => ({ ...t, logo_url: prevUrl })); showToast(updateError.message, 'error'); }
+    } else { setTeam((t) => ({ ...t, logo_url: prevUrl })); showToast(error.message, 'error'); }
     setLogoUploading(false);
   }
 
@@ -121,194 +107,188 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
     const file = e.target.files?.[0];
     if (!file) return;
     setPlayerPhotoUploading(playerId);
-
     const ext = file.name.split('.').pop();
     const path = `players/${playerId}/photo.${ext}`;
     const { error } = await supabase.storage.from('logos').upload(path, file, { upsert: true });
-
     if (!error) {
       const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(path);
       const { error: updateError } = await supabase.from('players').update({ photo_url: publicUrl }).eq('id', playerId);
-      if (!updateError) {
-        showToast('Photo updated');
-      } else {
-        showToast(updateError.message, 'error');
-      }
-    } else {
-      showToast(error.message, 'error');
-    }
+      if (!updateError) showToast('Photo updated');
+      else showToast(updateError.message, 'error');
+    } else showToast(error.message, 'error');
     setPlayerPhotoUploading(null);
   }
 
   return (
-    <div className="max-w-[900px] page-enter">
+    <div className="max-w-[1000px] page-enter">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-3 mb-6 text-sm">
-        <Link href="/teams" className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">Teams</Link>
-        <span className="text-[var(--text-muted)]/50">/</span>
-        <span className="text-[var(--text-primary)]">{team.name}</span>
+      <div className="flex items-center gap-2 mb-6 text-sm">
+        <Link href="/teams" className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors">Teams</Link>
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-[var(--text-muted)] opacity-40"><path d="M4 2l4 4-4 4" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <span className="text-[var(--text-primary)] font-medium">{team.name}</span>
       </div>
 
-      {/* Team card */}
-      <div className="surface p-6 mb-6">
-        {editTeam ? (
-          <form onSubmit={saveTeam} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="label">Team Name *</label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={teamForm.name}
-                  onChange={(e) => setTeamForm((f) => ({ ...f, name: e.target.value }))}
-                  required
-                  className="input-premium"
-                />
-              </div>
-              <div>
-                <label className="label">Short Name</label>
-                <input
-                  type="text"
-                  value={teamForm.short_name}
-                  onChange={(e) => setTeamForm((f) => ({ ...f, short_name: e.target.value.toUpperCase().slice(0, 5) }))}
-                  className="input-premium uppercase"
-                />
-              </div>
-              <div>
-                <label className="label">Brand Color</label>
-                <div className="flex items-center gap-3">
-                  <div className="relative">
+      {/* ─── Team Banner ─── */}
+      <div className="relative rounded-2xl overflow-hidden mb-8" style={{ background: `linear-gradient(135deg, ${team.brand_color}12 0%, var(--bg-surface) 50%, ${team.brand_color}08 100%)` }}>
+        {/* Subtle brand color accent line at top */}
+        <div className="h-[2px] w-full" style={{ background: `linear-gradient(90deg, transparent, ${team.brand_color}60, transparent)` }} />
+
+        <div className="px-8 py-8">
+          {editTeam ? (
+            /* ── Edit mode ── */
+            <form onSubmit={saveTeam} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">Team Name *</label>
+                  <input autoFocus type="text" value={teamForm.name}
+                    onChange={(e) => setTeamForm((f) => ({ ...f, name: e.target.value }))}
+                    required className="input-premium" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">Tag</label>
+                  <input type="text" value={teamForm.short_name}
+                    onChange={(e) => setTeamForm((f) => ({ ...f, short_name: e.target.value.toUpperCase().slice(0, 5) }))}
+                    placeholder="SEN" className="input-premium uppercase" />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">Brand Color</label>
+                  <div className="flex items-center gap-3">
                     <label className="relative cursor-pointer w-10 h-10 shrink-0 block">
-                      <input
-                        type="color"
-                        value={teamForm.brand_color}
+                      <input type="color" value={teamForm.brand_color}
                         onChange={(e) => setTeamForm((f) => ({ ...f, brand_color: e.target.value }))}
-                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-                      />
-                      <div
-                        className="w-10 h-10 rounded-lg border border-[var(--border)]"
-                        style={{ backgroundColor: teamForm.brand_color }}
-                      />
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                      <div className="w-10 h-10 rounded-lg border border-[var(--border)]" style={{ backgroundColor: teamForm.brand_color }} />
                     </label>
+                    <span className="text-[13px] font-mono text-[var(--text-secondary)] uppercase">{teamForm.brand_color}</span>
                   </div>
-                  <span className="text-[13px] font-mono text-[var(--text-secondary)] uppercase">{teamForm.brand_color}</span>
                 </div>
               </div>
-            </div>
-            <div className="flex gap-3">
-              <button type="submit" className="btn-primary">Save</button>
-              <button type="button" onClick={() => setEditTeam(false)} className="btn-ghost">Cancel</button>
-            </div>
-          </form>
-        ) : (
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-4">
+              <div className="flex gap-3">
+                <button type="submit" className="btn-primary">Save</button>
+                <button type="button" onClick={() => setEditTeam(false)} className="btn-ghost">Cancel</button>
+              </div>
+            </form>
+          ) : (
+            /* ── Display mode — Banner layout ── */
+            <div className="flex items-center gap-6">
               {/* Logo */}
-              <div className="relative group/logo">
+              <div className="relative group/logo flex-shrink-0">
                 {team.logo_url && !logoImgError ? (
-                  <img src={team.logo_url} alt={team.name} className="w-16 h-16 rounded-xl object-cover border border-[var(--border)]" onError={() => setLogoImgError(true)} />
+                  <img src={team.logo_url} alt={team.name}
+                    className="w-20 h-20 rounded-2xl object-cover border border-[var(--border)]"
+                    onError={() => setLogoImgError(true)} />
                 ) : (
-                  <div
-                    className="w-16 h-16 rounded-xl flex items-center justify-center text-xl font-bold border"
-                    style={{ backgroundColor: team.brand_color + '22', borderColor: `${team.brand_color}44` }}
-                  >
-                    <span style={{ color: team.brand_color }}>
-                      {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
-                    </span>
+                  <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-black border"
+                    style={{ backgroundColor: team.brand_color + '18', borderColor: team.brand_color + '30', color: team.brand_color }}>
+                    {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
                   </div>
                 )}
-                <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl opacity-0 group-hover/logo:opacity-100 transition-opacity cursor-pointer text-xs text-white font-medium">
-                  {logoUploading ? 'Uploading...' : 'Upload'}
+                <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl opacity-0 group-hover/logo:opacity-100 transition-opacity cursor-pointer">
+                  <span className="text-xs text-white font-medium">{logoUploading ? '...' : 'Upload'}</span>
                   <input type="file" accept="image/*" onChange={uploadLogo} className="hidden" />
                 </label>
               </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h1 className="text-xl font-semibold text-[var(--text-primary)]">{team.name}</h1>
+
+              {/* Team info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-3 mb-1">
+                  <h1 className="text-2xl font-display font-black uppercase tracking-wide text-[var(--text-primary)]">{team.name}</h1>
                   {team.short_name && (
-                    <span className="badge badge-muted">{team.short_name}</span>
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md border"
+                      style={{ color: team.brand_color, borderColor: team.brand_color + '40', backgroundColor: team.brand_color + '10' }}>
+                      {team.short_name}
+                    </span>
                   )}
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: team.brand_color }} />
                 </div>
-                <div className="text-sm text-[var(--text-secondary)]">{players.length} player{players.length !== 1 ? 's' : ''}</div>
+                <div className="flex items-center gap-4 text-sm text-[var(--text-secondary)]">
+                  <div className="flex items-center gap-1.5">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-[var(--text-muted)]">
+                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                    <span>{players.length} player{players.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: team.brand_color }} />
+                    <span className="font-mono text-xs uppercase">{team.brand_color}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button onClick={() => setEditTeam(true)}
+                  className="text-xs font-medium px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-hover)] transition-colors">
+                  Edit Team
+                </button>
               </div>
             </div>
-            <button onClick={() => setEditTeam(true)} className="btn-ghost btn-sm">
-              Edit
-            </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Players */}
-      <div className="surface overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border)]">
-          <span className="text-sm font-semibold text-[var(--text-primary)]">Players & IDs</span>
-          <button onClick={() => setAddingPlayer(true)} className="btn-ghost btn-sm">
-            + Add Player
+      {/* ─── Meet the Roster ─── */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <h2 className="text-[11px] font-display font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">Meet the Roster</h2>
+            <div className="h-px flex-1 bg-[var(--border)] min-w-[40px]" />
+          </div>
+          <button onClick={() => setAddingPlayer(true)}
+            className="flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-xl border border-[var(--border)] text-[var(--text-muted)] hover:text-[var(--accent)] hover:border-[var(--accent-border)] transition-colors">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            Add Player
           </button>
         </div>
 
-        {/* Add player form */}
+        {/* Add player form — inline, not a modal */}
         {addingPlayer && (
-          <form onSubmit={handleAddPlayer} className="border-b border-[var(--border)] px-5 py-4 bg-[var(--bg-base)] flex items-end gap-3">
-            <div className="flex-1">
-              <label className="label">Display Name</label>
-              <input
-                autoFocus
-                type="text"
-                value={playerForm.display_name}
-                onChange={(e) => setPlayerForm((f) => ({ ...f, display_name: e.target.value }))}
-                placeholder="e.g. SnipeKing"
-                required
-                className="input-premium"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="label">
-                In-Game Character ID <span className="text-[var(--text-muted)]">(must match exactly)</span>
-              </label>
-              <input
-                type="text"
-                value={playerForm.player_open_id}
-                onChange={(e) => setPlayerForm((f) => ({ ...f, player_open_id: e.target.value.trim() }))}
-                placeholder="Paste exact character ID"
-                required
-                className="input-premium font-mono"
-              />
-            </div>
-            <button type="submit" disabled={addPlayerMutation.isPending} className="btn-primary">
-              {addPlayerMutation.isPending ? 'Saving...' : 'Add'}
-            </button>
-            <button type="button" onClick={() => setAddingPlayer(false)} className="btn-ghost btn-sm">Cancel</button>
-          </form>
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] p-5 mb-5 animate-fade-in">
+            <form onSubmit={handleAddPlayer} className="flex items-end gap-3">
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">Display Name</label>
+                <input autoFocus type="text" value={playerForm.display_name}
+                  onChange={(e) => setPlayerForm((f) => ({ ...f, display_name: e.target.value }))}
+                  placeholder="e.g. SnipeKing" required className="input-premium" />
+              </div>
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">
+                  Character ID <span className="normal-case tracking-normal font-normal text-[var(--text-muted)]">(exact match)</span>
+                </label>
+                <input type="text" value={playerForm.player_open_id}
+                  onChange={(e) => setPlayerForm((f) => ({ ...f, player_open_id: e.target.value.trim() }))}
+                  placeholder="Paste exact ID" required className="input-premium font-mono" />
+              </div>
+              <button type="submit" disabled={addPlayerMutation.isPending} className="btn-primary py-[9px]">
+                {addPlayerMutation.isPending ? '...' : 'Add'}
+              </button>
+              <button type="button" onClick={() => setAddingPlayer(false)}
+                className="text-[var(--text-muted)] hover:text-[var(--text-primary)] px-2 py-2 transition-colors">&times;</button>
+            </form>
+          </div>
         )}
 
-        {/* Player list */}
+        {/* Player cards grid */}
         {players.length > 0 ? (
-          <div>
-            {players.map((player, i) => (
-              <div
-                key={player.id}
-                className={`flex items-center justify-between px-5 py-3 hover:bg-[var(--bg-hover)] transition-colors group ${
-                  i > 0 ? 'border-t border-[var(--border)]' : ''
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  {/* Player photo */}
-                  <div className="relative group/photo flex-shrink-0">
-                    {player.photo_url ? (
-                      <img src={player.photo_url} alt={player.display_name} className="w-9 h-9 rounded-lg object-cover border border-[var(--border)]" />
-                    ) : (
-                      <div className="w-9 h-9 rounded-lg bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-[11px] font-bold text-[var(--text-muted)]">
-                        {player.display_name.substring(0, 2).toUpperCase()}
-                      </div>
-                    )}
-                    <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg opacity-0 group-hover/photo:opacity-100 transition-opacity cursor-pointer">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {players.map((player) => (
+              <div key={player.id}
+                className="group relative rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)] hover:border-[var(--border-hover)] transition-all">
+                {/* Card content */}
+                <div className="p-5 flex flex-col items-center text-center">
+                  {/* Player portrait */}
+                  <div className="relative group/photo mb-4">
+                    <PlayerAvatar
+                      name={player.display_name}
+                      logoUrl={player.photo_url}
+                      brandColor={team.brand_color}
+                      px={72}
+                      className="rounded-xl"
+                    />
+                    <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-xl opacity-0 group-hover/photo:opacity-100 transition-opacity cursor-pointer">
                       {playerPhotoUploading === player.id ? (
-                        <span className="text-[8px] text-white">...</span>
+                        <span className="text-[9px] text-white font-medium">...</span>
                       ) : (
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round">
                           <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
                           <circle cx="12" cy="13" r="4"/>
                         </svg>
@@ -316,23 +296,67 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
                       <input type="file" accept="image/*" onChange={(e) => uploadPlayerPhoto(player.id, e)} className="hidden" />
                     </label>
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-[var(--text-primary)]">{player.display_name}</div>
-                    <div className="text-xs font-mono text-[var(--text-muted)] mt-0.5">{player.player_open_id}</div>
+
+                  {/* Name */}
+                  <div className="text-sm font-bold text-[var(--text-primary)] mb-0.5">{player.display_name}</div>
+
+                  {/* In-game ID */}
+                  <div className="text-[10px] font-mono text-[var(--text-muted)] mb-4 truncate max-w-full px-2">{player.player_open_id}</div>
+
+                  {/* Stats row */}
+                  <div className="flex items-center justify-center gap-5 w-full">
+                    <div className="text-center">
+                      <div className="text-[15px] font-bold text-[var(--text-primary)] tabular-nums">—</div>
+                      <div className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Matches</div>
+                    </div>
+                    <div className="w-px h-6 bg-[var(--border)]" />
+                    <div className="text-center">
+                      <div className="text-[15px] font-bold text-[var(--text-primary)] tabular-nums">—</div>
+                      <div className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Kills</div>
+                    </div>
+                    <div className="w-px h-6 bg-[var(--border)]" />
+                    <div className="text-center">
+                      <div className="text-[15px] font-bold text-[var(--text-primary)] tabular-nums">—</div>
+                      <div className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">Dmg</div>
+                    </div>
                   </div>
                 </div>
+
+                {/* Remove button — top-right corner */}
                 <button
                   onClick={() => deletePlayer(player.id)}
-                  className="text-xs text-[var(--text-muted)] hover:text-[var(--red)] transition-colors"
-                >
-                  Remove
+                  className="absolute top-3 right-3 w-7 h-7 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--red)] hover:bg-[var(--red)]/10 transition-all opacity-0 group-hover:opacity-100">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M18 6L6 18M6 6l12 12"/>
+                  </svg>
                 </button>
               </div>
             ))}
+
+            {/* Add player ghost card */}
+            <button
+              onClick={() => setAddingPlayer(true)}
+              className="rounded-2xl border border-dashed border-[var(--border)] hover:border-[var(--accent-border)] bg-transparent hover:bg-[var(--accent)]/5 transition-all flex flex-col items-center justify-center py-10 text-[var(--text-muted)] hover:text-[var(--accent)] min-h-[200px]">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mb-2 opacity-40">
+                <path d="M12 5v14M5 12h14" strokeLinecap="round"/>
+              </svg>
+              <span className="text-xs font-medium">Add Player</span>
+            </button>
           </div>
         ) : (
-          <div className="px-5 py-8 text-center text-[var(--text-muted)] text-sm">
-            No players yet. Add players with their exact in-game character IDs so they can be identified during live matches.
+          <div className="rounded-2xl border border-dashed border-[var(--border)] bg-[var(--bg-surface)] py-16 text-center">
+            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="mx-auto mb-4 text-[var(--text-muted)] opacity-30">
+              <circle cx="12" cy="10" r="5" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M2 28c0-5.5 4.5-10 10-10s10 4.5 10 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+              <circle cx="22" cy="10" r="5" stroke="currentColor" strokeWidth="1.5" opacity="0.4"/>
+            </svg>
+            <div className="text-sm text-[var(--text-muted)] mb-1">No players on this roster</div>
+            <div className="text-xs text-[var(--text-muted)] opacity-60 mb-5">Add players with their exact in-game IDs for live match tracking.</div>
+            <button onClick={() => setAddingPlayer(true)}
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-xl border border-[var(--accent-border)] text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-colors">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              Add First Player
+            </button>
           </div>
         )}
       </div>
