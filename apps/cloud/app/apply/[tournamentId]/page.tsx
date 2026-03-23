@@ -185,7 +185,7 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
                 <path d="M2 8L5 5L8 8L11 5L14 8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
-            <span className="text-sm font-black tracking-[0.2em] uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#00ffc3] via-[#6d5efc] to-[#ff4e4e]">
+            <span className="text-sm font-black tracking-[0.2em] uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#00ffc3] via-[#2F6B3F] to-[#ff4e4e]">
               Tournyx
             </span>
           </div>

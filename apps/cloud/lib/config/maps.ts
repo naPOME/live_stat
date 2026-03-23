@@ -13,7 +13,7 @@ export type GameMap = {
 export const GAME_MAPS: GameMap[] = [
   { id: 'erangel',  name: 'Erangel',  size: '8×8',  color: '#3b82f6', weight: 3, competitive: true },
   { id: 'miramar',  name: 'Miramar',  size: '8×8',  color: '#f59e0b', weight: 2, competitive: true },
-  { id: 'vikendi',  name: 'Vikendi',  size: '6×6',  color: '#8b5cf6', weight: 1, competitive: true },
+  { id: 'vikendi',  name: 'Vikendi',  size: '6×6',  color: '#2F6B3F', weight: 1, competitive: true },
   { id: 'sanhok',   name: 'Sanhok',   size: '4×4',  color: '#22c55e', weight: 1, competitive: true },
   { id: 'rondo',    name: 'Rondo',    size: '8×8',  color: '#ef4444', weight: 2, competitive: true },
   { id: 'deston',   name: 'Deston',   size: '8×8',  color: '#06b6d4', weight: 1, competitive: true },

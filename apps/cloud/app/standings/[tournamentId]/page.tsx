@@ -45,7 +45,7 @@ export default function PublicStandingsPage({ params }: { params: Promise<{ tour
   }, [tournamentId]);
 
   const selectedStage = stages.find((s) => s.id === selectedStageId);
-  const accentColor = org?.brand_color || '#8B5CF6';
+  const accentColor = org?.brand_color || '#2F6B3F';
 
   if (loading) {
     return (

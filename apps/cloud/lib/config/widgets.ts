@@ -25,7 +25,7 @@ export const WIDGETS: WidgetDef[] = [
 export const WIDGET_GROUPS = [
   { id: 'live',   label: 'Live Widgets',       color: '#ff4e4e', desc: 'Active during gameplay' },
   { id: 'post',   label: 'Post-Match',         color: '#00ffc3', desc: 'Show after match ends' },
-  { id: 'static', label: 'Static / Pre-Match', color: '#6d5efc', desc: 'Info overlays' },
+  { id: 'static', label: 'Static / Pre-Match', color: '#2F6B3F', desc: 'Info overlays' },
 ] as const;
 
 /** Quick lookup: key → WidgetDef */

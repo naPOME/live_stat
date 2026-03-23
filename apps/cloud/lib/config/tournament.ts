@@ -99,7 +99,7 @@ export const SLOT_COLORS: string[] = [
   '#3b82f6', // 02 — blue
   '#22c55e', // 03 — green
   '#f59e0b', // 04 — amber
-  '#8b5cf6', // 05 — violet
+  '#2F6B3F', // 05 — violet
   '#06b6d4', // 06 — cyan
   '#ec4899', // 07 — pink
   '#f97316', // 08 — orange

@@ -6,7 +6,7 @@ import type { StageStandings } from '../_types';
 
 // ─── Mock data for preview when no real matches exist ─────────────────────────
 
-const MOCK_COLORS = ['#00ffc3', '#ff4e4e', '#ffc107', '#7c3aed', '#06b6d4', '#f97316', '#10b981', '#e879f9', '#3b82f6', '#ef4444', '#84cc16', '#f59e0b'];
+const MOCK_COLORS = ['#00ffc3', '#ff4e4e', '#ffc107', '#2F6B3F', '#06b6d4', '#f97316', '#10b981', '#e879f9', '#3b82f6', '#ef4444', '#84cc16', '#f59e0b'];
 const MOCK_NAMES = ['Team Alpha', 'Team Bravo', 'Nexus', 'Storm', 'Eclipse', 'Phantom', 'Vortex', 'Nova', 'Apex', 'Blaze', 'Cipher', 'Rogue'];
 
 function buildMockStandings(teams: { id: string; name: string; short_name: string | null; brand_color: string; logo_url: string | null }[]): StageStandings {

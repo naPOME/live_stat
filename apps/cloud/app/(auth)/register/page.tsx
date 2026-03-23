@@ -49,7 +49,7 @@ export default function RegisterPage() {
               style={{ background: 'linear-gradient(135deg, #00ffc3, #00b89c)' }} />
           </div>
           <span className="font-display text-2xl font-bold tracking-wider uppercase text-transparent bg-clip-text"
-            style={{ backgroundImage: 'linear-gradient(135deg, #00ffc3 0%, #6d5efc 50%, #ff4e4e 100%)' }}>
+            style={{ backgroundImage: 'linear-gradient(135deg, #00ffc3 0%, #2F6B3F 50%, #ff4e4e 100%)' }}>
             Tournyx
           </span>
         </div>
@@ -87,7 +87,7 @@ export default function RegisterPage() {
 
       <p className="text-center text-[var(--text-muted)] text-sm mt-7">
         Already have an account?{' '}
-        <Link href="/login" className="text-[#00ffc3] hover:text-[#6d5efc] transition-colors font-semibold">
+        <Link href="/login" className="text-[#00ffc3] hover:text-[#2F6B3F] transition-colors font-semibold">
           Sign in
         </Link>
       </p>

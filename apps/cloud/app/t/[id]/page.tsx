@@ -52,7 +52,7 @@ export default function PublicTournamentHub({ params }: { params: Promise<{ id: 
     load();
   }, [tournamentId]);
 
-  const accent = org?.brand_color || '#8B5CF6';
+  const accent = org?.brand_color || '#2F6B3F';
   const selectedStage = stages.find((s) => s.id === selectedStageId);
   const totalMatches = stages.reduce((s, st) => s + st.totalMatches, 0);
   const finishedMatches = stages.reduce((s, st) => s + st.matchCount, 0);
