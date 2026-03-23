@@ -70,19 +70,26 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
         return (
           <div className="flex items-center gap-3 min-w-0">
             <TeamAvatar name={team.name} logoUrl={team.logo_url} size="md" />
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-[14px] text-[var(--text-primary)] truncate group-hover:text-white transition-colors">
-                  {team.name}
-                </span>
-                {team.short_name && (
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded flex-shrink-0 text-[var(--text-muted)] bg-[var(--bg-elevated)] border border-[var(--border)]">
-                    {team.short_name}
-                  </span>
-                )}
-              </div>
-            </div>
+            <span className="font-semibold text-[14px] text-[var(--text-primary)] truncate group-hover:text-white transition-colors">
+              {team.name}
+            </span>
           </div>
+        );
+      },
+    },
+    {
+      id: 'tag',
+      header: 'Tag',
+      meta: { width: '80px' },
+      accessorFn: (t) => t.short_name ?? '',
+      cell: ({ row }) => {
+        const team = row.original;
+        return team.short_name ? (
+          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded text-[var(--text-muted)] bg-[var(--bg-elevated)] border border-[var(--border)]">
+            {team.short_name}
+          </span>
+        ) : (
+          <span className="text-[10px] text-[var(--text-muted)] opacity-40">—</span>
         );
       },
     },
@@ -100,7 +107,7 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
     {
       id: 'actions',
       header: '',
-      meta: { width: '110px' },
+      meta: { width: '140px' },
       enableSorting: false,
       cell: ({ row }) => {
         const team = row.original;
@@ -114,8 +121,8 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); deleteTeam(team.id); }}
               title="Delete team"
-              className="w-7 h-7 flex items-center justify-center rounded-md text-[var(--text-muted)] hover:text-[var(--red)] hover:bg-[var(--red-soft)] transition-colors opacity-0 group-hover:opacity-100">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--text-muted)] hover:text-[var(--red)] hover:bg-[var(--red-soft)] transition-colors">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
               </svg>
             </button>
