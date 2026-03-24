@@ -3,7 +3,7 @@ import type { Stage, Match, Team, StageGroup, PointSystem, TeamApplication, Tour
 export type GroupWithTeams = StageGroup & { teams: Team[]; matches: Match[] };
 export type StageWithDetails = Stage & { matches: Match[]; groups: GroupWithTeams[] };
 
-export type Tab = 'overview' | 'stages' | 'standings' | 'applications' | 'ops';
+export type Tab = 'overview' | 'stages' | 'standings' | 'stats' | 'applications' | 'ops';
 
 export type TournamentData = {
   id: string;

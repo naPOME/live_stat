@@ -10,6 +10,7 @@ import OverviewTab from './tabs/OverviewTab';
 import StagesTab from './tabs/StagesTab';
 import StandingsTab from './tabs/StandingsTab';
 import ApplicationsTab from './tabs/ApplicationsTab';
+import StatsTab from './tabs/StatsTab';
 import OpsTab from './tabs/OpsTab';
 
 // ─── Inner component (has access to context) ──────────────────────────────────
@@ -56,6 +57,16 @@ function TournamentDetail() {
       icon: (
         <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
           <path d="M2 11V6m3.5 5V3M9 11V5m3.5 6V8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+        </svg>
+      ),
+    },
+    {
+      id: 'stats',
+      label: 'Stats',
+      icon: (
+        <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+          <path d="M7 1v12M3.5 4v9M10.5 6v7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          <circle cx="7" cy="1.5" r="1" fill="currentColor"/>
         </svg>
       ),
     },
@@ -190,6 +201,7 @@ function TournamentDetail() {
       {activeTab === 'overview' && <OverviewTab />}
       {activeTab === 'stages' && <StagesTab />}
       {activeTab === 'standings' && <StandingsTab />}
+      {activeTab === 'stats' && <StatsTab />}
       {activeTab === 'applications' && <ApplicationsTab />}
       {activeTab === 'ops' && <OpsTab />}
 

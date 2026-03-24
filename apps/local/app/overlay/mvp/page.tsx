@@ -6,7 +6,17 @@ interface Player {
   playerName: string;
   displayName?: string;
   teamName: string;
+  teamSlot: number;
   kills: number;
+  damage: number;
+  damageTaken: number;
+  heal: number;
+  headshots: number;
+  assists: number;
+  knockouts: number;
+  rescues: number;
+  survivalTime: number;
+  survived: boolean;
 }
 
 interface Team {
@@ -15,6 +25,7 @@ interface Team {
   shortName?: string;
   brandColor?: string;
   logoPath?: string;
+  logoPath64?: string;
 }
 
 interface LiveData {
@@ -23,8 +34,37 @@ interface LiveData {
   players?: Player[];
 }
 
+/**
+ * Weighted MVP formula:
+ *   (playerKills / totalKills) × 0.4
+ * + (playerDamage / totalDamage) × 0.3
+ * + (playerAvgSurvival / globalAvgSurvival) × 0.2
+ * + (playerKnockouts / totalKnockouts) × 0.1
+ */
+function computeMvpPoints(player: Player, allPlayers: Player[]): number {
+  const totalKills = allPlayers.reduce((s, p) => s + p.kills, 0);
+  const totalDamage = allPlayers.reduce((s, p) => s + p.damage, 0);
+  const totalKnockouts = allPlayers.reduce((s, p) => s + p.knockouts, 0);
+  const globalAvgSurvival = allPlayers.length > 0
+    ? allPlayers.reduce((s, p) => s + p.survivalTime, 0) / allPlayers.length
+    : 0;
+
+  const killShare = totalKills > 0 ? (player.kills / totalKills) * 0.4 : 0;
+  const damageShare = totalDamage > 0 ? (player.damage / totalDamage) * 0.3 : 0;
+  const survivalShare = globalAvgSurvival > 0 ? (player.survivalTime / globalAvgSurvival) * 0.2 : 0;
+  const knockoutShare = totalKnockouts > 0 ? (player.knockouts / totalKnockouts) * 0.1 : 0;
+
+  return killShare + damageShare + survivalShare + knockoutShare;
+}
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 export default function MvpOverlay() {
-  const [mvp, setMvp] = useState<(Player & { brandColor?: string; teamShort?: string; teamLogo?: string }) | null>(null);
+  const [mvp, setMvp] = useState<(Player & { mvpPoints: number; brandColor?: string; teamShort?: string; teamLogo?: string }) | null>(null);
   const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
   const [show, setShow] = useState(false);
 
@@ -33,22 +73,32 @@ export default function MvpOverlay() {
   }, []);
 
   useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => { const d = (raw?.data ?? raw) as LiveData;
+    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => {
+      const d = (raw?.data ?? raw) as LiveData;
       const players = d.players || [];
       if (players.length === 0) return;
 
-      // Find MVP: highest kills
-      const sorted = [...players].sort((a, b) => b.kills - a.kills);
-      const top = sorted[0];
-      if (!top || top.kills === 0) return;
+      // Compute MVP points for all players, find the highest
+      let bestPlayer: Player | null = null;
+      let bestPoints = -1;
+      for (const p of players) {
+        const pts = computeMvpPoints(p, players);
+        if (pts > bestPoints) {
+          bestPoints = pts;
+          bestPlayer = p;
+        }
+      }
 
-      const team = d.teams.find(t => t.teamName === top.teamName);
+      if (!bestPlayer || bestPoints === 0) return;
+
+      const team = d.teams.find(t => t.teamName === bestPlayer!.teamName);
 
       setMvp({
-        ...top,
+        ...bestPlayer,
+        mvpPoints: bestPoints,
         brandColor: team?.brandColor,
-        teamShort: team?.shortName || team?.displayName || top.teamName,
-        teamLogo: team?.logoPath,
+        teamShort: team?.shortName || team?.displayName || bestPlayer.teamName,
+        teamLogo: team?.logoPath64 || team?.logoPath,
       });
 
       if (!show) setTimeout(() => setShow(true), 300);
@@ -64,6 +114,15 @@ export default function MvpOverlay() {
   const accent = theme.accent_color || '#60a5fa';
   const color = mvp.brandColor || accent;
   const name = mvp.displayName || mvp.playerName;
+
+  const stats = [
+    { label: 'ELIMINATIONS', value: String(mvp.kills), highlight: true },
+    { label: 'DAMAGE', value: String(mvp.damage) },
+    { label: 'KNOCKDOWNS', value: String(mvp.knockouts) },
+    { label: 'HEADSHOTS', value: String(mvp.headshots) },
+    { label: 'ASSISTS', value: String(mvp.assists) },
+    { label: 'HEALS', value: String(mvp.heal) },
+  ];
 
   return (
     <div className="fixed inset-0 flex items-center justify-center" style={{ fontFamily: 'Inter, sans-serif' }}>
@@ -101,6 +160,12 @@ export default function MvpOverlay() {
           >
             MVP
           </div>
+
+          {/* MVP Points */}
+          <div className="absolute bottom-4 left-4 right-4">
+            <div className="text-[9px] font-bold uppercase tracking-widest text-[#8b8da6]">MVP Score</div>
+            <div className="text-xl font-black" style={{ color: accent }}>{mvp.mvpPoints.toFixed(4)}</div>
+          </div>
         </div>
 
         {/* Right: Info Panel */}
@@ -125,27 +190,20 @@ export default function MvpOverlay() {
           </div>
 
           {/* Stats Grid */}
-          <div className="px-6 pb-5 grid grid-cols-2 gap-[2px]">
-            {[
-              { label: 'ELIMINATIONS', value: String(mvp.kills) },
-              { label: 'DAMAGE', value: '—' },
-              { label: 'ASSISTS', value: '—' },
-              { label: 'KNOCKOUTS', value: '—' },
-              { label: 'THROWABLES', value: '—' },
-              { label: 'HEALS', value: '—' },
-            ].map((stat, i) => (
+          <div className="px-6 pb-3 grid grid-cols-2 gap-[2px]">
+            {stats.map((stat, i) => (
               <div
                 key={i}
                 className="flex items-center justify-between px-4 py-2.5 rounded-lg"
                 style={{
-                  background: stat.label === 'ELIMINATIONS' ? `${accent}22` : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${stat.label === 'ELIMINATIONS' ? accent + '33' : 'rgba(255,255,255,0.05)'}`,
+                  background: stat.highlight ? `${accent}22` : 'rgba(255,255,255,0.03)',
+                  border: `1px solid ${stat.highlight ? accent + '33' : 'rgba(255,255,255,0.05)'}`,
                 }}
               >
                 <span className="text-[10px] font-bold uppercase tracking-wider text-[#8b8da6]">{stat.label}</span>
                 <span
                   className="text-sm font-black"
-                  style={{ color: stat.label === 'ELIMINATIONS' ? accent : '#fff' }}
+                  style={{ color: stat.highlight ? accent : '#fff' }}
                 >
                   {stat.value}
                 </span>
@@ -153,13 +211,38 @@ export default function MvpOverlay() {
             ))}
           </div>
 
-          {/* Survival Time */}
-          <div
-            className="mx-6 mb-5 flex items-center justify-between px-4 py-2.5 rounded-lg"
-            style={{ background: accent, color: '#000' }}
-          >
-            <span className="text-[10px] font-bold uppercase tracking-wider">SURVIVAL TIME</span>
-            <span className="text-sm font-black">—</span>
+          {/* Survival Time + Rescues */}
+          <div className="px-6 pb-5 flex gap-[2px]">
+            <div
+              className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-lg"
+              style={{ background: accent, color: '#000' }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider">SURVIVAL TIME</span>
+              <span className="text-sm font-black">{formatTime(mvp.survivalTime)}</span>
+            </div>
+            <div
+              className="flex items-center justify-between px-4 py-2.5 rounded-lg"
+              style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#8b8da6] mr-3">RESCUES</span>
+              <span className="text-sm font-black text-white">{mvp.rescues}</span>
+            </div>
+          </div>
+
+          {/* MVP Formula bar */}
+          <div className="px-6 pb-4">
+            <div className="flex gap-[2px] rounded-lg overflow-hidden h-1.5">
+              <div style={{ width: '40%', background: '#fbbf24' }} title="Kills 40%" />
+              <div style={{ width: '30%', background: '#ef4444' }} title="Damage 30%" />
+              <div style={{ width: '20%', background: '#10b981' }} title="Survival 20%" />
+              <div style={{ width: '10%', background: '#3b82f6' }} title="Knockdowns 10%" />
+            </div>
+            <div className="flex justify-between mt-1 text-[8px] font-bold uppercase tracking-wider text-[#8b8da6]">
+              <span style={{ color: '#fbbf24' }}>Kills 40%</span>
+              <span style={{ color: '#ef4444' }}>Dmg 30%</span>
+              <span style={{ color: '#10b981' }}>Survival 20%</span>
+              <span style={{ color: '#3b82f6' }}>KO 10%</span>
+            </div>
           </div>
         </div>
       </div>

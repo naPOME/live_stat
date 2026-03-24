@@ -280,11 +280,16 @@ export interface LeaderboardPlayer {
   playerName: string;
   displayName?: string;
   teamName: string;
+  teamSlot: number;
   kills: number;
   damage: number;
+  damageTaken: number;
+  heal: number;
   headshots: number;
   assists: number;
   knockouts: number;
+  rescues: number;
+  survivalTime: number;
   survived: boolean;
 }
 
