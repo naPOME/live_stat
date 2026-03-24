@@ -176,6 +176,7 @@ export function handleTotalMessage(payload: {
       brandColor: rt?.brand_color,
       logoPath: rt?.logo_path,
       logoPath64: rt?.logo_path_64,
+      logoUrl: rt?.logo_url,
     });
   }
 

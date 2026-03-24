@@ -18,6 +18,7 @@ export interface RosterTeam {
   brand_color: string;
   logo_path?: string;
   logo_path_64?: string;
+  logo_url?: string;
   players: RosterPlayer[];
 }
 
@@ -53,6 +54,7 @@ export interface RosterMapping {
     name: string;
     brand_color: string;
     logo_path?: string;
+    logo_url?: string;
     sponsors?: string[];
     theme?: OverlayTheme;
   };

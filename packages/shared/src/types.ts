@@ -135,6 +135,7 @@ export interface TeamState {
   brandColor?: string;
   logoPath?: string;
   logoPath64?: string;
+  logoUrl?: string;
 }
 
 export interface KillEvent {
@@ -267,6 +268,7 @@ export interface LeaderboardTeam {
   shortName?: string;
   brandColor?: string;
   logoPath?: string;
+  logoUrl?: string;
   kills: number;
   placement?: number;
   alive: boolean;
