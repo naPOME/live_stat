@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { PALETTES } from '@/components/TopPlayersWidget';
 import { useGlobalTheme } from '@/hooks/useGlobalTheme';
 
@@ -12,6 +12,10 @@ import { TopPlayersWidget, type PlayerStat } from '@/components/TopPlayersWidget
 import { MatchResultsWidget, type MatchPlayerStat } from '@/components/MatchResultsWidget';
 import { PlayerSpotlightWidget } from '@/components/PlayerSpotlightWidget';
 import { KillFeedWidget, type KillEvent } from '@/components/KillFeedWidget';
+import { EliminationAlertWidget, type EliminationData } from '@/components/EliminationAlertWidget';
+import { TeamListWidget, type TeamEntry } from '@/components/TeamListWidget';
+import { MatchInfoWidget, type MatchInfoData } from '@/components/MatchInfoWidget';
+import { ScheduleWidget, type ScheduleMatch } from '@/components/ScheduleWidget';
 
 // ── API response types ──
 interface APITeam {
@@ -46,6 +50,16 @@ interface LiveData {
   players?: APIPlayer[];
 }
 
+// ── Mock schedule data ──
+const MOCK_SCHEDULE: ScheduleMatch[] = [
+  { matchNumber: 1, mapName: 'Erangel', status: 'completed', startTime: '14:00', winnerTeam: 'Alpha 7' },
+  { matchNumber: 2, mapName: 'Miramar', status: 'completed', startTime: '14:45', winnerTeam: 'Nova Esports' },
+  { matchNumber: 3, mapName: 'Sanhok', status: 'live', startTime: '15:30' },
+  { matchNumber: 4, mapName: 'Vikendi', status: 'upcoming', startTime: '16:15' },
+  { matchNumber: 5, mapName: 'Erangel', status: 'upcoming', startTime: '17:00' },
+  { matchNumber: 6, mapName: 'Miramar', status: 'upcoming', startTime: '17:45' },
+];
+
 export default function MasterOverlay() {
   const [vis, setVis] = useState<Record<string, boolean>>({});
   const themeIdx = useGlobalTheme();
@@ -54,10 +68,15 @@ export default function MasterOverlay() {
   // ── Live Data ──
   const [apiTeams, setApiTeams] = useState<APITeam[]>([]);
   const [apiPlayers, setApiPlayers] = useState<APIPlayer[]>([]);
+  const prevTeamAlive = useRef<Record<string, boolean>>({});
 
-  // ── Kill Feed (SSE driven) ──
+  // ── Kill Feed ──
   const [killEvents, setKillEvents] = useState<KillEvent[]>([]);
   const killTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+
+  // ── Elimination Alert Queue ──
+  const [elimAlert, setElimAlert] = useState<EliminationData | null>(null);
+  const elimTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Widget visibility SSE ──
   useEffect(() => {
@@ -67,17 +86,46 @@ export default function MasterOverlay() {
     return () => es.close();
   }, []);
 
+  // Show elimination alert
+  const showElimAlert = useCallback((data: EliminationData) => {
+    if (elimTimer.current) clearTimeout(elimTimer.current);
+    setElimAlert(data);
+    elimTimer.current = setTimeout(() => setElimAlert(null), 5500);
+  }, []);
+
   // ── Live data polling ──
   useEffect(() => {
     const poll = () => fetch('/api/live').then(r => r.json()).then(raw => {
       const d = (raw?.data ?? raw) as LiveData;
-      setApiTeams(d.teams || []);
+      const teams = d.teams || [];
+      setApiTeams(teams);
       setApiPlayers((d.players as APIPlayer[]) || []);
+
+      // Detect newly eliminated teams
+      for (const t of teams) {
+        const name = t.displayName || t.teamName;
+        const wasAlive = prevTeamAlive.current[name];
+        const isNowDead = !t.alive && t.liveMemberNum === 0;
+        if (wasAlive === true && isNowDead) {
+          const rank = teams.filter(x => !x.alive && x.liveMemberNum === 0).length;
+          showElimAlert({
+            teamName: name,
+            teamShort: t.shortName,
+            teamLogoUrl: t.logoPath,
+            teamColor: t.brandColor,
+            placement: 16 - rank + 1,
+            totalTeams: teams.length,
+            matchKills: t.kills,
+            matchPoints: t.totalPoints,
+          });
+        }
+        prevTeamAlive.current[name] = t.alive && t.liveMemberNum > 0;
+      }
     }).catch(() => {});
     poll();
     const id = setInterval(poll, 1500);
     return () => clearInterval(id);
-  }, []);
+  }, [showElimAlert]);
 
   // ── Kill feed SSE ──
   useEffect(() => {
@@ -103,26 +151,21 @@ export default function MasterOverlay() {
   }, []);
 
   // ── Data Mappers ──
-
-  // OverallLeaderboardWidget wants TeamStandings[]
   const leaderboardTeams: TeamStandings[] = apiTeams.map((t, i) => ({
     rank: i + 1, name: t.displayName || t.teamName, logoUrl: t.logoPath,
     wwcd: 0, eliminations: t.kills, placement: t.placementPoints, totalPoints: t.totalPoints,
   }));
 
-  // MatchLeaderboardSidebar wants SidebarTeam[]
   const sidebarTeams: SidebarTeam[] = apiTeams.map((t, i) => ({
     rank: i + 1, name: t.displayName || t.teamName, logoUrl: t.logoPath,
     playersAlive: t.liveMemberNum, matchKills: t.kills, totalPoints: t.totalPoints,
   }));
 
-  // LiveStandingsWidget wants LiveTeam[]
   const liveTeams: LiveTeam[] = apiTeams.slice(0, 5).map((t, i) => ({
     rank: i + 1, rankChange: 0, name: t.displayName || t.teamName,
     logoUrl: t.logoPath, points: t.totalPoints, isAlive: t.alive,
   }));
 
-  // TopPlayersWidget wants PlayerStat[]
   const topPlayers: PlayerStat[] = [...apiPlayers]
     .filter(p => p.kills > 0).sort((a, b) => b.kills - a.kills).slice(0, 5)
     .map(p => ({
@@ -130,7 +173,6 @@ export default function MasterOverlay() {
       assists: p.assists, survivalTime: `${Math.floor(p.survivalTime / 60)}m`,
     }));
 
-  // MatchResultsWidget – winner team data
   const winnerTeam = apiTeams[0];
   const winnerPlayers: MatchPlayerStat[] = winnerTeam
     ? apiPlayers.filter(p => p.teamName === winnerTeam.teamName)
@@ -138,50 +180,54 @@ export default function MasterOverlay() {
         .map(p => ({ name: p.displayName || p.playerName, eliminations: p.kills, damage: p.damage, assists: p.assists }))
     : [];
 
-  // PlayerSpotlightWidget – MVP
   const mvpPlayer = [...apiPlayers].sort((a, b) => b.kills - a.kills || b.damage - a.damage)[0];
   const mvpTeam = mvpPlayer ? apiTeams.find(t => t.teamName === mvpPlayer.teamName) : undefined;
 
-  // Visibility check helper
+  const teamListEntries: TeamEntry[] = apiTeams.map(t => ({
+    name: t.displayName || t.teamName,
+    shortName: t.shortName, logoUrl: t.logoPath, brandColor: t.brandColor,
+    players: apiPlayers.filter(p => p.teamName === t.teamName).slice(0, 4)
+      .map(p => ({ name: p.displayName || p.playerName })),
+  }));
+
+  const matchInfoData: MatchInfoData = {
+    tournamentName: 'PUBG MOBILE PRO LEAGUE',
+    stageName: 'GRAND FINALS',
+    matchNumber: 3, totalMatches: 6,
+    mapName: 'ERANGEL', perspective: 'TPP',
+    teamsAlive: apiTeams.filter(t => t.alive).length,
+    totalTeams: apiTeams.length,
+    playersAlive: apiTeams.reduce((s, t) => s + t.liveMemberNum, 0),
+    totalPlayers: apiTeams.length * 4,
+    phase: 'ingame', currentZone: 4,
+  };
+
   const isOn = (key: string) => vis[key] ?? false;
 
   return (
     <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
 
-      {/* ── Leaderboard (Full Table) ── */}
-      {isOn('leaderboard') && leaderboardTeams.length > 0 && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 10, opacity: 1, transition: 'opacity 0.4s ease' }}>
-          <OverallLeaderboardWidget teams={leaderboardTeams} palette={palette} stageText="GRAND FINALS" matchText="OVERALL STANDINGS" />
-        </div>
-      )}
+      {/* ── Full-screen overlays (only one at a time typically) ── */}
 
-      {/* ── Results (Match Winner Card) ── */}
       {isOn('results') && winnerTeam && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 12, opacity: 1, transition: 'opacity 0.4s ease' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 12 }}>
           <MatchResultsWidget
-            teamName={winnerTeam.displayName || winnerTeam.teamName}
-            teamLogo={winnerTeam.logoPath}
-            matchTotalPoints={winnerTeam.totalPoints}
-            matchElims={winnerTeam.kills}
+            teamName={winnerTeam.displayName || winnerTeam.teamName} teamLogo={winnerTeam.logoPath}
+            matchTotalPoints={winnerTeam.totalPoints} matchElims={winnerTeam.kills}
             matchDamage={winnerPlayers.reduce((s, p) => s + p.damage, 0)}
-            players={winnerPlayers}
-            palette={palette}
-            stageText="GRAND FINALS"
-            matchText="MATCH WINNER"
+            players={winnerPlayers} palette={palette} stageText="GRAND FINALS" matchText="MATCH WINNER"
           />
         </div>
       )}
 
-      {/* ── Top Fraggers ── */}
       {isOn('fraggers') && topPlayers.length > 0 && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 14, opacity: 1, transition: 'opacity 0.4s ease' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 14 }}>
           <TopPlayersWidget players={topPlayers} palette={palette} stageText="GRAND FINALS" matchText="TOP FRAGGERS" />
         </div>
       )}
 
-      {/* ── MVP Spotlight ── */}
       {isOn('mvp') && mvpPlayer && mvpPlayer.kills > 0 && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 16, opacity: 1, transition: 'opacity 0.4s ease' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 16 }}>
           <PlayerSpotlightWidget
             playerName={mvpPlayer.displayName || mvpPlayer.playerName}
             teamName={mvpTeam?.displayName || mvpPlayer.teamName}
@@ -189,7 +235,8 @@ export default function MasterOverlay() {
             stats={{
               eliminations: mvpPlayer.kills, damage: mvpPlayer.damage,
               headshotHitRate: mvpPlayer.kills > 0 ? ((mvpPlayer.headshots || 0) / mvpPlayer.kills) * 100 : 0,
-              assists: mvpPlayer.assists, survivalTime: `${Math.floor(mvpPlayer.survivalTime / 60)}:${String(mvpPlayer.survivalTime % 60).padStart(2, '0')}`,
+              assists: mvpPlayer.assists,
+              survivalTime: `${Math.floor(mvpPlayer.survivalTime / 60)}:${String(mvpPlayer.survivalTime % 60).padStart(2, '0')}`,
               longestKill: 120 + Math.floor(Math.random() * 200),
             }}
             palette={palette}
@@ -197,33 +244,55 @@ export default function MasterOverlay() {
         </div>
       )}
 
-      {/* ── Point Table (reuses OverallLeaderboardWidget) ── */}
       {isOn('pointtable') && leaderboardTeams.length > 0 && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 11, opacity: 1, transition: 'opacity 0.4s ease' }}>
+        <div style={{ position: 'absolute', inset: 0, zIndex: 11 }}>
           <OverallLeaderboardWidget teams={leaderboardTeams} palette={palette} stageText="OVERALL" matchText="POINT TABLE" />
         </div>
       )}
 
-      {/* ── HUD Overlays (these sit ON TOP of the game feed, position: absolute) ── */}
+      {isOn('teamlist') && teamListEntries.length > 0 && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
+          <TeamListWidget teams={teamListEntries} palette={palette} stageText="PARTICIPATING TEAMS" />
+        </div>
+      )}
 
-      {/* Kill Feed (top-right) */}
+      {isOn('matchinfo') && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 15 }}>
+          <MatchInfoWidget data={matchInfoData} palette={palette} />
+        </div>
+      )}
+
+      {isOn('schedule') && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
+          <ScheduleWidget matches={MOCK_SCHEDULE} palette={palette} tournamentName="PUBG MOBILE PRO LEAGUE" dayLabel="DAY 1" />
+        </div>
+      )}
+
+      {/* ── HUD Overlays (sit on top of the game feed) ── */}
+
       {isOn('killfeed') && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 20, pointerEvents: 'none' }}>
           <KillFeedWidget events={killEvents} palette={palette} />
         </div>
       )}
 
-      {/* Live Standings (bottom-left ticker) */}
       {isOn('playercard') && liveTeams.length > 0 && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 18, pointerEvents: 'none' }}>
           <LiveStandingsWidget teams={liveTeams} palette={palette} title="LIVE MATCH STANDINGS" />
         </div>
       )}
 
-      {/* Match Leaderboard Sidebar (bottom-right) */}
-      {isOn('elimination') && sidebarTeams.length > 0 && (
+      {/* Match Leaderboard Sidebar (bottom-right live ranking) */}
+      {isOn('leaderboard') && sidebarTeams.length > 0 && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 19, pointerEvents: 'none' }}>
           <MatchLeaderboardSidebar teams={sidebarTeams} palette={palette} />
+        </div>
+      )}
+
+      {/* ── Elimination Alert Popup (enabled via Elimination Alert button) ── */}
+      {isOn('elimination') && elimAlert && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
+          <EliminationAlertWidget data={elimAlert} palette={palette} />
         </div>
       )}
 
