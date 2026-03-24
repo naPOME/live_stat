@@ -144,9 +144,8 @@ export default function ApplicationsTab() {
                     {app.logo_url ? (
                       <img src={app.logo_url} alt={app.team_name} className="w-10 h-10 rounded-lg object-cover border border-[var(--border)] flex-shrink-0" />
                     ) : (
-                      <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0"
-                        style={{ backgroundColor: app.brand_color + '22', border: `1.5px solid ${app.brand_color}44` }}>
-                        <span style={{ color: app.brand_color }}>{(app.short_name ?? app.team_name).substring(0, 2).toUpperCase()}</span>
+                      <div className="w-10 h-10 rounded-lg flex items-center justify-center font-bold text-xs flex-shrink-0 bg-[var(--accent)]/10 border border-[var(--accent)]/20">
+                        <span className="text-[var(--accent)]">{(app.short_name ?? app.team_name).substring(0, 2).toUpperCase()}</span>
                       </div>
                     )}
                     <div className="min-w-0">
@@ -159,7 +158,14 @@ export default function ApplicationsTab() {
                       </div>
                       <div className="flex items-center gap-3 mt-0.5 text-xs text-[var(--text-muted)]">
                         <span>{app.players.length} player{app.players.length !== 1 ? 's' : ''}</span>
-                        {app.contact_email && <span>{app.contact_email}</span>}
+                        {app.contact_email && (
+                          <span className="flex items-center gap-1">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="opacity-50">
+                              <path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.94 8.13l-1.97 9.28c-.15.67-.54.83-1.09.52l-3.02-2.22-1.46 1.4c-.16.16-.3.3-.61.3l.22-3.06 5.54-5c.24-.22-.05-.33-.38-.13l-6.85 4.31-2.95-.92c-.64-.2-.65-.64.13-.95l11.54-4.45c.53-.2 1 .13.82.94z"/>
+                            </svg>
+                            {app.contact_email.startsWith('@') ? app.contact_email : `@${app.contact_email}`}
+                          </span>
+                        )}
                         <span>{new Date(app.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>

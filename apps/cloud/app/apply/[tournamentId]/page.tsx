@@ -4,19 +4,32 @@ import { useEffect, useState, useRef, use } from 'react';
 
 type PlayerRow = { display_name: string; player_open_id: string };
 
+type TournamentInfo = {
+  name: string;
+  status: string;
+  registration_open: boolean;
+  registration_limit: number | null;
+  accepted_teams: number;
+};
+
+type OrgInfo = {
+  name: string;
+  logo_url: string | null;
+  sponsors: string[];
+};
+
 export default function ApplyPage({ params }: { params: Promise<{ tournamentId: string }> }) {
   const { tournamentId } = use(params);
 
-  const [tournament, setTournament] = useState<{ name: string; status: string } | null>(null);
-  const [orgName, setOrgName] = useState('');
+  const [tournament, setTournament] = useState<TournamentInfo | null>(null);
+  const [org, setOrg] = useState<OrgInfo | null>(null);
   const [loadError, setLoadError] = useState('');
   const [loading, setLoading] = useState(true);
 
   // Form
   const [teamName, setTeamName] = useState('');
   const [shortName, setShortName] = useState('');
-  const [brandColor, setBrandColor] = useState('#ffffff');
-  const [contactEmail, setContactEmail] = useState('');
+  const [telegram, setTelegram] = useState('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
@@ -49,9 +62,14 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
         setLoading(false);
         return;
       }
+      if (t.registration_open === false) {
+        setLoadError('Registration is currently closed');
+        setLoading(false);
+        return;
+      }
 
-      setTournament({ name: t.name, status: t.status });
-      setOrgName(data.organization?.name ?? '');
+      setTournament(t);
+      setOrg(data.organization ?? null);
       setLoading(false);
     }
     load();
@@ -93,7 +111,6 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
       return;
     }
 
-    // Upload logo if provided
     let logoUrl: string | null = null;
     if (logoFile) {
       setLogoUploading(true);
@@ -115,8 +132,7 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
         tournament_id: tournamentId,
         team_name: teamName,
         short_name: shortName || null,
-        brand_color: brandColor,
-        contact_email: contactEmail || null,
+        telegram_username: telegram || null,
         logo_url: logoUrl,
         players: filledPlayers,
       }),
@@ -132,231 +148,251 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
     setSubmitted(true);
   }
 
+  // ── Loading ──
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0e1621] flex items-center justify-center">
-        <span className="loader" aria-label="Loading" />
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-white/20 border-t-white/80 rounded-full animate-spin" />
       </div>
     );
   }
 
+  // ── Error ──
   if (loadError) {
     return (
-      <div className="min-h-screen bg-[#0e1621] flex items-center justify-center px-4">
-        <div className="text-center">
-          <div className="text-4xl mb-4">:/</div>
-          <p className="text-white font-semibold mb-1">{loadError}</p>
-          <p className="text-[#8b8da6] text-sm">Check the link and try again.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (submitted) {
-    return (
-      <div className="min-h-screen bg-[#0e1621] flex items-center justify-center px-4">
-        <div className="max-w-sm w-full text-center">
-          <div className="w-16 h-16 rounded-2xl bg-[#00ffc3]/15 flex items-center justify-center mx-auto mb-5">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-              <path d="M5 13l4 4L19 7" stroke="#00ffc3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+        <div className="text-center max-w-sm">
+          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="#666" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">Application Submitted!</h1>
-          <p className="text-[#8b8da6] text-sm mb-1">
-            <span className="text-white font-medium">{teamName}</span> has been submitted to
-          </p>
-          <p className="text-[#00ffc3] font-semibold">{tournament?.name}</p>
-          <p className="text-[#8b8da6] text-xs mt-4">
-            The tournament organizer will review your application.
-          </p>
+          <p className="text-white/90 font-medium mb-1">{loadError}</p>
+          <p className="text-white/30 text-sm">Check the link and try again.</p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-[#0e1621] py-8 px-4">
-      <div className="max-w-lg mx-auto">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00ffc3] to-[#00ffc3]/60 flex items-center justify-center">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M2 8L5 5L8 8L11 5L14 8" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </div>
-            <span className="text-sm font-black tracking-[0.2em] uppercase italic text-transparent bg-clip-text bg-gradient-to-r from-[#00ffc3] via-[#2F6B3F] to-[#ff4e4e]">
-              Tournyx
-            </span>
+  // ── Success ──
+  if (submitted) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+        <div className="max-w-sm w-full text-center">
+          <div className="w-14 h-14 rounded-full bg-[#2F6B3F]/15 flex items-center justify-center mx-auto mb-5">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M5 13l4 4L19 7" stroke="#2F6B3F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
           </div>
-          {orgName && <p className="text-[#8b8da6] text-xs mb-2">Hosted by {orgName}</p>}
-          <h1 className="text-xl font-bold text-white">Team Registration</h1>
-          <p className="text-[#00ffc3] font-semibold text-sm mt-1">{tournament?.name}</p>
+          <h1 className="text-lg font-semibold text-white mb-2">Application Submitted</h1>
+          <p className="text-white/40 text-sm">
+            <span className="text-white/80">{teamName}</span> has been registered for
+          </p>
+          <p className="text-white/80 font-medium mt-1">{tournament?.name}</p>
+          <p className="text-white/25 text-xs mt-6">The organizer will review your application.</p>
+          {org?.sponsors && org.sponsors.length > 0 && (
+            <div className="flex items-center justify-center gap-4 mt-8 pt-6 border-t border-white/5">
+              {org.sponsors.map((url, i) => (
+                <img key={i} src={url} alt="" className="h-6 w-auto max-w-[80px] object-contain opacity-40" />
+              ))}
+            </div>
+          )}
         </div>
+      </div>
+    );
+  }
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+  const slotsInfo = tournament?.registration_limit
+    ? `${tournament.accepted_teams} / ${tournament.registration_limit} teams registered`
+    : null;
+
+  // ── Form ──
+  return (
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+
+      {/* ── Header ── */}
+      <div className="border-b border-white/5">
+        <div className="max-w-lg mx-auto px-4 py-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {org?.logo_url ? (
+                <img src={org.logo_url} alt="" className="w-8 h-8 rounded-lg object-contain bg-white/5" />
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-[10px] font-bold text-white/30">
+                  {(org?.name ?? '').substring(0, 2).toUpperCase()}
+                </div>
+              )}
+              <div>
+                <div className="text-xs text-white/30">{org?.name}</div>
+                <div className="text-sm font-semibold text-white/90">{tournament?.name}</div>
+              </div>
+            </div>
+            {slotsInfo && (
+              <div className="text-[10px] text-white/30 bg-white/5 px-2.5 py-1 rounded-full">
+                {slotsInfo}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Sponsors Bar ── */}
+      {org?.sponsors && org.sponsors.length > 0 && (
+        <div className="border-b border-white/5">
+          <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-center gap-6">
+            <span className="text-[9px] uppercase tracking-widest text-white/15 font-medium">Sponsored by</span>
+            {org.sponsors.map((url, i) => (
+              <img key={i} src={url} alt="" className="h-5 w-auto max-w-[70px] object-contain opacity-50" />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Form ── */}
+      <div className="max-w-lg mx-auto px-4 py-8">
+        <h1 className="text-base font-semibold mb-1">Team Registration</h1>
+        <p className="text-xs text-white/30 mb-8">Fill in your team details and player roster to register.</p>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-[#ff4e4e]/10 border border-[#ff4e4e]/30 text-[#ff4e4e] text-sm px-3 py-2.5 rounded-lg">
+            <div className="bg-red-500/8 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-lg">
               {error}
             </div>
           )}
 
-          {/* Team info */}
-          <div className="bg-[#1a2735] border border-white/10 rounded-2xl p-5 space-y-4">
-            <div className="text-sm font-semibold text-white">Team Details</div>
+          {/* ── Team Details ── */}
+          <fieldset className="space-y-4">
+            <legend className="text-xs font-medium text-white/50 uppercase tracking-wider mb-3">Team Details</legend>
 
-            {/* Logo upload */}
+            {/* Logo */}
             <div className="flex items-center gap-4">
               <button
                 type="button"
                 onClick={() => logoInputRef.current?.click()}
-                className="relative w-16 h-16 rounded-xl border-2 border-dashed border-white/20 hover:border-[#00ffc3]/50 transition-colors flex items-center justify-center overflow-hidden flex-shrink-0 group"
+                className="w-14 h-14 rounded-xl border border-dashed border-white/10 hover:border-white/25 transition-colors flex items-center justify-center overflow-hidden shrink-0"
               >
                 {logoPreview ? (
-                  <img src={logoPreview} alt="Logo preview" className="w-full h-full object-cover" />
+                  <img src={logoPreview} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-white/30 group-hover:text-[#00ffc3]/60 transition-colors">
-                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="text-white/20"/>
                   </svg>
                 )}
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleLogoSelect}
-                  className="hidden"
-                />
+                <input ref={logoInputRef} type="file" accept="image/*" onChange={handleLogoSelect} className="hidden" />
               </button>
               <div>
-                <div className="text-xs text-white font-medium">Team Logo</div>
-                <div className="text-[10px] text-[#8b8da6] mt-0.5">
-                  {logoFile ? logoFile.name : 'Click to upload (PNG/JPG, max 5MB)'}
+                <div className="text-xs text-white/70">Team Logo</div>
+                <div className="text-[10px] text-white/25 mt-0.5">
+                  {logoFile ? logoFile.name : 'PNG or JPG, max 5MB'}
                 </div>
                 {logoFile && (
-                  <button
-                    type="button"
-                    onClick={() => { setLogoFile(null); setLogoPreview(null); }}
-                    className="text-[10px] text-[#ff4e4e] mt-1 hover:underline"
-                  >
-                    Remove
-                  </button>
+                  <button type="button" onClick={() => { setLogoFile(null); setLogoPreview(null); }}
+                    className="text-[10px] text-red-400/70 hover:text-red-400 mt-0.5">Remove</button>
                 )}
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2 sm:col-span-1">
-                <label className="block text-xs text-[#8b8da6] mb-1">Team Name *</label>
+            {/* Name + Tag */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="col-span-2">
+                <label className="block text-[11px] text-white/30 mb-1.5">Team Name <span className="text-red-400">*</span></label>
                 <input
                   type="text"
                   required
                   value={teamName}
                   onChange={(e) => setTeamName(e.target.value)}
-                  placeholder="e.g. Alpha Wolves"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                  placeholder="Alpha Wolves"
+                  className="w-full bg-white/[0.04] border border-white/8 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/15 focus:outline-none focus:border-white/20 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[#8b8da6] mb-1">Short Name / Tag</label>
+                <label className="block text-[11px] text-white/30 mb-1.5">Tag</label>
                 <input
                   type="text"
                   value={shortName}
                   onChange={(e) => setShortName(e.target.value.toUpperCase().slice(0, 5))}
                   placeholder="ALPH"
                   maxLength={5}
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                  className="w-full bg-white/[0.04] border border-white/8 rounded-lg px-3 py-2.5 text-sm text-white placeholder-white/15 focus:outline-none focus:border-white/20 transition-colors font-mono"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-[#8b8da6] mb-1">Team Color</label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={brandColor}
-                    onChange={(e) => setBrandColor(e.target.value)}
-                    className="w-10 h-9 rounded-lg cursor-pointer"
-                  />
-                  <span className="text-xs font-mono text-[#8b8da6]">{brandColor}</span>
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs text-[#8b8da6] mb-1">Contact Email</label>
+            {/* Telegram */}
+            <div>
+              <label className="block text-[11px] text-white/30 mb-1.5">Captain Telegram Username</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20 text-sm">@</span>
                 <input
-                  type="email"
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="captain@team.gg"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                  type="text"
+                  value={telegram}
+                  onChange={(e) => setTelegram(e.target.value.replace(/^@/, ''))}
+                  placeholder="username"
+                  className="w-full bg-white/[0.04] border border-white/8 rounded-lg pl-7 pr-3 py-2.5 text-sm text-white placeholder-white/15 focus:outline-none focus:border-white/20 transition-colors"
                 />
               </div>
             </div>
-          </div>
+          </fieldset>
 
-          {/* Players */}
-          <div className="bg-[#1a2735] border border-white/10 rounded-2xl p-5 space-y-3">
+          {/* ── Players ── */}
+          <fieldset className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-semibold text-white">Players</div>
-                <div className="text-xs text-[#8b8da6]">In-game ID must match the exact character ID used in-game</div>
+                <legend className="text-xs font-medium text-white/50 uppercase tracking-wider">Players</legend>
+                <p className="text-[10px] text-white/20 mt-0.5">In-game ID must match the exact character ID</p>
               </div>
-              <button
-                type="button"
-                onClick={addPlayerRow}
-                className="text-xs text-[#00ffc3] hover:text-white font-medium transition-colors"
-              >
-                + Add Player
+              <button type="button" onClick={addPlayerRow}
+                className="text-[11px] text-white/30 hover:text-white/60 transition-colors">
+                + Add
               </button>
             </div>
 
-            <div className="space-y-2">
-              {/* Column labels */}
-              <div className="grid grid-cols-[1fr_1fr_28px] gap-2 px-1">
-                <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">Player Name</span>
-                <span className="text-[10px] text-[#8b8da6] uppercase tracking-wider font-semibold">In-Game Character ID</span>
+            <div className="space-y-1.5">
+              {/* Header */}
+              <div className="grid grid-cols-[1fr_1fr_24px] gap-2 px-1">
+                <span className="text-[9px] text-white/20 uppercase tracking-wider font-medium">Display Name</span>
+                <span className="text-[9px] text-white/20 uppercase tracking-wider font-medium">In-Game ID</span>
                 <span />
               </div>
 
               {players.map((p, i) => (
-                <div key={i} className="grid grid-cols-[1fr_1fr_28px] gap-2 items-center">
+                <div key={i} className="grid grid-cols-[1fr_1fr_24px] gap-2 items-center">
                   <input
                     type="text"
                     value={p.display_name}
                     onChange={(e) => updatePlayer(i, 'display_name', e.target.value)}
                     placeholder={`Player ${i + 1}`}
-                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors"
+                    className="bg-white/[0.04] border border-white/8 rounded-lg px-3 py-2 text-sm text-white placeholder-white/15 focus:outline-none focus:border-white/20 transition-colors"
                   />
                   <input
                     type="text"
                     value={p.player_open_id}
                     onChange={(e) => updatePlayer(i, 'player_open_id', e.target.value)}
-                    placeholder="exact ID"
-                    className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm placeholder-white/20 focus:outline-none focus:border-[#00ffc3]/60 transition-colors font-mono"
+                    placeholder="ID"
+                    className="bg-white/[0.04] border border-white/8 rounded-lg px-3 py-2 text-sm text-white placeholder-white/15 focus:outline-none focus:border-white/20 transition-colors font-mono"
                   />
-                  <button
-                    type="button"
-                    onClick={() => removePlayerRow(i)}
-                    className={`text-[#8b8da6] hover:text-[#ff4e4e] text-sm transition-colors ${players.length <= 1 ? 'invisible' : ''}`}
-                  >
-                    ×
+                  <button type="button" onClick={() => removePlayerRow(i)}
+                    className={`text-white/15 hover:text-red-400/70 text-sm transition-colors ${players.length <= 1 ? 'invisible' : ''}`}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    </svg>
                   </button>
                 </div>
               ))}
             </div>
-          </div>
+          </fieldset>
 
+          {/* ── Submit ── */}
           <button
             type="submit"
             disabled={submitting || logoUploading}
-            className="w-full bg-[#00ffc3] hover:bg-[#00e6af] disabled:opacity-50 text-[#0e1621] font-bold py-3 rounded-xl transition-colors text-sm"
+            className="w-full bg-white text-black font-medium py-2.5 rounded-lg text-sm hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            {logoUploading ? 'Uploading logo...' : submitting ? 'Submitting...' : 'Submit Application'}
+            {logoUploading ? 'Uploading logo...' : submitting ? 'Submitting...' : 'Submit Registration'}
           </button>
 
-          <p className="text-center text-[#8b8da6] text-[10px]">
-            Powered by Tournyx
+          <p className="text-center text-white/10 text-[10px] pt-2">
+            Tournyx
           </p>
         </form>
       </div>

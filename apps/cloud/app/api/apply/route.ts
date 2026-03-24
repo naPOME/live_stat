@@ -27,9 +27,16 @@ export async function GET(request: NextRequest) {
 
   const { data: org } = await supabase
     .from('organizations')
-    .select('name')
+    .select('name, logo_url, sponsor1_url, sponsor2_url, sponsor3_url')
     .eq('id', tournament.org_id)
     .single();
+
+  // Count accepted teams so far
+  const { count: acceptedCount } = await supabase
+    .from('team_applications')
+    .select('id', { count: 'exact', head: true })
+    .eq('tournament_id', tournamentId)
+    .eq('status', 'accepted');
 
   return NextResponse.json({
     tournament: {
@@ -38,20 +45,23 @@ export async function GET(request: NextRequest) {
       registration_open: tournament.registration_open,
       registration_mode: tournament.registration_mode,
       registration_limit: tournament.registration_limit,
+      accepted_teams: acceptedCount ?? 0,
     },
     organization: {
       name: org?.name ?? '',
+      logo_url: org?.logo_url ?? null,
+      sponsors: [org?.sponsor1_url, org?.sponsor2_url, org?.sponsor3_url].filter(Boolean),
     },
   });
 }
 
 export async function POST(request: NextRequest) {
   const body = await request.json();
-  const { tournament_id, team_name, short_name, brand_color, contact_email, logo_url, players } = body as {
+  const { tournament_id, team_name, short_name, telegram_username, contact_email, logo_url, players } = body as {
     tournament_id?: string;
     team_name?: string;
     short_name?: string | null;
-    brand_color?: string | null;
+    telegram_username?: string | null;
     contact_email?: string | null;
     logo_url?: string | null;
     players?: ApplicationPlayer[];
@@ -125,9 +135,9 @@ export async function POST(request: NextRequest) {
     tournament_id,
     team_name: team_name.trim(),
     short_name: short_name?.trim() || null,
-    brand_color: brand_color || '#ffffff',
+    brand_color: '#ffffff',
     logo_url: logo_url || null,
-    contact_email: contact_email?.trim() || null,
+    contact_email: telegram_username?.trim() || contact_email?.trim() || null,
     players: players.map((p) => ({
       display_name: p.display_name.trim(),
       player_open_id: p.player_open_id.trim(),
