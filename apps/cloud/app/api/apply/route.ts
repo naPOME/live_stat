@@ -22,7 +22,11 @@ export async function GET(request: NextRequest) {
     .single();
 
   if (!tournament) {
-    return NextResponse.json({ error: 'Tournament not found' }, { status: 404 });
+    return NextResponse.json({ error: 'not_found' }, { status: 404 });
+  }
+
+  if (tournament.status !== 'active' || tournament.registration_open === false) {
+    return NextResponse.json({ error: 'not_found' }, { status: 404 });
   }
 
   const { data: org } = await supabase

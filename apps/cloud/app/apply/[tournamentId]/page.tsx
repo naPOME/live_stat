@@ -56,19 +56,7 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
         return;
       }
 
-      const t = data.tournament;
-      if (t.status !== 'active') {
-        setLoadError('This tournament is no longer accepting applications');
-        setLoading(false);
-        return;
-      }
-      if (t.registration_open === false) {
-        setLoadError('Registration is currently closed');
-        setLoading(false);
-        return;
-      }
-
-      setTournament(t);
+      setTournament(data.tournament);
       setOrg(data.organization ?? null);
       setLoading(false);
     }
@@ -157,18 +145,12 @@ export default function ApplyPage({ params }: { params: Promise<{ tournamentId: 
     );
   }
 
-  // ── Error ──
+  // ── Not found / closed — show nothing useful ──
   if (loadError) {
     return (
       <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
-        <div className="text-center max-w-sm">
-          <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <path d="M18 6L6 18M6 6l12 12" stroke="#666" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-          </div>
-          <p className="text-white/90 font-medium mb-1">{loadError}</p>
-          <p className="text-white/30 text-sm">Check the link and try again.</p>
+        <div className="text-center">
+          <p className="text-white/20 text-sm">This page is not available.</p>
         </div>
       </div>
     );

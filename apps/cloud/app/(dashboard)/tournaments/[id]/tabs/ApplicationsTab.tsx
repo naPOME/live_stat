@@ -26,62 +26,80 @@ export default function ApplicationsTab() {
 
   return (
     <div className="space-y-4">
-      {/* Registration link */}
+      {/* Registration status + toggle */}
       <div className="surface-elevated p-5">
         <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="text-sm font-semibold text-[var(--text-primary)]">Registration Link</div>
-            <div className="text-xs text-[var(--text-muted)] mt-0.5">Share this with teams so they can apply</div>
+          <div className="flex items-center gap-3">
+            <div className={`w-2.5 h-2.5 rounded-full ${tournament.registration_open ? 'bg-[var(--accent)] animate-pulse' : 'bg-[var(--text-muted)]/30'}`} />
+            <div>
+              <div className="text-sm font-semibold text-[var(--text-primary)]">
+                Registration {tournament.registration_open ? 'Open' : 'Closed'}
+              </div>
+              <div className="text-xs text-[var(--text-muted)] mt-0.5">
+                {tournament.registration_open
+                  ? 'Teams can apply via the link below'
+                  : 'The registration link is disabled — no one can access it'}
+              </div>
+            </div>
           </div>
-          <button onClick={copyRegistrationLink} className="btn-primary text-xs px-4 py-2">
-            {linkCopied ? 'Copied!' : 'Copy Link'}
-          </button>
+          <div className="flex items-center gap-2">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={tournament.registration_open ?? true}
+                onChange={(e) => setTournament((t) => t ? { ...t, registration_open: e.target.checked } : t)}
+                className="sr-only peer" />
+              <div className="w-10 h-6 rounded-full bg-[var(--bg-base)] border border-[var(--border)] peer-checked:bg-[var(--accent)]/15 peer-checked:border-[var(--accent-border)] transition-all" />
+              <div className="absolute top-1 left-1 w-4 h-4 rounded-full bg-[var(--text-muted)] peer-checked:bg-[var(--accent)] peer-checked:translate-x-4 transition-all" />
+            </label>
+            <button onClick={updateRegistrationSettings} className="btn-primary text-xs px-3 py-1.5">Save</button>
+          </div>
         </div>
-        <div className="bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm font-mono text-[var(--text-secondary)] truncate select-all">
-          {typeof window !== 'undefined' ? `${window.location.origin}/apply/${tournament.id}` : `/apply/${tournament.id}`}
-        </div>
+
+        {/* Link — only shown when open */}
+        {tournament.registration_open && (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-[var(--text-muted)]">Registration Link</span>
+              <button onClick={copyRegistrationLink} className="btn-ghost text-xs px-3 py-1">
+                {linkCopied ? 'Copied!' : 'Copy'}
+              </button>
+            </div>
+            <div className="bg-[var(--bg-base)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm font-mono text-[var(--text-secondary)] truncate select-all">
+              {typeof window !== 'undefined' ? `${window.location.origin}/apply/${tournament.id}` : `/apply/${tournament.id}`}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Registration settings */}
-      <div className="surface-elevated p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <div className="text-sm font-semibold text-[var(--text-primary)]">Registration Settings</div>
-            <div className="text-xs text-[var(--text-muted)] mt-0.5">Control how teams can register</div>
+      {tournament.registration_open && (
+        <div className="surface-elevated p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-sm font-semibold text-[var(--text-primary)]">Registration Settings</div>
+              <div className="text-xs text-[var(--text-muted)] mt-0.5">Control how teams can register</div>
+            </div>
+            <button onClick={updateRegistrationSettings} className="btn-primary text-xs px-4 py-2">Save Settings</button>
           </div>
-          <button onClick={updateRegistrationSettings} className="btn-primary text-xs px-4 py-2">Save Settings</button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="label">Registration Mode</label>
-            <select value={tournament.registration_mode}
-              onChange={(e) => setTournament((t) => t ? { ...t, registration_mode: e.target.value as 'open' | 'cap' | 'pick_first' } : t)}
-              className="input-premium w-full">
-              <option value="open">Open — accept all teams</option>
-              <option value="cap">Capped — close after limit</option>
-              <option value="pick_first">Review — you choose</option>
-            </select>
-          </div>
-          <div>
-            <label className="label">Max Teams {tournament.registration_mode === 'open' && <span className="text-[var(--text-muted)]">(ignored)</span>}</label>
-            <input type="number" min={0} value={tournament.registration_limit ?? ''}
-              onChange={(e) => setTournament((t) => t ? { ...t, registration_limit: e.target.value === '' ? null : Number(e.target.value) } : t)}
-              placeholder="e.g. 60" className="input-premium w-full" />
-          </div>
-          <div className="flex items-end pb-1">
-            <label className="flex items-center gap-3 cursor-pointer p-3 rounded-lg border border-[var(--border)] hover:bg-[var(--bg-hover)] transition-colors w-full">
-              <div className="relative flex-shrink-0">
-                <input type="checkbox" checked={tournament.registration_open ?? true}
-                  onChange={(e) => setTournament((t) => t ? { ...t, registration_open: e.target.checked } : t)}
-                  className="sr-only peer" />
-                <div className="w-10 h-6 rounded-full bg-[var(--bg-base)] border border-[var(--border)] peer-checked:bg-[var(--accent)]/15 peer-checked:border-[var(--accent-border)] transition-all" />
-                <div className="absolute top-1 left-1 w-4 h-4 rounded-full bg-[var(--text-muted)] peer-checked:bg-[var(--accent)] peer-checked:translate-x-4 transition-all" />
-              </div>
-              <span className="text-sm font-medium text-[var(--text-primary)]">{tournament.registration_open ? 'Open' : 'Closed'}</span>
-            </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="label">Registration Mode</label>
+              <select value={tournament.registration_mode}
+                onChange={(e) => setTournament((t) => t ? { ...t, registration_mode: e.target.value as 'open' | 'cap' | 'pick_first' } : t)}
+                className="input-premium w-full">
+                <option value="open">Open — accept all teams</option>
+                <option value="cap">Capped — close after limit</option>
+                <option value="pick_first">Review — you choose</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">Max Teams {tournament.registration_mode === 'open' && <span className="text-[var(--text-muted)]">(ignored)</span>}</label>
+              <input type="number" min={0} value={tournament.registration_limit ?? ''}
+                onChange={(e) => setTournament((t) => t ? { ...t, registration_limit: e.target.value === '' ? null : Number(e.target.value) } : t)}
+                placeholder="e.g. 60" className="input-premium w-full" />
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Bulk actions (review mode) */}
       {tournament.registration_mode === 'pick_first' && pendingApps.length > 0 && (
