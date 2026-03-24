@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { PALETTES } from '@/components/TopPlayersWidget';
+import { useGlobalTheme } from '@/hooks/useGlobalTheme';
 
 interface Team {
   teamName: string;
@@ -32,149 +34,132 @@ export default function WwcdOverlay() {
   const [winner, setWinner] = useState<Team | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [show, setShow] = useState(false);
-  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
-  const [sponsors, setSponsors] = useState<string[]>([]);
+  const themeIdx = useGlobalTheme();
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(r => {
-      const d = r?.data ?? r;
-      setTheme(d);
-      if (Array.isArray(d.sponsors)) setSponsors(d.sponsors.filter(Boolean));
-    }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => { const d = (raw?.data ?? raw) as LiveData;
-      if (d.phase === 'finished' && d.teams.length > 0) {
-        // Winner is first team (already sorted by points)
+    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => {
+      const d = (raw?.data ?? raw) as LiveData;
+      if (d.teams.length > 0) {
         const winTeam = d.teams[0];
         setWinner(winTeam);
-
-        // Get winner's players
         const teamPlayers = (d.players || [])
-          .filter(p => p.teamName === winTeam.teamName)
+          .filter(pl => pl.teamName === winTeam.teamName)
           .sort((a, b) => b.kills - a.kills);
         setPlayers(teamPlayers);
         setTimeout(() => setShow(true), 200);
       }
     }).catch(() => {});
-
     poll();
     const id = setInterval(poll, 2000);
     return () => clearInterval(id);
   }, []);
 
-  if (!winner) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
+  if (!winner) return null;
 
-  const accent = theme.accent_color || '#60a5fa';
+  const p = PALETTES[themeIdx];
   const name = winner.displayName || winner.teamName;
-  const color = winner.brandColor || accent;
+  const color = winner.brandColor || p.accent;
 
   return (
-    <div
-      className={`fixed inset-0 flex flex-col items-center justify-center transition-all duration-1000 ${
-        show ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
-      }`}
-      style={{ fontFamily: 'Inter, sans-serif' }}
-    >
-      {/* Tournament Label */}
-      <div
-        className="text-[10px] font-bold uppercase tracking-[0.3em] px-4 py-1 rounded mb-3"
-        style={{ background: accent, color: '#000' }}
-      >
-        PUBG MOBILE TOURNAMENT
-      </div>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        body { background: transparent !important; margin: 0; overflow: hidden; }
+      `}} />
 
-      {/* WINNER WINNER CHICKEN DINNER */}
-      <h1
-        className="text-5xl font-black uppercase tracking-wider mb-6"
-        style={{
-          color: accent,
-          textShadow: `0 0 40px ${accent}44, 0 0 80px ${accent}22`,
-        }}
-      >
-        WINNER WINNER CHICKEN DINNER
-      </h1>
+      <div style={{
+        position: 'fixed', inset: 0,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'Inter', sans-serif",
+        opacity: show ? 1 : 0, transform: show ? 'scale(1)' : 'scale(0.9)',
+        transition: 'all 1s ease',
+      }}>
+        {/* Tournament Label */}
+        <div style={{
+          fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.3em',
+          padding: '5px 18px', borderRadius: 100,
+          background: p.accent, color: p.cardBg,
+          marginBottom: 12,
+        }}>
+          PUBG MOBILE TOURNAMENT
+        </div>
 
-      {/* Player Silhouettes Row */}
-      <div className="flex items-end gap-6 mb-6">
-        {players.slice(0, 4).map((p, i) => (
-          <div key={i} className="flex flex-col items-center">
-            <div
-              className="w-[120px] h-[140px] rounded-xl flex items-center justify-center mb-2"
-              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
-            >
-              <svg width="60" height="80" viewBox="0 0 60 80" fill="none">
-                <circle cx="30" cy="20" r="14" fill="rgba(255,255,255,0.15)" />
-                <path d="M8 75C8 55 15 42 30 42C45 42 52 55 52 75" fill="rgba(255,255,255,0.1)" />
-              </svg>
+        {/* WWCD Title */}
+        <h1 style={{
+          fontFamily: "'Space Grotesk', sans-serif",
+          fontSize: 52, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em',
+          color: p.accent,
+          textShadow: `0 0 40px ${p.accent}44, 0 0 80px ${p.accent}22`,
+          margin: '0 0 24px',
+        }}>
+          WINNER WINNER CHICKEN DINNER
+        </h1>
+
+        {/* Player Silhouettes */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 24, marginBottom: 24 }}>
+          {players.slice(0, 4).map((pl, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{
+                width: 120, height: 140, borderRadius: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 8,
+                background: p.bg, border: '1px solid ' + p.separator,
+              }}>
+                <svg width="60" height="80" viewBox="0 0 60 80" fill="none">
+                  <circle cx="30" cy="20" r="14" fill={p.textMuted + '33'} />
+                  <path d="M8 75C8 55 15 42 30 42C45 42 52 55 52 75" fill={p.textMuted + '22'} />
+                </svg>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 700, color: p.text }}>{pl.displayName || pl.playerName}</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: p.accent }}>{pl.kills} ELIMS</span>
             </div>
-            <span className="text-white text-xs font-semibold">{p.displayName || p.playerName}</span>
-            <span className="text-[10px] font-bold" style={{ color: accent }}>{p.kills} ELIMS</span>
-          </div>
-        ))}
-      </div>
-
-      {/* Team Name */}
-      <div className="flex items-center gap-3 mb-6">
-        {winner.logoPath ? (
-          <img src={winner.logoPath} alt="" className="w-10 h-10 rounded-lg object-contain" />
-        ) : (
-          <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-lg font-black"
-            style={{ background: color + '33', color }}
-          >
-            {(winner.shortName || name).substring(0, 2).toUpperCase()}
-          </div>
-        )}
-        <span className="text-2xl font-bold text-white">{name}</span>
-      </div>
-
-      {/* Stats Row */}
-      <div className="flex items-center gap-0 rounded-xl overflow-hidden" style={{ border: `2px solid ${accent}33` }}>
-        {[
-          { label: 'WWCD', value: '1' },
-          { label: 'TOTAL ELIMS', value: String(winner.kills) },
-          { label: 'PLACEMENT PTS', value: String(winner.placementPoints) },
-          { label: 'TOTAL POINTS', value: String(winner.totalPoints) },
-        ].map((stat, i) => (
-          <div
-            key={i}
-            className="px-8 py-3 text-center"
-            style={{
-              background: i === 0 ? accent : 'rgba(10,10,26,0.9)',
-              color: i === 0 ? '#000' : '#fff',
-              borderLeft: i > 0 ? `1px solid ${accent}22` : 'none',
-            }}
-          >
-            <div
-              className="text-[10px] font-bold uppercase tracking-wider mb-1"
-              style={{ color: i === 0 ? '#000' : '#8b8da6' }}
-            >
-              {stat.label}
-            </div>
-            <div className="text-2xl font-black">{stat.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Sponsor strip */}
-      {sponsors.length > 0 && (
-        <div className="flex items-center gap-3 mt-6">
-          <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>
-            Presented by
-          </span>
-          <div style={{ width: 1, height: 20, background: `${accent}44` }} />
-          {sponsors.map((url, i) => (
-            <img key={i} src={url} alt={`Sponsor ${i + 1}`}
-              style={{ height: 28, width: 'auto', maxWidth: 100, objectFit: 'contain', opacity: 0.8 }} />
           ))}
         </div>
-      )}
 
-      <style jsx global>{`
-        body { background: transparent !important; margin: 0; overflow: hidden; }
-      `}</style>
-    </div>
+        {/* Team Name */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          {winner.logoPath ? (
+            <img src={winner.logoPath} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'contain' }} />
+          ) : (
+            <div style={{
+              width: 40, height: 40, borderRadius: 8,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 18, fontWeight: 900,
+              background: color + '33', color,
+            }}>{(winner.shortName || name).substring(0, 2)}</div>
+          )}
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 800, color: p.text }}>{name}</span>
+        </div>
+
+        {/* Stats Row */}
+        <div style={{
+          display: 'flex', borderRadius: 12, overflow: 'hidden',
+          border: '2px solid ' + p.accent + '33',
+        }}>
+          {[
+            { label: 'WWCD', value: '1' },
+            { label: 'TOTAL ELIMS', value: String(winner.kills) },
+            { label: 'PLACEMENT PTS', value: String(winner.placementPoints) },
+            { label: 'TOTAL POINTS', value: String(winner.totalPoints) },
+          ].map((stat, i) => (
+            <div key={i} style={{
+              padding: '12px 32px', textAlign: 'center',
+              background: i === 0 ? p.accent : p.cardBg,
+              color: i === 0 ? p.cardBg : p.text,
+              borderLeft: i > 0 ? '1px solid ' + p.separator : 'none',
+            }}>
+              <div style={{
+                fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+                color: i === 0 ? p.cardBg : p.textMuted, marginBottom: 4,
+              }}>{stat.label}</div>
+              <div style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: 24, fontWeight: 900,
+              }}>{stat.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }

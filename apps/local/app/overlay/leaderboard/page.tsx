@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { PALETTES } from '@/components/TopPlayersWidget';
+import { useGlobalTheme } from '@/hooks/useGlobalTheme';
 
 interface Team {
   teamName: string;
@@ -23,25 +25,18 @@ interface LiveData {
 
 export default function LeaderboardOverlay() {
   const [data, setData] = useState<LiveData | null>(null);
-  const [theme, setTheme] = useState({ bg_color: '#0a0a1a', accent_color: '#60a5fa' });
+  const themeIdx = useGlobalTheme();
   const prevPoints = useRef<Record<string, number>>({});
   const [flashing, setFlashing] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
-  }, []);
-
-  useEffect(() => {
     const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => {
       const d = (raw?.data ?? raw) as LiveData;
-      // Detect point changes for flash animation
       const newFlash: Record<string, boolean> = {};
       for (const t of d.teams) {
         const key = t.displayName || t.teamName;
         const prev = prevPoints.current[key];
-        if (prev !== undefined && prev !== t.totalPoints) {
-          newFlash[key] = true;
-        }
+        if (prev !== undefined && prev !== t.totalPoints) newFlash[key] = true;
         prevPoints.current[key] = t.totalPoints;
       }
       if (Object.keys(newFlash).length > 0) {
@@ -50,7 +45,6 @@ export default function LeaderboardOverlay() {
       }
       setData(d);
     }).catch(() => {});
-
     poll();
     const id = setInterval(poll, 1000);
     return () => clearInterval(id);
@@ -58,139 +52,133 @@ export default function LeaderboardOverlay() {
 
   if (!data || data.teams.length === 0) return null;
 
-  const accent = theme.accent_color || '#60a5fa';
+  const p = PALETTES[themeIdx];
   const teams = data.teams.slice(0, 16);
 
-  return (
-    <div
-      className="fixed top-0 right-0 w-[420px] h-[1080px] flex flex-col"
-      style={{ fontFamily: 'Inter, sans-serif' }}
-    >
-      {/* Header */}
-      <div
-        className="flex items-center justify-between px-4 py-2"
-        style={{ background: accent, color: '#000' }}
-      >
-        <span className="text-xs font-black uppercase tracking-wider">TEAMS</span>
-        <div className="flex items-center gap-6 text-[10px] font-bold uppercase tracking-wider">
-          <span>PLAYERS</span>
-          <span className="w-8 text-center">PTS</span>
-          <span className="w-8 text-center">ELIMS</span>
-        </div>
-      </div>
+  const renderAliveDots = (alive: number) => (
+    <div style={{ display: 'flex', gap: 2 }}>
+      {[...Array(4)].map((_, i) => (
+        <div key={i} style={{
+          width: 3, height: 14, borderRadius: 1,
+          background: i < alive ? p.accent : 'rgba(255,255,255,0.1)',
+        }} />
+      ))}
+    </div>
+  );
 
-      {/* Team Rows */}
-      <div className="flex-1 flex flex-col">
+  return (
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        body { background: transparent !important; margin: 0; overflow: hidden; }
+      `}} />
+
+      <div style={{
+        position: 'fixed', top: 0, right: 0,
+        width: 420, height: '100vh',
+        display: 'flex', flexDirection: 'column',
+        fontFamily: "'Inter', sans-serif",
+      }}>
+        {/* Header */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '32px 1fr 50px 40px 50px',
+          padding: '10px 12px',
+          background: p.accent,
+          fontSize: 10, fontWeight: 800, color: p.cardBg,
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>
+          <span style={{ textAlign: 'center' }}>#</span>
+          <span>TEAMS</span>
+          <span style={{ textAlign: 'center' }}>ALIVE</span>
+          <span style={{ textAlign: 'center' }}>PTS</span>
+          <span style={{ textAlign: 'center' }}>ELIM</span>
+        </div>
+
+        {/* Team Rows */}
         {teams.map((team, i) => {
           const name = team.displayName || team.teamName;
-          const short = team.shortName || name.substring(0, 4).toUpperCase();
-          const color = team.brandColor || '#ffffff';
           const isFlash = flashing[name];
-          const isEliminated = !team.alive && team.liveMemberNum === 0;
+          const isElim = !team.alive && team.liveMemberNum === 0;
           const rank = i + 1;
 
           return (
-            <div
-              key={name}
-              className="flex items-center gap-0 border-b transition-all duration-300"
-              style={{
-                borderColor: 'rgba(255,255,255,0.06)',
-                background: isFlash
-                  ? `${accent}22`
-                  : isEliminated
-                  ? 'rgba(255,0,0,0.05)'
-                  : i % 2 === 0
-                  ? 'rgba(10,10,26,0.92)'
-                  : 'rgba(15,15,35,0.92)',
-                opacity: isEliminated ? 0.5 : 1,
-              }}
-            >
+            <div key={name} style={{
+              display: 'grid', gridTemplateColumns: '32px 1fr 50px 40px 50px',
+              alignItems: 'center',
+              padding: '0 12px',
+              height: 42,
+              background: isFlash ? p.accent + '22' : (i % 2 === 0 ? p.cardBg : p.bg),
+              borderBottom: '1px solid ' + p.separator,
+              opacity: isElim ? 0.4 : 1,
+              filter: isElim ? 'grayscale(80%)' : 'none',
+              transition: 'background 0.3s',
+            }}>
               {/* Rank */}
-              <div
-                className="w-8 flex items-center justify-center text-xs font-black flex-shrink-0"
-                style={{
-                  color: rank <= 3 ? '#000' : '#fff',
-                  background:
-                    rank === 1 ? accent
-                    : rank === 2 ? '#ef6b6b'
-                    : rank === 3 ? '#f0b940'
-                    : 'transparent',
-                }}
-              >
-                {rank}
-              </div>
+              <div style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: 14, fontWeight: 900, textAlign: 'center',
+                color: rank <= 3 ? p.accent : p.textMuted,
+              }}>{rank}</div>
 
-              {/* Team Color Bar */}
-              <div className="w-1 h-full flex-shrink-0" style={{ background: color }} />
-
-              {/* Logo + Name */}
-              <div className="flex items-center gap-2 flex-1 min-w-0 px-2 py-[6px]">
+              {/* Team */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                <div style={{
+                  width: 3, height: 22, borderRadius: 1, flexShrink: 0,
+                  background: team.brandColor || p.textMuted,
+                }} />
                 {team.logoPath ? (
-                  <img src={team.logoPath} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />
+                  <img src={team.logoPath} alt="" style={{ width: 22, height: 22, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
                 ) : (
-                  <div
-                    className="w-6 h-6 rounded flex items-center justify-center text-[8px] font-black flex-shrink-0"
-                    style={{ background: color + '33', color }}
-                  >
-                    {short.substring(0, 2)}
-                  </div>
+                  <div style={{
+                    width: 22, height: 22, borderRadius: 4, flexShrink: 0,
+                    background: (team.brandColor || '#fff') + '22',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 8, fontWeight: 900, color: team.brandColor || p.text,
+                  }}>{(team.shortName || name).substring(0, 2)}</div>
                 )}
-                <span className="text-white text-xs font-semibold truncate">{name}</span>
+                <span style={{
+                  fontSize: 12, fontWeight: 700, color: p.text,
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                }}>{name}</span>
               </div>
 
-              {/* Player Status (4 bars) */}
-              <div className="flex items-center gap-[2px] px-2">
-                {Array.from({ length: 4 }, (_, pi) => {
-                  // Get alive count from liveMemberNum
-                  const isAlive = pi < team.liveMemberNum;
-                  return (
-                    <div
-                      key={pi}
-                      className="w-[3px] h-[14px] rounded-sm"
-                      style={{
-                        background: isAlive ? accent : 'rgba(239,107,107,0.4)',
-                      }}
-                    />
-                  );
-                })}
+              {/* Alive */}
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                {renderAliveDots(team.liveMemberNum)}
               </div>
 
               {/* Points */}
-              <div
-                className="w-8 text-center text-xs font-black flex-shrink-0"
-                style={{ color: isFlash ? accent : '#fff' }}
-              >
-                {team.totalPoints}
-              </div>
+              <div style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                textAlign: 'center', fontSize: 14, fontWeight: 900,
+                color: isFlash ? p.accent : p.text,
+              }}>{team.totalPoints}</div>
 
-              {/* Elims */}
-              <div className="w-8 text-center text-xs font-bold flex-shrink-0 pr-2" style={{ color: '#8b8da6' }}>
-                {team.kills}
-              </div>
+              {/* Kills */}
+              <div style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                textAlign: 'center', fontSize: 12, fontWeight: 700,
+                color: p.textMuted,
+              }}>{team.kills}</div>
             </div>
           );
         })}
-      </div>
 
-      {/* Footer Legend */}
-      <div
-        className="flex items-center justify-center gap-4 px-4 py-1.5 text-[9px] uppercase tracking-wider"
-        style={{ background: 'rgba(10,10,26,0.95)', color: '#8b8da6' }}
-      >
-        <span className="flex items-center gap-1">
-          <span className="w-[3px] h-[10px] rounded-sm" style={{ background: accent }} /> ALIVE
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-[3px] h-[10px] rounded-sm" style={{ background: 'rgba(239,107,107,0.4)' }} /> KNOCKED
-        </span>
-        <span className="flex items-center gap-1">
-          <span className="w-[3px] h-[10px] rounded-sm" style={{ background: 'rgba(255,255,255,0.1)' }} /> DEAD
-        </span>
+        {/* Footer */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16,
+          padding: '6px 12px',
+          background: p.cardBg, borderTop: '1px solid ' + p.separator,
+          fontSize: 9, fontWeight: 700, color: p.textMuted, textTransform: 'uppercase', letterSpacing: '0.1em',
+        }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ width: 3, height: 10, borderRadius: 1, background: p.accent }} /> ALIVE
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ width: 3, height: 10, borderRadius: 1, background: 'rgba(255,255,255,0.1)' }} /> DEAD
+          </span>
+        </div>
       </div>
-
-      <style jsx global>{`
-        body { background: transparent !important; margin: 0; overflow: hidden; }
-      `}</style>
-    </div>
+    </>
   );
 }

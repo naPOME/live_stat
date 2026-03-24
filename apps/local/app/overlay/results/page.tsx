@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { PALETTES } from '@/components/TopPlayersWidget';
+import { useGlobalTheme } from '@/hooks/useGlobalTheme';
 
 interface Team {
   teamName: string;
@@ -22,129 +24,133 @@ interface LiveData {
 
 export default function ResultsOverlay() {
   const [teams, setTeams] = useState<Team[]>([]);
-  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
   const [show, setShow] = useState(false);
+  const themeIdx = useGlobalTheme();
 
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => { const d = (raw?.data ?? raw) as LiveData;
+    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => {
+      const d = (raw?.data ?? raw) as LiveData;
       if (d.teams.length > 0) {
         setTeams(d.teams);
         if (!show) setTimeout(() => setShow(true), 300);
       }
     }).catch(() => {});
-
     poll();
     const id = setInterval(poll, 3000);
     return () => clearInterval(id);
   }, [show]);
 
-  if (teams.length === 0) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
+  if (teams.length === 0) return null;
 
-  const accent = theme.accent_color || '#60a5fa';
-
-  // Split into two columns
+  const p = PALETTES[themeIdx];
   const half = Math.ceil(teams.length / 2);
   const leftTeams = teams.slice(0, half);
   const rightTeams = teams.slice(half);
 
-  function renderRow(team: Team, rank: number) {
-    const name = team.displayName || team.teamName;
-    const short = team.shortName || name.substring(0, 3).toUpperCase();
-    const color = team.brandColor || '#ffffff';
-
+  function renderColumn(columnTeams: Team[], startRank: number) {
     return (
-      <div
-        key={name}
-        className="flex items-center gap-0 border-b"
-        style={{
-          borderColor: 'rgba(255,255,255,0.06)',
-          background: rank % 2 === 0 ? 'rgba(15,15,35,0.95)' : 'rgba(10,10,26,0.95)',
-        }}
-      >
-        {/* Rank */}
-        <div
-          className="w-7 flex items-center justify-center text-[11px] font-black flex-shrink-0 py-2"
-          style={{
-            color: rank <= 3 ? '#000' : '#fff',
-            background: rank === 1 ? accent : rank === 2 ? '#ef6b6b' : rank === 3 ? '#f0b940' : 'transparent',
-          }}
-        >
-          #{rank}
+      <div style={{
+        flex: 1, borderRadius: 12, overflow: 'hidden',
+        border: '1px solid ' + p.separator,
+      }}>
+        {/* Column Header */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: '32px 1fr 44px 50px',
+          padding: '8px 12px',
+          background: p.accent,
+          fontSize: 9, fontWeight: 800, color: p.cardBg,
+          textTransform: 'uppercase', letterSpacing: '0.08em',
+        }}>
+          <span style={{ textAlign: 'center' }}>#</span>
+          <span>TEAM</span>
+          <span style={{ textAlign: 'center' }}>ELIMS</span>
+          <span style={{ textAlign: 'center' }}>TOTAL</span>
         </div>
 
-        {/* Color bar */}
-        <div className="w-[3px] self-stretch flex-shrink-0" style={{ background: color }} />
+        {columnTeams.map((team, i) => {
+          const name = team.displayName || team.teamName;
+          const rank = startRank + i;
 
-        {/* Logo + Team */}
-        <div className="flex items-center gap-2 flex-1 min-w-0 px-2 py-1.5">
-          {team.logoPath ? (
-            <img src={team.logoPath} alt="" className="w-5 h-5 rounded object-cover flex-shrink-0" />
-          ) : (
-            <div className="w-5 h-5 rounded flex items-center justify-center text-[7px] font-black flex-shrink-0"
-              style={{ background: color + '33', color }}>{short.substring(0, 2)}</div>
-          )}
-          <span className="text-white text-[11px] font-semibold truncate">{name}</span>
-        </div>
+          return (
+            <div key={name} style={{
+              display: 'grid', gridTemplateColumns: '32px 1fr 44px 50px',
+              alignItems: 'center',
+              padding: '0 12px',
+              height: 38,
+              background: rank % 2 === 0 ? p.bg : p.cardBg,
+              borderBottom: '1px solid ' + p.separator,
+            }}>
+              <div style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontSize: 12, fontWeight: 900, textAlign: 'center',
+                color: rank <= 3 ? p.accent : p.textMuted,
+              }}>#{rank}</div>
 
-        {/* Elims */}
-        <div className="w-10 text-center text-[11px] font-bold text-[#8b8da6] flex-shrink-0">
-          {team.kills}
-        </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+                <div style={{
+                  width: 3, height: 18, borderRadius: 1, flexShrink: 0,
+                  background: team.brandColor || '#fff',
+                }} />
+                {team.logoPath ? (
+                  <img src={team.logoPath} alt="" style={{ width: 20, height: 20, borderRadius: 4, objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{
+                    width: 20, height: 20, borderRadius: 4, flexShrink: 0,
+                    background: (team.brandColor || '#fff') + '22',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 7, fontWeight: 900, color: team.brandColor || p.text,
+                  }}>{(team.shortName || name).substring(0, 2)}</div>
+                )}
+                <span style={{ fontSize: 11, fontWeight: 700, color: p.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</span>
+              </div>
 
-        {/* Total */}
-        <div className="w-10 text-center text-[11px] font-black text-white flex-shrink-0 pr-2">
-          {team.totalPoints}
-        </div>
+              <div style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                textAlign: 'center', fontSize: 11, fontWeight: 700, color: p.textMuted,
+              }}>{team.kills}</div>
+
+              <div style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                textAlign: 'center', fontSize: 13, fontWeight: 900,
+                color: rank <= 3 ? p.accent : p.text,
+              }}>{team.totalPoints}</div>
+            </div>
+          );
+        })}
       </div>
     );
   }
 
   return (
-    <div
-      className={`fixed inset-0 flex flex-col items-center justify-center p-8 transition-all duration-700 ${
-        show ? 'opacity-100' : 'opacity-0'
-      }`}
-      style={{ fontFamily: 'Inter, sans-serif' }}
-    >
-      {/* Title */}
-      <div className="text-center mb-4">
-        <div className="text-3xl font-black text-white uppercase tracking-wider">MATCH STATS</div>
-      </div>
-
-      {/* Two-column table */}
-      <div className="flex gap-4 w-full max-w-[900px]">
-        {/* Left */}
-        <div className="flex-1 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div className="flex items-center px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider text-[#8b8da6]"
-            style={{ background: accent, color: '#000' }}>
-            <span className="w-7 text-center">#</span>
-            <span className="flex-1 px-2">TEAM</span>
-            <span className="w-10 text-center">ELIMS</span>
-            <span className="w-10 text-center pr-2">TOTAL</span>
-          </div>
-          {leftTeams.map((t, i) => renderRow(t, i + 1))}
-        </div>
-
-        {/* Right */}
-        <div className="flex-1 rounded-xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div className="flex items-center px-2 py-1.5 text-[9px] font-bold uppercase tracking-wider"
-            style={{ background: accent, color: '#000' }}>
-            <span className="w-7 text-center">#</span>
-            <span className="flex-1 px-2">TEAM</span>
-            <span className="w-10 text-center">ELIMS</span>
-            <span className="w-10 text-center pr-2">TOTAL</span>
-          </div>
-          {rightTeams.map((t, i) => renderRow(t, half + i + 1))}
-        </div>
-      </div>
-
-      <style jsx global>{`
+    <>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
         body { background: transparent !important; margin: 0; overflow: hidden; }
-      `}</style>
-    </div>
+      `}} />
+
+      <div style={{
+        position: 'fixed', inset: 0,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        padding: 48,
+        fontFamily: "'Inter', sans-serif",
+        opacity: show ? 1 : 0,
+        transition: 'opacity 0.7s ease',
+      }}>
+        {/* Title */}
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <div style={{
+            fontSize: 32, fontWeight: 900, color: p.text,
+            fontFamily: "'Space Grotesk', sans-serif",
+            textTransform: 'uppercase', letterSpacing: '0.05em',
+          }}>MATCH RESULTS</div>
+        </div>
+
+        {/* Two-column table */}
+        <div style={{ display: 'flex', gap: 16, width: '100%', maxWidth: 900 }}>
+          {renderColumn(leftTeams, 1)}
+          {renderColumn(rightTeams, half + 1)}
+        </div>
+      </div>
+    </>
   );
 }
