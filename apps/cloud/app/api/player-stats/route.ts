@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   if (!profile?.org_id) return NextResponse.json({ error: 'No org' }, { status: 403 });
 
   // Get all teams in org
-  const { data: teams } = await supabase.from('teams').select('id, name, short_name, brand_color, logo_url').eq('org_id', profile.org_id);
+  const { data: teams } = await supabase.from('teams').select('id, name, short_name, logo_url').eq('org_id', profile.org_id);
   const teamMap = new Map((teams ?? []).map((t) => [t.id, t]));
   const teamIds = (teams ?? []).map((t) => t.id);
   if (teamIds.length === 0) return NextResponse.json({ players: [] });

@@ -14,6 +14,9 @@ export async function GET(request: NextRequest) {
 
   // SSE stream
   const encoder = new TextEncoder();
+  let pingTimer: NodeJS.Timeout;
+  let unsub: (() => void) | null = null;
+
   const stream = new ReadableStream({
     start(controller) {
       const send = (data: unknown) => {
@@ -25,16 +28,16 @@ export async function GET(request: NextRequest) {
       // Send current state
       send(getVisibility());
 
-      const unsub = subscribeWidgets(() => send(getVisibility()));
+      unsub = subscribeWidgets(() => send(getVisibility()));
 
-      const ping = setInterval(() => {
+      pingTimer = setInterval(() => {
         try { controller.enqueue(encoder.encode(`event: ping\ndata: {}\n\n`)); }
-        catch { clearInterval(ping); }
+        catch { clearInterval(pingTimer); }
       }, 10000);
-
-      // Cleanup on close
-      const origClose = controller.close.bind(controller);
-      controller.close = () => { clearInterval(ping); unsub(); origClose(); };
+    },
+    cancel() {
+      clearInterval(pingTimer);
+      unsub?.();
     },
   });
 

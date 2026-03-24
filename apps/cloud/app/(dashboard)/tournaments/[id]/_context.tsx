@@ -249,7 +249,7 @@ export function TournamentProvider({ children, tournamentId: id, initialTourname
       supabase.from('matches').select('id, stage_id, group_id, name, map_name, status, point_system_id, scheduled_at, created_at').in('stage_id', stageIds),
       includeGroups
         ? supabase.from('stage_groups')
-            .select('id, stage_id, name, group_order, team_count, created_at, group_teams(team_id, teams(id, name, short_name, logo_url, brand_color))')
+            .select('id, stage_id, name, group_order, team_count, created_at, group_teams(team_id, teams(id, name, short_name, logo_url))')
             .in('stage_id', stageIds)
             .order('group_order')
         : Promise.resolve({ data: [] as GroupWithTeams[] }),
@@ -584,7 +584,7 @@ export function TournamentProvider({ children, tournamentId: id, initialTourname
 
     for (const app of toAccept) {
       const { data: team, error: teamError } = await supabase.from('teams')
-        .insert({ org_id: profile.org_id, name: app.team_name, short_name: app.short_name || null, brand_color: app.brand_color, logo_url: app.logo_url || null })
+        .insert({ org_id: profile.org_id, name: app.team_name, short_name: app.short_name || null, logo_url: app.logo_url || null })
         .select('id').single();
       if (teamError || !team) continue;
       await supabase.from('tournament_teams').upsert({ tournament_id: id, team_id: team.id }, { onConflict: 'tournament_id,team_id' });

@@ -17,13 +17,13 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
 
   const { data: player } = await supabase
     .from('players')
-    .select('id, display_name, player_open_id, team_id, teams(id, name, short_name, brand_color, logo_url, org_id)')
+    .select('id, display_name, player_open_id, team_id, teams(id, name, short_name, logo_url, org_id)')
     .eq('id', id)
     .single();
 
   if (!player) notFound();
 
-  const team = Array.isArray(player.teams) ? player.teams[0] : player.teams as { id: string; name: string; short_name: string | null; brand_color: string; logo_url: string | null; org_id: string } | null;
+  const team = Array.isArray(player.teams) ? player.teams[0] : player.teams as { id: string; name: string; short_name: string | null; logo_url: string | null; org_id: string } | null;
   if (!team || team.org_id !== profile.org_id) notFound();
 
   const { data: orgTournaments } = await supabase
@@ -68,7 +68,7 @@ export default async function PlayerProfilePage({ params }: { params: Promise<{ 
   const playedTournamentIds = new Set([...matchIdSet].map((mid) => tournamentMatchMap.get(mid)).filter(Boolean));
   const playedTournaments = (orgTournaments ?? []).filter((t) => playedTournamentIds.has(t.id));
 
-  const accent = team.brand_color;
+  const accent = '#2F6B3F';
 
   return (
     <div className="max-w-5xl mx-auto page-enter">

@@ -159,7 +159,12 @@ export async function pushMatchResult(): Promise<SyncResult> {
 
   // Resolve match_id: cycle through match_ids for multi-match sessions
   const lifecycle = getLifecycleState();
-  const matchId = roster.match_ids?.[lifecycle.matchNumber - 1] ?? roster.match_id;
+  const matchIds = roster.match_ids;
+  if (matchIds && lifecycle.matchNumber > matchIds.length) {
+    console.error(`[CloudSync] Match #${lifecycle.matchNumber} exceeds available match_ids (${matchIds.length}). Skipping sync.`);
+    return { ok: false, error: `No match_id for match #${lifecycle.matchNumber} (only ${matchIds.length} configured)` };
+  }
+  const matchId = matchIds?.[lifecycle.matchNumber - 1] ?? roster.match_id;
 
   const body: MatchResult = {
     tournament_id: roster.tournament_id,

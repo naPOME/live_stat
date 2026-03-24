@@ -12,7 +12,7 @@ export default async function TeamsPage() {
   if (!profile?.org_id) return <SetupOrgPrompt />;
 
   const [{ data: teams }, { count }] = await Promise.all([
-    supabase.from('teams').select('id, org_id, name, short_name, logo_url, brand_color, created_at').eq('org_id', profile.org_id).order('name'),
+    supabase.from('teams').select('id, org_id, name, short_name, logo_url, created_at').eq('org_id', profile.org_id).order('name'),
     supabase.from('tournaments').select('*', { count: 'exact', head: true }).eq('status', 'active'),
   ]);
 

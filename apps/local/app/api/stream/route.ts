@@ -36,11 +36,11 @@ export async function GET(req: NextRequest) {
 
   const encoder = new TextEncoder();
 
+  let pingTimer: NodeJS.Timeout;
+  const unsubs: Array<() => void> = [];
+
   const stream = new ReadableStream({
     start(controller) {
-      const unsubs: Array<() => void> = [];
-      let pingTimer: NodeJS.Timeout;
-
       const send = (event: string, data: unknown) => {
         try {
           controller.enqueue(
@@ -67,17 +67,10 @@ export async function GET(req: NextRequest) {
           clearInterval(pingTimer);
         }
       }, 10000);
-
-      // Cleanup on close (overwrite internal close)
-      const origCancel = controller.close.bind(controller);
-      controller.close = () => {
-        clearInterval(pingTimer);
-        unsubs.forEach(fn => fn());
-        origCancel();
-      };
     },
     cancel() {
-      // ReadableStream cancel — browser disconnected
+      clearInterval(pingTimer);
+      unsubs.forEach(fn => fn());
     },
   });
 

@@ -219,6 +219,7 @@ export function handleKillInfo(payload: {
 }
 
 export function handleObservingPlayer(uid: string): void {
+  if (uid === state.observingUid) return; // Dedup: skip if already observing same player
   state.observingUid = uid;
   const openId = state.uidToOpenId.get(uid) ?? uid;
   const player = state.players.get(openId);
@@ -235,8 +236,11 @@ export function handleCircleInfo(payload: {
   GameTime: string; CircleStatus: string; CircleIndex: string;
   Counter: string; MaxTime: string;
 }): void {
+  const gameTime = parseInt(payload.GameTime, 10) || 0;
+  // Reject out-of-order circle updates
+  if (state.circle && gameTime < state.circle.gameTime) return;
   state.circle = {
-    gameTime: parseInt(payload.GameTime, 10) || 0,
+    gameTime,
     circleStatus: parseInt(payload.CircleStatus, 10) || 0,
     circleIndex: parseInt(payload.CircleIndex, 10) || 0,
     counter: parseInt(payload.Counter, 10) || 0,
@@ -247,6 +251,7 @@ export function handleCircleInfo(payload: {
 
 export function handlePostMatchWeapons(playerId: string, weapons: PostMatchWeaponDetail['weapons']): void {
   state.postMatchWeapons.push({ playerId, weapons });
+  if (state.postMatchWeapons.length > 100) state.postMatchWeapons = state.postMatchWeapons.slice(-100);
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -274,7 +279,9 @@ function computeRanks(): void {
   aliveTeams.sort((a, b) =>
     b.liveMemberNum !== a.liveMemberNum
       ? b.liveMemberNum - a.liveMemberNum
-      : b.killNum - a.killNum
+      : b.killNum !== a.killNum
+        ? b.killNum - a.killNum
+        : a.slot - b.slot // Stable tiebreaker by slot number
   );
   aliveTeams.forEach((t, i) => {
     const s = state.teams.get(t.slot);

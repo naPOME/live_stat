@@ -14,7 +14,7 @@ const MEDAL: Record<number, { bg: string; text: string; label: string }> = {
 };
 
 function TeamAvatar({ team, size = 'sm' }: {
-  team: { name: string; short_name?: string | null; logo_url?: string | null; brand_color: string } | null;
+  team: { name: string; short_name?: string | null; logo_url?: string | null } | null;
   size?: 'sm' | 'md' | 'lg';
 }) {
   if (!team) return null;
@@ -25,7 +25,7 @@ function TeamAvatar({ team, size = 'sm' }: {
   }
   return (
     <div className={`${dim} rounded-lg flex items-center justify-center font-bold flex-shrink-0`}
-      style={{ backgroundColor: team.brand_color + '30', color: team.brand_color }}>
+      style={{ backgroundColor: '#2F6B3F' + '30', color: '#2F6B3F' }}>
       {initials}
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from 'react';
 
-type TeamInfo = { id: string; name: string; short_name: string | null; logo_url: string | null; brand_color: string };
+type TeamInfo = { id: string; name: string; short_name: string | null; logo_url: string | null };
 type StandingEntry = {
   rank: number; team_id: string; total_pts: number; total_kills: number;
   matches_played: number; wins: number; avg_placement: number; team: TeamInfo | null;
@@ -165,7 +165,7 @@ export default function PublicStandingsPage({ params }: { params: Promise<{ tour
                       ) : (
                         <div
                           className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0 border"
-                          style={{ backgroundColor: (entry.team?.brand_color ?? '#555') + '22', borderColor: (entry.team?.brand_color ?? '#555') + '44', color: entry.team?.brand_color ?? '#888' }}
+                          style={{ backgroundColor: '#2F6B3F22', borderColor: '#2F6B3F44', color: '#2F6B3F' }}
                         >
                           {(entry.team?.short_name ?? entry.team?.name ?? '?').substring(0, 2).toUpperCase()}
                         </div>

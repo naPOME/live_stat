@@ -9,12 +9,11 @@ import type { StageStandings } from '../_types';
 const MOCK_COLORS = ['#00ffc3', '#ff4e4e', '#ffc107', '#2F6B3F', '#06b6d4', '#f97316', '#10b981', '#e879f9', '#3b82f6', '#ef4444', '#84cc16', '#f59e0b'];
 const MOCK_NAMES = ['Team Alpha', 'Team Bravo', 'Nexus', 'Storm', 'Eclipse', 'Phantom', 'Vortex', 'Nova', 'Apex', 'Blaze', 'Cipher', 'Rogue'];
 
-function buildMockStandings(teams: { id: string; name: string; short_name: string | null; brand_color: string; logo_url: string | null }[]): StageStandings {
+function buildMockStandings(teams: { id: string; name: string; short_name: string | null; logo_url: string | null }[]): StageStandings {
   const source = teams.length >= 4 ? teams : MOCK_NAMES.slice(0, 12).map((name, i) => ({
     id: `mock-${i}`,
     name,
     short_name: name.split(' ')[1]?.substring(0, 3).toUpperCase() ?? null,
-    brand_color: MOCK_COLORS[i % MOCK_COLORS.length],
     logo_url: null,
   }));
 
@@ -26,7 +25,7 @@ function buildMockStandings(teams: { id: string; name: string; short_name: strin
     wins: Math.max(0, 3 - Math.floor(i / 3)),
     avg_placement: parseFloat((i + 1 + Math.random() * 0.5).toFixed(1)),
     rank: i + 1,
-    team: { id: t.id, name: t.name, short_name: t.short_name, logo_url: t.logo_url, brand_color: t.brand_color },
+    team: { id: t.id, name: t.name, short_name: t.short_name, logo_url: t.logo_url },
   }));
 
   return { id: 'mock', name: 'Preview', stage_order: 1, matchCount: 6, standings };
@@ -95,7 +94,7 @@ export default function StandingsTab() {
                   style={{ gridTemplateColumns: '40px 1.5fr repeat(5, 80px)' }}>
                   <span className={`text-sm font-bold tabular-nums ${entry.rank <= 3 ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>{entry.rank}</span>
                   <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-6 h-6 rounded flex-shrink-0" style={{ background: entry.team?.brand_color ?? '#888' }} />
+                    <div className="w-6 h-6 rounded flex-shrink-0" style={{ background: '#2F6B3F' }} />
                     <span className="text-sm font-medium text-[var(--text-primary)] truncate">{entry.team?.name ?? '—'}</span>
                   </div>
                   <span className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{entry.total_pts}</span>
@@ -151,7 +150,7 @@ export default function StandingsTab() {
                         <span className={`text-sm font-bold tabular-nums ${entry.rank <= 3 ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>{entry.rank}</span>
                         <div className="flex items-center gap-2 min-w-0">
                           {entry.team?.logo_url && <img src={entry.team.logo_url} alt="" className="w-6 h-6 rounded object-cover flex-shrink-0" />}
-                          {!entry.team?.logo_url && entry.team && <div className="w-6 h-6 rounded flex-shrink-0" style={{ background: entry.team.brand_color }} />}
+                          {!entry.team?.logo_url && entry.team && <div className="w-6 h-6 rounded flex-shrink-0" style={{ background: '#2F6B3F' }} />}
                           <span className="text-sm font-medium text-[var(--text-primary)] truncate">{entry.team?.name ?? entry.team_id}</span>
                         </div>
                         <span className="text-sm font-bold text-[var(--text-primary)] tabular-nums">{entry.total_pts}</span>

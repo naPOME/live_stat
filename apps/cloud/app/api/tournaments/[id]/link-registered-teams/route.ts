@@ -55,7 +55,6 @@ export async function POST(
           org_id: profile.org_id,
           name: app.team_name,
           short_name: app.short_name ?? null,
-          brand_color: app.brand_color ?? '#ffffff',
           logo_url: app.logo_url ?? null,
         })
         .select('id')

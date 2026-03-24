@@ -25,7 +25,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
   const [addingPlayer, setAddingPlayer] = useState(false);
   const [playerForm, setPlayerForm] = useState({ display_name: '', player_open_id: '' });
   const [editTeam, setEditTeam] = useState(false);
-  const [teamForm, setTeamForm] = useState({ name: initialTeam.name, short_name: initialTeam.short_name ?? '', brand_color: initialTeam.brand_color });
+  const [teamForm, setTeamForm] = useState({ name: initialTeam.name, short_name: initialTeam.short_name ?? '' });
   const [logoImgError, setLogoImgError] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [playerPhotoUploading, setPlayerPhotoUploading] = useState<string | null>(null);
@@ -66,7 +66,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
 
   async function saveTeam(e: React.FormEvent) {
     e.preventDefault();
-    const updates = { name: teamForm.name.trim(), short_name: teamForm.short_name.trim() || null, brand_color: teamForm.brand_color };
+    const updates = { name: teamForm.name.trim(), short_name: teamForm.short_name.trim() || null };
     const prevTeam = team;
     setTeam((t) => ({ ...t, ...updates }));
     setEditTeam(false);
@@ -74,7 +74,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
       onSuccess: () => showToast('Team updated'),
       onError: (err) => {
         setTeam(prevTeam);
-        setTeamForm({ name: prevTeam.name, short_name: prevTeam.short_name ?? '', brand_color: prevTeam.brand_color });
+        setTeamForm({ name: prevTeam.name, short_name: prevTeam.short_name ?? '' });
         showToast(err.message, 'error');
       },
     });
@@ -129,15 +129,15 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
       </div>
 
       {/* ─── Team Banner ─── */}
-      <div className="relative rounded-2xl overflow-hidden mb-8" style={{ background: `linear-gradient(135deg, ${team.brand_color}12 0%, var(--bg-surface) 50%, ${team.brand_color}08 100%)` }}>
+      <div className="relative rounded-2xl overflow-hidden mb-8" style={{ background: `linear-gradient(135deg, ${'#2F6B3F'}12 0%, var(--bg-surface) 50%, ${'#2F6B3F'}08 100%)` }}>
         {/* Subtle brand color accent line at top */}
-        <div className="h-[2px] w-full" style={{ background: `linear-gradient(90deg, transparent, ${team.brand_color}60, transparent)` }} />
+        <div className="h-[2px] w-full" style={{ background: `linear-gradient(90deg, transparent, ${'#2F6B3F'}60, transparent)` }} />
 
         <div className="px-8 py-8">
           {editTeam ? (
             /* ── Edit mode ── */
             <form onSubmit={saveTeam} className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">Team Name *</label>
                   <input autoFocus type="text" value={teamForm.name}
@@ -149,18 +149,6 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
                   <input type="text" value={teamForm.short_name}
                     onChange={(e) => setTeamForm((f) => ({ ...f, short_name: e.target.value.toUpperCase().slice(0, 5) }))}
                     placeholder="SEN" className="input-premium uppercase" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-muted)] mb-1.5">Brand Color</label>
-                  <div className="flex items-center gap-3">
-                    <label className="relative cursor-pointer w-10 h-10 shrink-0 block">
-                      <input type="color" value={teamForm.brand_color}
-                        onChange={(e) => setTeamForm((f) => ({ ...f, brand_color: e.target.value }))}
-                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
-                      <div className="w-10 h-10 rounded-lg border border-[var(--border)]" style={{ backgroundColor: teamForm.brand_color }} />
-                    </label>
-                    <span className="text-[13px] font-mono text-[var(--text-secondary)] uppercase">{teamForm.brand_color}</span>
-                  </div>
                 </div>
               </div>
               <div className="flex gap-3">
@@ -179,7 +167,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
                     onError={() => setLogoImgError(true)} />
                 ) : (
                   <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl font-black border"
-                    style={{ backgroundColor: team.brand_color + '18', borderColor: team.brand_color + '30', color: team.brand_color }}>
+                    style={{ backgroundColor: '#2F6B3F' + '18', borderColor: '#2F6B3F' + '30', color: '#2F6B3F' }}>
                     {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
                   </div>
                 )}
@@ -195,7 +183,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
                   <h1 className="text-2xl font-display font-black uppercase tracking-wide text-[var(--text-primary)]">{team.name}</h1>
                   {team.short_name && (
                     <span className="text-xs font-mono font-bold px-2 py-0.5 rounded-md border"
-                      style={{ color: team.brand_color, borderColor: team.brand_color + '40', backgroundColor: team.brand_color + '10' }}>
+                      style={{ color: '#2F6B3F', borderColor: '#2F6B3F' + '40', backgroundColor: '#2F6B3F' + '10' }}>
                       {team.short_name}
                     </span>
                   )}
@@ -206,10 +194,6 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
                       <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
                     </svg>
                     <span>{players.length} player{players.length !== 1 ? 's' : ''}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: team.brand_color }} />
-                    <span className="font-mono text-xs uppercase">{team.brand_color}</span>
                   </div>
                 </div>
               </div>
@@ -280,7 +264,7 @@ export default function TeamDetailClient({ teamId, initialTeam, initialPlayers }
                     <PlayerAvatar
                       name={player.display_name}
                       logoUrl={player.photo_url}
-                      brandColor={team.brand_color}
+                      brandColor={'#2F6B3F'}
                       px={72}
                       className="rounded-xl"
                     />

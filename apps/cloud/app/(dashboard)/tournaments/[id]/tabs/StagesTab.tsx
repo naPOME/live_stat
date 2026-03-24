@@ -189,7 +189,7 @@ function LiveLeaderboard({ stage, stageStandings, loading, onRefresh }: {
                     <img src={entry.team.logo_url} alt="" className="w-5 h-5 rounded object-cover flex-shrink-0" />
                   ) : (
                     <div className="w-5 h-5 rounded flex-shrink-0 flex items-center justify-center text-[8px] font-bold"
-                      style={{ backgroundColor: (entry.team?.brand_color ?? '#666') + '30', color: entry.team?.brand_color ?? '#666' }}>
+                      style={{ backgroundColor: '#2F6B3F30', color: '#2F6B3F' }}>
                       {(entry.team?.short_name ?? entry.team?.name ?? '??').substring(0, 2).toUpperCase()}
                     </div>
                   )}
@@ -719,7 +719,7 @@ function GroupAccordion({
                           <img src={team.logo_url} alt="" className="w-4 h-4 rounded object-cover flex-shrink-0" />
                         ) : (
                           <div className="w-4 h-4 rounded flex items-center justify-center text-[7px] font-bold flex-shrink-0"
-                            style={{ backgroundColor: team.brand_color + '30', color: team.brand_color }}>
+                            style={{ backgroundColor: '#2F6B3F30', color: '#2F6B3F' }}>
                             {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
                           </div>
                         )}

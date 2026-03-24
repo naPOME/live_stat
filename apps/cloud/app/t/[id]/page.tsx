@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from 'react';
 import { MAP_BY_ID } from '@/lib/config';
 
-type TeamInfo = { id: string; name: string; short_name: string | null; logo_url: string | null; brand_color: string };
+type TeamInfo = { id: string; name: string; short_name: string | null; logo_url: string | null };
 type StandingEntry = {
   rank: number; team_id: string; total_pts: number; total_kills: number;
   matches_played: number; wins: number; avg_placement: number; team: TeamInfo | null;
@@ -240,7 +240,7 @@ export default function PublicTournamentHub({ params }: { params: Promise<{ id: 
                           <img src={entry.team.logo_url} alt="" className="w-7 h-7 rounded-lg object-cover border border-white/10" />
                         ) : (
                           <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[9px] font-bold border border-white/10"
-                            style={{ backgroundColor: (entry.team?.brand_color ?? '#555') + '15', color: entry.team?.brand_color ?? '#555' }}>
+                            style={{ backgroundColor: '#2F6B3F15', color: '#2F6B3F' }}>
                             {(entry.team?.short_name ?? entry.team?.name ?? '?').substring(0, 2).toUpperCase()}
                           </div>
                         )}
@@ -430,7 +430,7 @@ export default function PublicTournamentHub({ params }: { params: Promise<{ id: 
                         <img src={entry.team.logo_url} alt="" className="w-7 h-7 rounded-lg object-cover border border-white/10 flex-shrink-0" />
                       ) : (
                         <div className="w-7 h-7 rounded-lg flex items-center justify-center text-[9px] font-bold flex-shrink-0 border"
-                          style={{ backgroundColor: (entry.team?.brand_color ?? '#555') + '15', borderColor: (entry.team?.brand_color ?? '#555') + '30', color: entry.team?.brand_color ?? '#555' }}>
+                          style={{ backgroundColor: '#2F6B3F15', borderColor: '#2F6B3F30', color: '#2F6B3F' }}>
                           {(entry.team?.short_name ?? entry.team?.name ?? '?').substring(0, 2).toUpperCase()}
                         </div>
                       )}
@@ -466,7 +466,7 @@ export default function PublicTournamentHub({ params }: { params: Promise<{ id: 
                       <img src={t.logo_url} alt={t.name} className="w-14 h-14 rounded-xl object-cover border border-white/10" />
                     ) : (
                       <div className="w-14 h-14 rounded-xl flex items-center justify-center text-lg font-bold border border-white/10"
-                        style={{ backgroundColor: t.brand_color + '15', color: t.brand_color }}>
+                        style={{ backgroundColor: '#2F6B3F15', color: '#2F6B3F' }}>
                         {(t.short_name ?? t.name).substring(0, 2).toUpperCase()}
                       </div>
                     )}

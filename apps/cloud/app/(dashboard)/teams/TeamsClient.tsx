@@ -23,7 +23,7 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
   const deleteTeamMutation = useDeleteTeam();
 
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: '', short_name: '', brand_color: '#00ffc3', logo_url: '' });
+  const [form, setForm] = useState({ name: '', short_name: '', logo_url: '' });
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ title: string; message: string; onConfirm: () => void } | null>(null);
 
@@ -36,9 +36,9 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
     e.preventDefault();
     if (!form.name.trim()) return;
     createTeamMutation.mutate(
-      { name: form.name.trim(), short_name: form.short_name.trim() || null, brand_color: form.brand_color, logo_url: form.logo_url.trim() || null },
+      { name: form.name.trim(), short_name: form.short_name.trim() || null, logo_url: form.logo_url.trim() || null },
       {
-        onSuccess: () => { setForm({ name: '', short_name: '', brand_color: '#00ffc3', logo_url: '' }); setAdding(false); showToast('Team created'); },
+        onSuccess: () => { setForm({ name: '', short_name: '', logo_url: '' }); setAdding(false); showToast('Team created'); },
         onError: (err) => showToast(err.message, 'error'),
       },
     );
@@ -182,18 +182,6 @@ export default function TeamsClient({ initialTeams, initialHasTournaments, initi
                 <input type="text" value={form.short_name}
                   onChange={(e) => setForm((f) => ({ ...f, short_name: e.target.value.toUpperCase().slice(0, 5) }))}
                   placeholder="SEN" className="input-premium uppercase" />
-              </div>
-              <div>
-                <label className="label">Brand Color</label>
-                <div className="flex items-center gap-3">
-                  <label className="relative cursor-pointer w-10 h-10 shrink-0 block">
-                    <input type="color" value={form.brand_color}
-                      onChange={(e) => setForm((f) => ({ ...f, brand_color: e.target.value }))}
-                      className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
-                    <div className="w-10 h-10 rounded-lg border border-[var(--border)]" style={{ backgroundColor: form.brand_color }} />
-                  </label>
-                  <span className="text-[13px] font-mono text-[var(--text-secondary)] uppercase">{form.brand_color}</span>
-                </div>
               </div>
             </div>
             <div>

@@ -20,7 +20,7 @@ export function useTeams(orgId: string, initialData?: Team[]) {
     queryFn: async () => {
       const { data } = await supabase
         .from('teams')
-        .select('id, org_id, name, short_name, logo_url, brand_color, created_at')
+        .select('id, org_id, name, short_name, logo_url, created_at')
         .eq('org_id', orgId)
         .order('name');
       return (data as Team[]) ?? [];
@@ -49,11 +49,11 @@ export function useTeamPlayers(teamId: string, initialData?: Player[]) {
 export function useCreateTeam(orgId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { name: string; short_name: string | null; brand_color: string; logo_url?: string | null }) => {
+    mutationFn: async (input: { name: string; short_name: string | null; logo_url?: string | null }) => {
       const { data, error } = await supabase
         .from('teams')
         .insert({ org_id: orgId, ...input })
-        .select('id, org_id, name, short_name, logo_url, brand_color, created_at')
+        .select('id, org_id, name, short_name, logo_url, created_at')
         .single();
       if (error) throw error;
       return data as Team;
@@ -152,7 +152,7 @@ export function useDeletePlayer(teamId: string) {
 export function useUpdateTeam(teamId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: Partial<Pick<Team, 'name' | 'short_name' | 'brand_color' | 'logo_url'>>) => {
+    mutationFn: async (input: Partial<Pick<Team, 'name' | 'short_name' | 'logo_url'>>) => {
       const { error } = await supabase.from('teams').update(input).eq('id', teamId);
       if (error) throw error;
       return input;

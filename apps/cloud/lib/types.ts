@@ -83,7 +83,6 @@ export type Team = {
   name: string;
   short_name: string | null;
   logo_url: string | null;
-  brand_color: string;
   created_at: string;
 };
 

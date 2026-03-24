@@ -7,7 +7,7 @@ type PlayerStat = {
   player_open_id: string;
   display_name: string;
   player_id: string | null;
-  team: { id: string; name: string; short_name: string | null; brand_color: string; logo_url: string | null } | null;
+  team: { id: string; name: string; short_name: string | null; logo_url: string | null } | null;
   total_kills: number;
   total_damage: number;
   matches_played: number;

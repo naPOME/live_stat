@@ -5,10 +5,11 @@ export const runtime = 'nodejs';
 export async function GET() {
   const encoder = new TextEncoder();
 
+  let pingTimer: NodeJS.Timeout;
+  let unsub: (() => void) | null = null;
+
   const stream = new ReadableStream({
     start(controller) {
-      let pingTimer: NodeJS.Timeout;
-
       const send = (data: unknown) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
@@ -24,18 +25,17 @@ export async function GET() {
         send({ uid: gs.observingUid, openId, player, team });
       }
 
-      const unsub = subscribe('playercard', send);
+      unsub = subscribe('playercard', send);
 
       pingTimer = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`event: ping\ndata: ${JSON.stringify({ t: Date.now() })}\n\n`));
         } catch { clearInterval(pingTimer); }
       }, 10000);
-
-      controller.close = () => {
-        clearInterval(pingTimer);
-        unsub();
-      };
+    },
+    cancel() {
+      clearInterval(pingTimer);
+      unsub?.();
     },
   });
 

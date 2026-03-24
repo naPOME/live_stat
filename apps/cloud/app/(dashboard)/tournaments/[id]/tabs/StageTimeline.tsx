@@ -147,7 +147,7 @@ export default function StageTimeline({ stages, activeStageId, onSelectStage, st
                             {entry.team?.logo_url ? (
                               <img src={entry.team.logo_url} alt="" className="w-4 h-4 rounded object-cover flex-shrink-0" />
                             ) : (
-                              <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: (entry.team?.brand_color ?? '#666') + '40' }} />
+                              <div className="w-4 h-4 rounded flex-shrink-0" style={{ backgroundColor: '#2F6B3F40' }} />
                             )}
                             <span className="text-[11px] font-medium text-[var(--text-primary)] truncate">
                               {entry.team?.short_name || entry.team?.name || 'Unknown'}

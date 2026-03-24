@@ -143,6 +143,7 @@ const POST_MATCH_WINDOW_MS = 30_000;
  * weapon details, etc.) before triggering cloud sync.
  */
 export function goFinished(): void {
+  if (state.phase === 'finished') return; // Guard: already finished, don't fire twice
   if (state.phase === 'live' || state.phase === 'warmup') {
     state.phase = 'finished';
     state.syncResult = null;

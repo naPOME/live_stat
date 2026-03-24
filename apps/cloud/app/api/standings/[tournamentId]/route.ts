@@ -59,7 +59,7 @@ export async function GET(
   // Get team details
   const teamIds = [...new Set((results ?? []).map((r) => r.team_id))];
   const { data: teams } = teamIds.length > 0
-    ? await supabase.from('teams').select('id, name, short_name, logo_url, brand_color').in('id', teamIds)
+    ? await supabase.from('teams').select('id, name, short_name, logo_url').in('id', teamIds)
     : { data: [] };
   const teamMap = new Map((teams ?? []).map((t) => [t.id, t]));
 

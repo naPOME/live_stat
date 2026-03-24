@@ -25,7 +25,7 @@ export type StandingEntry = {
   wins: number;
   avg_placement: number;
   rank: number;
-  team: { id: string; name: string; short_name: string | null; logo_url: string | null; brand_color: string } | null;
+  team: { id: string; name: string; short_name: string | null; logo_url: string | null } | null;
 };
 
 export type StageStandings = {

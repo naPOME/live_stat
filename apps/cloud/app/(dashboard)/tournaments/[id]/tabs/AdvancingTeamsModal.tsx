@@ -159,7 +159,7 @@ export default function AdvancingTeamsModal({ stage, nextStage, standings, advan
                         <img src={entry.team.logo_url} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
                       ) : (
                         <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-bold flex-shrink-0"
-                          style={{ backgroundColor: (entry.team?.brand_color ?? '#666') + '30', color: entry.team?.brand_color ?? '#666' }}>
+                          style={{ backgroundColor: '#2F6B3F30', color: '#2F6B3F' }}>
                           {(entry.team?.short_name ?? entry.team?.name ?? '??').substring(0, 2).toUpperCase()}
                         </div>
                       )}

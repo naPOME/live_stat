@@ -190,9 +190,9 @@ export async function POST(req: NextRequest) {
       }));
 
     if (rows.length > 0) {
-      // Delete existing results for this match first (slot-based upsert)
-      await supabase.from('match_results').delete().eq('match_id', body.match_id);
-      const { error } = await supabase.from('match_results').insert(rows);
+      const { error } = await supabase
+        .from('match_results')
+        .upsert(rows, { onConflict: 'match_id,slot_number' });
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
       }

@@ -45,7 +45,7 @@ export async function GET(
       ? supabase.from('matches').select('id, stage_id, name, map_name, status, scheduled_at').in('stage_id', stageIds).order('scheduled_at', { ascending: true, nullsFirst: false })
       : Promise.resolve({ data: [] as any[] }),
     teamIds.length > 0
-      ? supabase.from('teams').select('id, name, short_name, logo_url, brand_color').in('id', teamIds)
+      ? supabase.from('teams').select('id, name, short_name, logo_url').in('id', teamIds)
       : Promise.resolve({ data: [] as any[] }),
   ]);
 
@@ -70,7 +70,7 @@ export async function GET(
   if (missingTeamIds.length > 0) {
     const { data: missingTeams } = await supabase
       .from('teams')
-      .select('id, name, short_name, logo_url, brand_color')
+      .select('id, name, short_name, logo_url')
       .in('id', missingTeamIds);
     for (const t of missingTeams ?? []) teamMap.set(t.id, t);
   }

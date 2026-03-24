@@ -19,10 +19,11 @@ export async function GET(req: NextRequest) {
 
   // SSE stream
   const encoder = new TextEncoder();
+  let pingTimer: NodeJS.Timeout;
+  let unsub: (() => void) | null = null;
+
   const stream = new ReadableStream({
     start(controller) {
-      let pingTimer: NodeJS.Timeout;
-
       const send = (data: unknown) => {
         try {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
@@ -32,20 +33,17 @@ export async function GET(req: NextRequest) {
       // Send current state immediately
       send(getLifecycleState());
 
-      const unsub = subscribeLifecycle((state) => send(state));
+      unsub = subscribeLifecycle((state) => send(state));
 
       pingTimer = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`: ping\n\n`));
         } catch { clearInterval(pingTimer); }
       }, 15000);
-
-      const origClose = controller.close.bind(controller);
-      controller.close = () => {
-        clearInterval(pingTimer);
-        unsub();
-        origClose();
-      };
+    },
+    cancel() {
+      clearInterval(pingTimer);
+      unsub?.();
     },
   });
 

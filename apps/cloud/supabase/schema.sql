@@ -101,7 +101,6 @@ create table teams (
   name        text not null,
   short_name  text,
   logo_url    text,
-  brand_color text not null default '#ffffff',
   created_at  timestamptz not null default now()
 );
 

@@ -314,7 +314,7 @@ export default function OverviewTab() {
                 {team.logo_url ? (
                   <img src={team.logo_url} alt={team.name} className="w-7 h-7 rounded-md object-cover flex-shrink-0" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 ) : (
-                  <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ backgroundColor: team.brand_color + '25', color: team.brand_color }}>
+                  <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-bold flex-shrink-0" style={{ backgroundColor: '#2F6B3F25', color: '#2F6B3F' }}>
                     {(team.short_name ?? team.name).substring(0, 2).toUpperCase()}
                   </div>
                 )}
