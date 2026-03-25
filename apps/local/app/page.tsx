@@ -12,10 +12,15 @@ interface OrgInfo { id: string; name: string; brand_color: string; logo_path: st
 interface TeamInfo { slot_number: number; team_id: string; name: string; short_name: string; brand_color: string; logo_path: string | null; player_count: number; }
 interface PointSystemInfo { kill_points: number; placement_points: Record<string, number>; }
 interface RosterInfo { roster_loaded: boolean; team_count: number; player_count: number; tournament_id?: string | null; stage_name?: string | null; group_name?: string | null; match_id?: string | null; org: OrgInfo | null; point_system: PointSystemInfo | null; teams: TeamInfo[]; has_cloud_config?: boolean; error?: string | null; roster_source?: string | null; }
-interface CloudStatus { bound: boolean; cloud_url?: string | null; org?: { id: string; name: string } | null; tournament?: { id: string; name: string } | null; }
 interface LiveTeam { teamName: string; displayName?: string; shortName?: string; brandColor?: string; kills: number; totalPoints: number; liveMemberNum: number; alive: boolean; placement?: number; }
 interface GameData { phase?: string; teams: LiveTeam[]; spotlight?: { playerName: string; displayName?: string; teamName: string; kills: number }; players?: { playerName: string; displayName?: string; teamName: string; kills: number; damage: number; headshots: number; }[]; }
 interface SyncStatus { role: string; connected: boolean; peerCount: number; syncCode: string | null; }
+
+interface AuthInfo { configured: boolean; logged_in: boolean; user: { id: string; email: string } | null; org: { id: string; name: string } | null; }
+interface TournamentInfo { id: string; name: string; status: string; format: string; stages?: StageInfo[]; }
+interface StageInfo { id: string; name: string; stage_order: number; status: string; matches?: MatchInfo[]; }
+interface MatchInfo { id: string; name: string; map: string | null; status: string; }
+interface MatchSelection { selected: boolean; tournament_name?: string; stage_name?: string; match_name?: string; match_map?: string; team_count?: number; player_count?: number; }
 
 /* ── Dashboard ────────────────────────────────────── */
 export default function Dashboard() {
@@ -23,17 +28,28 @@ export default function Dashboard() {
   const [game, setGame] = useState<GameData | null>(null);
   const [roster, setRoster] = useState<RosterInfo | null>(null);
   const [widgets, setWidgets] = useState<Record<string, boolean>>({});
-  const [cloud, setCloud] = useState<CloudStatus | null>(null);
   const [sync, setSync] = useState<SyncStatus>({ role: 'standalone', connected: false, peerCount: 0, syncCode: null });
 
+  // Auth
+  const [auth, setAuth] = useState<AuthInfo | null>(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginBusy, setLoginBusy] = useState(false);
+  const [loginErr, setLoginErr] = useState('');
+
+  // Match picker
+  const [tournaments, setTournaments] = useState<TournamentInfo[]>([]);
+  const [selectedTournament, setSelectedTournament] = useState<TournamentInfo | null>(null);
+  const [selectedStage, setSelectedStage] = useState<StageInfo | null>(null);
+  const [selectedMatch, setSelectedMatch] = useState<MatchInfo | null>(null);
+  const [matchSelection, setMatchSelection] = useState<MatchSelection | null>(null);
+  const [pickerBusy, setPickerBusy] = useState(false);
+  const [pickerErr, setPickerErr] = useState('');
+
+  // Cloud URL for match-config fetch
   const [cloudUrl, setCloudUrl] = useState('');
-  const [deviceCode, setDeviceCode] = useState('');
-  const [deviceStatus, setDeviceStatus] = useState<'idle' | 'waiting' | 'approved'>('idle');
-  const [cloudBusy, setCloudBusy] = useState(false);
-  const [cloudErr, setCloudErr] = useState('');
-  const [tournaments, setTournaments] = useState<{ id: string; name: string; status: string }[]>([]);
-  const [selectedTournament, setSelectedTournament] = useState('');
-  const [rosterMsg, setRosterMsg] = useState('');
+
+  // Sync & Export
   const [joinCode, setJoinCode] = useState('');
   const [syncBusy, setSyncBusy] = useState(false);
   const [syncErr, setSyncErr] = useState('');
@@ -78,10 +94,16 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    fetch('/api/roster').then(r => r.json()).then(d => setRoster(d?.data ?? d)).catch(() => {});
-    fetch('/api/cloud').then(r => r.json()).then(d => {
-      if (d?.ok || d?.bound) { setCloud(d); if (d.cloud_url) setCloudUrl(d.cloud_url); if (d.tournament?.id) setSelectedTournament(d.tournament.id); if (d.bound) refreshTournaments(); }
+    // Check auth status
+    fetch('/api/auth').then(r => r.json()).then(d => {
+      setAuth(d);
+      if (d.logged_in) loadTournaments();
     }).catch(() => {});
+    // Check match selection
+    fetch('/api/match-select').then(r => r.json()).then(d => {
+      if (d?.selected) setMatchSelection(d);
+    }).catch(() => {});
+    fetch('/api/roster').then(r => r.json()).then(d => setRoster(d?.data ?? d)).catch(() => {});
     fetch('/api/widgets').then(r => r.json()).then(setWidgets).catch(() => {});
     const wes = new EventSource('/api/widgets?stream=1');
     wes.onmessage = e => { try { setWidgets(JSON.parse(e.data)); } catch {} };
@@ -91,17 +113,61 @@ export default function Dashboard() {
     return () => { wes.close(); ses.close(); };
   }, []);
 
-  useEffect(() => {
-    if (deviceStatus !== 'waiting' || !deviceCode || !cloudUrl.trim()) return;
-    const id = setInterval(() => pollDeviceStatus(deviceCode), 3000);
-    return () => clearInterval(id);
-  }, [deviceStatus, deviceCode, cloudUrl]);
-
   /* ── Actions ───────────────────────────────────── */
-  async function refreshTournaments() { try { const res = await fetch('/api/cloud/tournaments'); const d = await res.json(); if (d.ok) { setTournaments(d.tournaments ?? []); if (!selectedTournament && d.tournaments?.length) setSelectedTournament(d.tournaments[0].id); } } catch {} }
-  async function requestDeviceCode() { setCloudBusy(true); setCloudErr(''); try { const res = await fetch('/api/cloud', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'device-code', cloud_url: cloudUrl }) }); const d = await res.json(); if (!d.ok) { setCloudErr(d.error || 'Failed'); return; } setDeviceCode(d.code || ''); setDeviceStatus('waiting'); } catch { setCloudErr('Network error'); } finally { setCloudBusy(false); } }
-  async function pollDeviceStatus(code: string) { try { const res = await fetch('/api/cloud', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'device-status', cloud_url: cloudUrl, code }) }); const d = await res.json(); if (d.ok && d.approved) { setDeviceStatus('approved'); setRosterMsg('Organization linked'); const r2 = await fetch('/api/cloud'); const s2 = await r2.json(); if (s2?.ok) setCloud(s2); refreshTournaments(); } } catch {} }
-  async function selectTournament() { if (!selectedTournament) return; setCloudBusy(true); setCloudErr(''); try { const res = await fetch('/api/cloud', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'select-tournament', tournament_id: selectedTournament }) }); const d = await res.json(); if (d.ok) { setRosterMsg('Tournament linked'); const [r1, r2] = await Promise.all([fetch('/api/roster'), fetch('/api/cloud')]); const rd = await r1.json(); setRoster(rd?.data ?? rd); const sd = await r2.json(); if (sd?.ok) setCloud(sd); } else { setCloudErr(d.error || 'Failed'); } } catch { setCloudErr('Network error'); } finally { setCloudBusy(false); setTimeout(() => setRosterMsg(''), 3000); } }
+  async function doLogin() {
+    setLoginBusy(true); setLoginErr('');
+    try {
+      const res = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'login', email, password }) });
+      const d = await res.json();
+      if (!d.ok) { setLoginErr(d.error || 'Login failed'); return; }
+      setAuth({ configured: true, logged_in: true, user: d.user, org: d.org });
+      loadTournaments();
+    } catch { setLoginErr('Network error'); } finally { setLoginBusy(false); }
+  }
+  async function doLogout() {
+    await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'logout' }) });
+    setAuth({ configured: true, logged_in: false, user: null, org: null });
+    setTournaments([]); setSelectedTournament(null); setSelectedStage(null); setSelectedMatch(null); setMatchSelection(null);
+  }
+  async function loadTournaments() {
+    try { const res = await fetch('/api/tournaments'); const d = await res.json(); if (d.ok) setTournaments(d.tournaments ?? []); } catch {}
+  }
+  async function loadTournamentDetail(id: string) {
+    setPickerBusy(true); setPickerErr('');
+    try {
+      const res = await fetch(`/api/tournaments?id=${id}`);
+      const d = await res.json();
+      if (d.ok && d.tournament) {
+        const t = d.tournament as TournamentInfo;
+        setSelectedTournament(t);
+        // Auto-select first active stage
+        const stages = (t.stages ?? []).sort((a: StageInfo, b: StageInfo) => a.stage_order - b.stage_order);
+        const active = stages.find((s: StageInfo) => s.status === 'active') ?? stages[0];
+        if (active) { setSelectedStage(active); setSelectedMatch(active.matches?.[0] ?? null); }
+      }
+    } catch { setPickerErr('Failed to load tournament'); } finally { setPickerBusy(false); }
+  }
+  async function doSelectMatch() {
+    if (!selectedTournament || !selectedMatch) return;
+    setPickerBusy(true); setPickerErr('');
+    const url = cloudUrl.trim() || window.location.origin;
+    try {
+      const res = await fetch('/api/match-select', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cloud_url: url,
+          tournament_id: selectedTournament.id,
+          stage_id: selectedStage?.id,
+          match_id: selectedMatch.id,
+        }),
+      });
+      const d = await res.json();
+      if (!d.ok) { setPickerErr(d.error || 'Failed'); return; }
+      setMatchSelection({ selected: true, tournament_name: d.tournament_name, stage_name: d.stage_name, match_name: d.match_name, match_map: d.match_map, team_count: d.team_count, player_count: d.player_count });
+      // Reload roster
+      const r = await fetch('/api/roster'); const rd = await r.json(); setRoster(rd?.data ?? rd);
+    } catch { setPickerErr('Network error'); } finally { setPickerBusy(false); }
+  }
   const startLeader = async () => { setSyncBusy(true); setSyncErr(''); try { const res = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start-leader' }) }); const d = await res.json(); if (d.ok && d.status) setSync(d.status); else setSyncErr(d.error || 'Failed'); } catch { setSyncErr('Network error'); } finally { setSyncBusy(false); } };
   const joinFollower = async () => { if (joinCode.length !== 6) return; setSyncBusy(true); setSyncErr(''); try { const res = await fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'join', code: joinCode }) }); const d = await res.json(); if (d.ok && d.status) setSync(d.status); else setSyncErr(d.error || 'Failed'); } catch { setSyncErr('Network error'); } finally { setSyncBusy(false); } };
   const stopSync = () => fetch('/api/sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'stop' }) });
@@ -117,9 +183,9 @@ export default function Dashboard() {
   const widgetCount = Object.values(widgets).filter(Boolean).length;
   const connAge = lc.lastTelemetryAt ? (Date.now() - lc.lastTelemetryAt) / 1000 : Infinity;
   const connColor = connAge < 5 ? 'var(--green)' : connAge < 15 ? 'var(--amber)' : 'var(--red)';
-  const org = roster?.org;
+  const org = roster?.org ?? (auth?.org ? { id: auth.org.id, name: auth.org.name, brand_color: '#2F6B3F', logo_path: null } : null);
   const orgAccent = org?.brand_color || 'var(--accent)';
-  const hasOrg = !!org && lc.rosterLoaded;
+  const hasOrg = !!auth?.logged_in && !!matchSelection?.selected;
 
   const topFraggers = [...(game?.players ?? [])].sort((a, b) => b.kills - a.kills || b.damage - a.damage).slice(0, 5);
 
@@ -171,9 +237,9 @@ export default function Dashboard() {
               <div>
                 <h1 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>{org.name}</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, fontSize: 12, color: 'var(--text-faint)' }}>
-                  {cloud?.tournament?.name && <span>{cloud.tournament.name}</span>}
-                  {roster?.stage_name && <><span style={{ opacity: 0.3 }}>/</span><span>{roster.stage_name}</span></>}
-                  {roster?.group_name && <><span style={{ opacity: 0.3 }}>/</span><span>{roster.group_name}</span></>}
+                  {matchSelection?.tournament_name && <span>{matchSelection.tournament_name}</span>}
+                  {matchSelection?.stage_name && <><span style={{ opacity: 0.3 }}>/</span><span>{matchSelection.stage_name}</span></>}
+                  {matchSelection?.match_name && <><span style={{ opacity: 0.3 }}>/</span><span>{matchSelection.match_name}</span></>}
                 </div>
               </div>
             </div>
@@ -211,10 +277,10 @@ export default function Dashboard() {
           {/* Step indicators */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {[
-              { n: '1', title: 'Link Organization', desc: 'Connect to cloud', done: !!cloud?.bound },
-              { n: '2', title: 'Select Tournament', desc: 'Load team roster', done: lc.rosterLoaded },
-              { n: '3', title: 'Sync & Export', desc: 'Logos + PCOB files', done: exportDone },
-              { n: '4', title: 'Start Game Client', desc: 'Begin spectating', done: lc.gameClientConnected },
+              { n: '1', title: 'Login', desc: 'Sign in to cloud', done: !!auth?.logged_in },
+              { n: '2', title: 'Select Match', desc: 'Pick tournament & match', done: !!matchSelection?.selected },
+              { n: '3', title: 'Sync PCOB', desc: 'Logos to C:/logo', done: exportDone },
+              { n: '4', title: 'Start Game', desc: 'Begin spectating', done: lc.gameClientConnected },
             ].map(s => (
               <div key={s.n} className="metric-card" style={{
                 borderColor: s.done ? 'rgba(34,197,94,0.12)' : 'var(--border)',
@@ -241,53 +307,103 @@ export default function Dashboard() {
             ))}
           </div>
 
-          {/* Cloud link / tournament select */}
-          {!cloud?.bound ? (
+          {/* ── Step 1: Login ───────────────────────────── */}
+          {!auth?.logged_in && (
             <div className="card">
-              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Connect Organization</div>
-              <div className="flex gap-8">
-                <input className="input" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="Cloud URL (https://...)" style={{ flex: 1, fontFamily: 'var(--sans)' }} />
-                <button className="btn btn-accent" onClick={requestDeviceCode} disabled={cloudBusy || !cloudUrl.trim()} style={{ whiteSpace: 'nowrap' }}>
-                  {cloudBusy ? 'Wait...' : 'Get Code'}
-                </button>
-              </div>
-              {deviceCode && (
-                <div className="flex items-center gap-10" style={{ marginTop: 14 }}>
-                  <div className="mono" style={{ fontSize: 32, fontWeight: 900, letterSpacing: '0.2em', color: 'var(--accent)' }}>{deviceCode}</div>
-                  <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>
-                    {deviceStatus === 'waiting' ? 'Enter this code on the cloud dashboard' : 'Approved'}
-                  </span>
+              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sign In</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <input className="input" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" style={{ fontFamily: 'var(--sans)' }} onKeyDown={e => e.key === 'Enter' && doLogin()} />
+                <input className="input" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password" style={{ fontFamily: 'var(--sans)' }} onKeyDown={e => e.key === 'Enter' && doLogin()} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input className="input" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="Cloud URL (leave empty for same origin)" style={{ flex: 1, fontFamily: 'var(--sans)', fontSize: 11 }} />
+                  <button className="btn btn-accent" onClick={doLogin} disabled={loginBusy || !email.trim() || !password} style={{ whiteSpace: 'nowrap' }}>
+                    {loginBusy ? 'Signing in...' : 'Sign In'}
+                  </button>
                 </div>
-              )}
-              {cloudErr && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{cloudErr}</div>}
-            </div>
-          ) : !lc.rosterLoaded ? (
-            <div className="card">
-              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Select Tournament</div>
-              <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 10 }}>
-                <strong style={{ color: 'var(--text)' }}>{cloud.org?.name}</strong> linked
               </div>
-              <div className="flex gap-8">
-                <select className="input" value={selectedTournament} onChange={e => setSelectedTournament(e.target.value)} style={{ flex: 1, fontFamily: 'var(--sans)' }}>
-                  {(tournaments.length ? tournaments : [{ id: '', name: 'No tournaments', status: '' }]).map(t => (
-                    <option key={t.id || 'none'} value={t.id}>{t.name || 'No tournaments'}</option>
+              {loginErr && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{loginErr}</div>}
+            </div>
+          )}
+
+          {/* ── Step 2: Match Picker ────────────────────── */}
+          {auth?.logged_in && !matchSelection?.selected && (
+            <div className="card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Select Match</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
+                    <strong style={{ color: 'var(--text)' }}>{auth.org?.name}</strong> — {auth.user?.email}
+                  </div>
+                </div>
+                <button className="btn" onClick={doLogout} style={{ fontSize: 10, padding: '3px 10px' }}>Logout</button>
+              </div>
+
+              {/* Tournament selector */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                <select className="input" value={selectedTournament?.id ?? ''} onChange={e => { const t = tournaments.find(x => x.id === e.target.value); if (t) loadTournamentDetail(t.id); }} style={{ flex: 1, fontFamily: 'var(--sans)' }}>
+                  <option value="">Select tournament...</option>
+                  {tournaments.filter(t => t.status === 'active').map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
                   ))}
                 </select>
-                <button className="btn btn-accent" onClick={selectTournament} disabled={cloudBusy || !selectedTournament}>
-                  {cloudBusy ? 'Linking...' : 'Link'}
-                </button>
               </div>
-            </div>
-          ) : null}
 
-          {/* Sync & Export step — shown when roster loaded but game not connected */}
-          {lc.rosterLoaded && !lc.gameClientConnected && (
+              {/* Stage selector */}
+              {selectedTournament?.stages && selectedTournament.stages.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <select className="input" value={selectedStage?.id ?? ''} onChange={e => { const s = selectedTournament.stages?.find(x => x.id === e.target.value); if (s) { setSelectedStage(s); setSelectedMatch(s.matches?.[0] ?? null); } }} style={{ flex: 1, fontFamily: 'var(--sans)' }}>
+                    {selectedTournament.stages.sort((a, b) => a.stage_order - b.stage_order).map(s => (
+                      <option key={s.id} value={s.id}>{s.name} {s.status === 'active' ? '(active)' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Match selector */}
+              {selectedStage?.matches && selectedStage.matches.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                  <select className="input" value={selectedMatch?.id ?? ''} onChange={e => { const m = selectedStage.matches?.find(x => x.id === e.target.value); if (m) setSelectedMatch(m); }} style={{ flex: 1, fontFamily: 'var(--sans)' }}>
+                    {selectedStage.matches.map(m => (
+                      <option key={m.id} value={m.id}>{m.name}{m.map ? ` — ${m.map}` : ''}{m.status === 'finished' ? ' (done)' : ''}</option>
+                    ))}
+                  </select>
+                  <button className="btn btn-accent" onClick={doSelectMatch} disabled={pickerBusy || !selectedMatch} style={{ whiteSpace: 'nowrap' }}>
+                    {pickerBusy ? 'Loading...' : 'Select'}
+                  </button>
+                </div>
+              )}
+              {pickerErr && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{pickerErr}</div>}
+            </div>
+          )}
+
+          {/* ── Match context banner ────────────────────── */}
+          {matchSelection?.selected && (
+            <div style={{
+              padding: '12px 18px', borderRadius: 'var(--radius)',
+              background: 'var(--accent-soft)', border: '1px solid rgba(59,130,246,0.1)',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent)' }}>
+                  {matchSelection.match_map && <span style={{ fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 4, background: 'rgba(59,130,246,0.12)', marginRight: 8, textTransform: 'uppercase' }}>{matchSelection.match_map}</span>}
+                  {matchSelection.match_name} | {matchSelection.tournament_name}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', marginTop: 2 }}>
+                  {matchSelection.stage_name} — {matchSelection.team_count} teams, {matchSelection.player_count} players
+                </div>
+              </div>
+              <button className="btn" onClick={() => { setMatchSelection(null); setSelectedTournament(null); setSelectedStage(null); setSelectedMatch(null); }} style={{ fontSize: 10, padding: '3px 10px' }}>Change</button>
+            </div>
+          )}
+
+          {/* ── Step 3: Sync PCOB ───────────────────────── */}
+          {matchSelection?.selected && !lc.gameClientConnected && (
             <div className="card" style={{ borderColor: exportDone ? 'rgba(34,197,94,0.12)' : undefined }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sync & Export</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-faint)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sync PCOB Files</div>
                   <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 4 }}>
-                    Download logos and generate PCOB files to <span className="mono" style={{ color: 'var(--text-faint)', fontSize: 11 }}>C:/logo</span>
+                    Download logos and generate .ini to <span className="mono" style={{ color: 'var(--text-faint)', fontSize: 11 }}>C:/logo</span>
                   </div>
                 </div>
                 <button className="btn btn-accent" onClick={runExport} disabled={exportBusy} style={{ whiteSpace: 'nowrap' }}>
@@ -308,7 +424,7 @@ export default function Dashboard() {
               </div>
               {exportDone && (
                 <div style={{ fontSize: 11, padding: '8px 12px', borderRadius: 'var(--radius-sm)', background: 'var(--green-soft)', color: 'var(--green)', border: '1px solid rgba(34,197,94,0.1)' }}>
-                  Logos downloaded and PCOB files generated. Ready to start game client.
+                  Logos downloaded and PCOB .ini generated. Ready to start game client.
                 </div>
               )}
               {exportErr && (
@@ -317,10 +433,6 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          )}
-
-          {rosterMsg && (
-            <div style={{ fontSize: 12, padding: '8px 14px', borderRadius: 'var(--radius-sm)', background: 'var(--green-soft)', color: 'var(--green)', border: '1px solid rgba(34,197,94,0.1)' }}>{rosterMsg}</div>
           )}
         </div>
       )}
@@ -674,13 +786,13 @@ export default function Dashboard() {
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" /></svg>
                   <span style={{ fontSize: 13, fontWeight: 700 }}>Cloud</span>
                 </div>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 5, background: cloud?.bound ? 'var(--green-soft)' : 'var(--bg-hover)', color: cloud?.bound ? 'var(--green)' : 'var(--text-faint)' }}>
-                  {cloud?.bound ? 'LINKED' : 'NOT LINKED'}
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 5, background: auth?.logged_in ? 'var(--green-soft)' : 'var(--bg-hover)', color: auth?.logged_in ? 'var(--green)' : 'var(--text-faint)' }}>
+                  {auth?.logged_in ? 'CONNECTED' : 'OFFLINE'}
                 </span>
               </div>
-              {cloud?.bound && (
+              {auth?.logged_in && (
                 <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>
-                  {cloud.org?.name}{cloud.tournament?.name ? ` / ${cloud.tournament.name}` : ''}
+                  {auth.org?.name}{matchSelection?.tournament_name ? ` / ${matchSelection.tournament_name}` : ''}
                 </div>
               )}
             </div>
@@ -702,8 +814,8 @@ export default function Dashboard() {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                  <button className="btn" onClick={startLeader} disabled={syncBusy || !roster?.has_cloud_config} style={{ width: '100%', fontSize: 11 }}>
-                    {!roster?.has_cloud_config ? 'Link first' : 'Leader'}
+                  <button className="btn" onClick={startLeader} disabled={syncBusy || !matchSelection?.selected} style={{ width: '100%', fontSize: 11 }}>
+                    {!matchSelection?.selected ? 'Select match' : 'Leader'}
                   </button>
                   <div className="flex gap-4">
                     <input className="input" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))} placeholder="Code" maxLength={6} style={{ flex: 1, textAlign: 'center', fontWeight: 800, letterSpacing: '0.12em', fontSize: 11 }} />
