@@ -33,10 +33,10 @@ export function PlayerSpotlightWidget({
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '64px 24px', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ background: p.bg, width: '100%', padding: '64px 24px', fontFamily: "'Roboto', sans-serif" }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
           
           {/* Main Card Container */}
@@ -73,15 +73,15 @@ export function PlayerSpotlightWidget({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 40 }}>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                      <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 700, color: p.cardBg, background: p.accent, padding: '4px 12px', borderRadius: 4, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                      <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 700, color: p.cardBg, background: p.accent, padding: '4px 12px', borderRadius: 4, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
                         MVP SPOTLIGHT
                       </span>
                       <span style={{ fontSize: 13, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', textTransform: 'uppercase' }}>MATCH 15</span>
                     </div>
-                    <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 56, fontWeight: 900, color: p.headerText, margin: 0, lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase', textShadow: `0 4px 12px ${p.bg}` }}>
+                    <h1 style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 56, fontWeight: 900, color: p.headerText, margin: 0, lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase', textShadow: `0 4px 12px ${p.bg}` }}>
                       {playerName}
                     </h1>
-                    <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 28, fontWeight: 700, color: p.text, margin: 0, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <h2 style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 28, fontWeight: 700, color: p.text, margin: 0, marginTop: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       {teamName}
                     </h2>
                   </div>
@@ -99,33 +99,33 @@ export function PlayerSpotlightWidget({
                   <div style={{ gridColumn: 'span 2', display: 'flex', gap: 32, paddingBottom: 24, borderBottom: `1px solid ${p.separator}` }}>
                      <div style={{ flex: 1 }}>
                        <div style={{ fontSize: 12, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 8, textTransform: 'uppercase' }}>Eliminations</div>
-                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 900, color: p.accent, lineHeight: 1 }}>{stats.eliminations}</div>
+                       <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 48, fontWeight: 900, color: p.accent, lineHeight: 1 }}>{stats.eliminations}</div>
                      </div>
                      <div style={{ width: 2, background: p.separator, opacity: 0.5 }}></div>
                      <div style={{ flex: 1 }}>
                        <div style={{ fontSize: 12, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 8, textTransform: 'uppercase' }}>Damage Dealt</div>
-                       <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 900, color: p.text, lineHeight: 1 }}>{stats.damage}</div>
+                       <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 48, fontWeight: 900, color: p.text, lineHeight: 1 }}>{stats.damage}</div>
                      </div>
                   </div>
                   
                   {/* Assists */}
                   <div style={{ gridColumn: 'span 1', display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingBottom: 24, borderBottom: `1px solid ${p.separator}` }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 8, textTransform: 'uppercase' }}>Assists</div>
-                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 32, fontWeight: 800, color: p.text, lineHeight: 1 }}>{stats.assists}</div>
+                    <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 32, fontWeight: 800, color: p.text, lineHeight: 1 }}>{stats.assists}</div>
                   </div>
 
                   {/* Secondary Stats Row */}
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 8, textTransform: 'uppercase' }}>Headshot %</div>
-                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 28, fontWeight: 800, color: p.text, lineHeight: 1 }}>{stats.headshotHitRate.toFixed(1)}%</div>
+                    <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 28, fontWeight: 800, color: p.text, lineHeight: 1 }}>{stats.headshotHitRate.toFixed(1)}%</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 8, textTransform: 'uppercase' }}>Longest Kill</div>
-                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 28, fontWeight: 800, color: p.text, lineHeight: 1 }}>{stats.longestKill}m</div>
+                    <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 28, fontWeight: 800, color: p.text, lineHeight: 1 }}>{stats.longestKill}m</div>
                   </div>
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 8, textTransform: 'uppercase' }}>Survival Time</div>
-                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 28, fontWeight: 800, color: p.text, lineHeight: 1 }}>{stats.survivalTime}</div>
+                    <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 28, fontWeight: 800, color: p.text, lineHeight: 1 }}>{stats.survivalTime}</div>
                   </div>
 
                 </div>

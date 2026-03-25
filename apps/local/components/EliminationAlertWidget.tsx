@@ -30,7 +30,7 @@ export function EliminationAlertWidget({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
         @keyframes elimSlideIn {
           0% { opacity: 0; transform: translateY(-40px) scale(0.95); }
           100% { opacity: 1; transform: translateY(0) scale(1); }
@@ -52,7 +52,7 @@ export function EliminationAlertWidget({
         left: '50%',
         transform: 'translateX(-50%)',
         animation: 'elimSlideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'Roboto', sans-serif",
         zIndex: 50,
       }}>
         <div style={{
@@ -80,12 +80,12 @@ export function EliminationAlertWidget({
                 width: 40, height: 40, borderRadius: 8,
                 background: 'rgba(255,255,255,0.2)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontSize: 16, fontWeight: 900, color: '#fff',
               }}>{short.substring(0, 2)}</div>
             )}
             <div style={{
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "'Montserrat', sans-serif",
               fontSize: 22, fontWeight: 900, color: '#fff',
               textShadow: '0 2px 8px rgba(0,0,0,0.5)',
             }}>#{data.placement}</div>
@@ -109,7 +109,7 @@ export function EliminationAlertWidget({
 
             {/* Team name */}
             <div style={{
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "'Montserrat', sans-serif",
               fontSize: 26, fontWeight: 900, color: p.text,
               textTransform: 'uppercase', letterSpacing: '-0.01em',
               lineHeight: 1,
@@ -121,17 +121,17 @@ export function EliminationAlertWidget({
             }}>
               <div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: p.textMuted, letterSpacing: '0.1em', textTransform: 'uppercase' }}>PLACEMENT</div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 900, color: p.text }}>#{data.placement}/{data.totalTeams}</div>
+                <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 18, fontWeight: 900, color: p.text }}>#{data.placement}/{data.totalTeams}</div>
               </div>
               <div style={{ width: 1, background: p.separator }} />
               <div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: p.textMuted, letterSpacing: '0.1em', textTransform: 'uppercase' }}>MATCH KILLS</div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 900, color: p.accent }}>{data.matchKills}</div>
+                <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 18, fontWeight: 900, color: p.accent }}>{data.matchKills}</div>
               </div>
               <div style={{ width: 1, background: p.separator }} />
               <div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: p.textMuted, letterSpacing: '0.1em', textTransform: 'uppercase' }}>MATCH PTS</div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 900, color: p.text }}>{data.matchPoints}</div>
+                <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 18, fontWeight: 900, color: p.text }}>{data.matchPoints}</div>
               </div>
             </div>
 

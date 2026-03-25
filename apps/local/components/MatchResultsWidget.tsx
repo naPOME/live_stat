@@ -41,24 +41,24 @@ export function MatchResultsWidget({
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 64px', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 64px', fontFamily: "'Roboto', sans-serif" }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 40, paddingBottom: 20, borderBottom: `2px solid ${p.separator}` }}>
             <div>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 700, color: '#eab308', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 700, color: '#eab308', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
                 WINNER WINNER CHICKEN DINNER
               </div>
-              <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 800, color: p.headerText, margin: 0, lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+              <h1 style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 800, color: p.headerText, margin: 0, lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
                 Match Results
               </h1>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 800, color: p.text, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 22, fontWeight: 800, color: p.text, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                 {stageText}
               </span>
               <span style={{ fontSize: 13, fontWeight: 800, color: p.badgeText, background: p.badgeBg, padding: '6px 16px', borderRadius: 4, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
@@ -87,15 +87,15 @@ export function MatchResultsWidget({
                 {teamLogo ? (
                   <img src={teamLogo} alt={teamName} style={{ width: 120, height: 120, objectFit: 'contain', background: 'white', borderRadius: 20, padding: 12, border: `2px solid ${p.separator}` }} />
                 ) : (
-                  <div style={{ width: 120, height: 120, borderRadius: 20, background: `${p.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${p.accent}40`, fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 800, color: p.accent }}>
+                  <div style={{ width: 120, height: 120, borderRadius: 20, background: `${p.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${p.accent}40`, fontFamily: "'Montserrat', sans-serif", fontSize: 48, fontWeight: 800, color: p.accent }}>
                     {teamName.substring(0,2).toUpperCase()}
                   </div>
                 )}
                 <div>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 700, color: p.textMuted, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
+                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 16, fontWeight: 700, color: p.textMuted, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 8 }}>
                     CHAMPIONS
                   </div>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 800, color: p.text, lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 48, fontWeight: 800, color: p.text, lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
                     {teamName}
                   </div>
                 </div>
@@ -104,17 +104,17 @@ export function MatchResultsWidget({
               <div style={{ position: 'relative', zIndex: 10, display: 'flex', gap: 32 }}>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 8, textTransform: 'uppercase', textShadow: `0 2px 8px ${p.cardBg}` }}>Match Elims</div>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 40, fontWeight: 800, color: p.text, lineHeight: 1, textShadow: `0 4px 12px ${p.cardBg}` }}>{matchElims}</div>
+                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 40, fontWeight: 800, color: p.text, lineHeight: 1, textShadow: `0 4px 12px ${p.cardBg}` }}>{matchElims}</div>
                 </div>
                 <div style={{ width: 2, background: p.separator, opacity: 0.5 }}></div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 8, textTransform: 'uppercase', textShadow: `0 2px 8px ${p.cardBg}` }}>Match Dmg</div>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 40, fontWeight: 800, color: p.text, lineHeight: 1, textShadow: `0 4px 12px ${p.cardBg}` }}>{matchDamage}</div>
+                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 40, fontWeight: 800, color: p.text, lineHeight: 1, textShadow: `0 4px 12px ${p.cardBg}` }}>{matchDamage}</div>
                 </div>
                 <div style={{ width: 2, background: p.separator, opacity: 0.5 }}></div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: 12, fontWeight: 700, color: p.accent, letterSpacing: '0.15em', marginBottom: 8, textTransform: 'uppercase', textShadow: `0 2px 8px ${p.cardBg}` }}>Total Pts</div>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 48, fontWeight: 800, color: p.accent, lineHeight: 1, textShadow: `0 4px 12px ${p.cardBg}` }}>+{matchTotalPoints}</div>
+                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 48, fontWeight: 800, color: p.accent, lineHeight: 1, textShadow: `0 4px 12px ${p.cardBg}` }}>+{matchTotalPoints}</div>
                 </div>
               </div>
 
@@ -122,7 +122,7 @@ export function MatchResultsWidget({
 
             {/* Bottom Section: Roster Breakdown */}
             <div style={{ padding: '40px', background: p.cardBg }}>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 24 }}>
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 14, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 24 }}>
                 Squad Performance
               </div>
               
@@ -144,7 +144,7 @@ export function MatchResultsWidget({
                       )}
                       <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40%', background: `linear-gradient(to top, ${p.bg} 0%, transparent 100%)` }}></div>
                       
-                      <div style={{ position: 'absolute', bottom: 12, left: 16, fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 800, color: p.text, textTransform: 'uppercase', letterSpacing: '0.02em', textShadow: `0 2px 8px ${p.bg}` }}>
+                      <div style={{ position: 'absolute', bottom: 12, left: 16, fontFamily: "'Montserrat', sans-serif", fontSize: 20, fontWeight: 800, color: p.text, textTransform: 'uppercase', letterSpacing: '0.02em', textShadow: `0 2px 8px ${p.bg}` }}>
                         {player.name || `Player ${idx + 1}`}
                       </div>
                     </div>
@@ -153,15 +153,15 @@ export function MatchResultsWidget({
                     <div style={{ padding: 16, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
                       <div style={{ background: p.cardBg, padding: '10px 0', borderRadius: 8, border: `1px solid ${p.separator}`, textAlign: 'center' }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: p.textMuted, letterSpacing: '0.1em', marginBottom: 4 }}>ELIMS</div>
-                        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 800, color: p.text }}>{player.eliminations ?? '-'}</div>
+                        <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 18, fontWeight: 800, color: p.text }}>{player.eliminations ?? '-'}</div>
                       </div>
                       <div style={{ background: p.cardBg, padding: '10px 0', borderRadius: 8, border: `1px solid ${p.separator}`, textAlign: 'center' }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: p.textMuted, letterSpacing: '0.1em', marginBottom: 4 }}>DMG</div>
-                        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 800, color: p.text }}>{player.damage ?? '-'}</div>
+                        <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 18, fontWeight: 800, color: p.text }}>{player.damage ?? '-'}</div>
                       </div>
                       <div style={{ background: p.cardBg, padding: '10px 0', borderRadius: 8, border: `1px solid ${p.separator}`, textAlign: 'center' }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: p.textMuted, letterSpacing: '0.1em', marginBottom: 4 }}>ASTS</div>
-                        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 800, color: p.text }}>{player.assists ?? '-'}</div>
+                        <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 18, fontWeight: 800, color: p.text }}>{player.assists ?? '-'}</div>
                       </div>
                     </div>
 

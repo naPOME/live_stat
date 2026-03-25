@@ -28,7 +28,7 @@ export function LiveStandingsWidget({
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
       {/* Broadcaster usually places this near the bottom center/left */}
@@ -39,7 +39,7 @@ export function LiveStandingsWidget({
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
-        fontFamily: "'Inter', sans-serif"
+        fontFamily: "'Roboto', sans-serif"
       }}>
         
         {/* Title Block */}
@@ -55,7 +55,7 @@ export function LiveStandingsWidget({
           borderBottom: 'none'
         }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.accent, marginRight: 12, boxShadow: `0 0 8px ${p.accent}` }}></div>
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 800, color: p.text, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 800, color: p.text, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
             {title}
           </span>
         </div>
@@ -90,7 +90,7 @@ export function LiveStandingsWidget({
                   minWidth: 50,
                   borderRight: `1px solid ${p.separator}`
                 }}>
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 900, color: isFirst ? p.cardBg : p.text, lineHeight: 1 }}>
+                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 24, fontWeight: 900, color: isFirst ? p.cardBg : p.text, lineHeight: 1 }}>
                     {team.rank}
                   </div>
                   {/* Rank Change Arrow */}
@@ -111,7 +111,7 @@ export function LiveStandingsWidget({
                     </div>
                   )}
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 16, fontWeight: 800, color: p.text, textTransform: 'uppercase', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 16, fontWeight: 800, color: p.text, textTransform: 'uppercase', lineHeight: 1.1, whiteSpace: 'nowrap' }}>
                       {team.name}
                     </span>
                     {!team.isAlive && (
@@ -129,7 +129,7 @@ export function LiveStandingsWidget({
                   justifyContent: 'center',
                   borderLeft: `1px dashed ${p.separator}`
                 }}>
-                  <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 900, color: isFirst ? p.accent : p.text, lineHeight: 1 }}>
+                  <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 24, fontWeight: 900, color: isFirst ? p.accent : p.text, lineHeight: 1 }}>
                     {team.points}
                   </span>
                 </div>

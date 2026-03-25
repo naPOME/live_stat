@@ -16,6 +16,7 @@ import { EliminationAlertWidget, type EliminationData } from '@/components/Elimi
 import { TeamListWidget, type TeamEntry } from '@/components/TeamListWidget';
 import { MatchInfoWidget, type MatchInfoData } from '@/components/MatchInfoWidget';
 import { ScheduleWidget, type ScheduleMatch } from '@/components/ScheduleWidget';
+import { BrandOverlay } from '@/components/BrandOverlay';
 
 // ── API response types ──
 interface APITeam {
@@ -207,64 +208,78 @@ export default function MasterOverlay() {
   return (
     <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
 
-      {/* ── Full-screen overlays (only one at a time typically) ── */}
+      {/* ── Full-screen overlays (wrapped with PUBG MOBILE brand logos) ── */}
 
       {isOn('results') && winnerTeam && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 12 }}>
-          <MatchResultsWidget
-            teamName={winnerTeam.displayName || winnerTeam.teamName} teamLogo={winnerTeam.logoPath}
-            matchTotalPoints={winnerTeam.totalPoints} matchElims={winnerTeam.kills}
-            matchDamage={winnerPlayers.reduce((s, p) => s + p.damage, 0)}
-            players={winnerPlayers} palette={palette} stageText="GRAND FINALS" matchText="MATCH WINNER"
-          />
+          <BrandOverlay>
+            <MatchResultsWidget
+              teamName={winnerTeam.displayName || winnerTeam.teamName} teamLogo={winnerTeam.logoPath}
+              matchTotalPoints={winnerTeam.totalPoints} matchElims={winnerTeam.kills}
+              matchDamage={winnerPlayers.reduce((s, p) => s + p.damage, 0)}
+              players={winnerPlayers} palette={palette} stageText="GRAND FINALS" matchText="MATCH WINNER"
+            />
+          </BrandOverlay>
         </div>
       )}
 
       {isOn('fraggers') && topPlayers.length > 0 && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 14 }}>
-          <TopPlayersWidget players={topPlayers} palette={palette} stageText="GRAND FINALS" matchText="TOP FRAGGERS" />
+          <BrandOverlay>
+            <TopPlayersWidget players={topPlayers} palette={palette} stageText="GRAND FINALS" matchText="TOP FRAGGERS" />
+          </BrandOverlay>
         </div>
       )}
 
       {isOn('mvp') && mvpPlayer && mvpPlayer.kills > 0 && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 16 }}>
-          <PlayerSpotlightWidget
-            playerName={mvpPlayer.displayName || mvpPlayer.playerName}
-            teamName={mvpTeam?.displayName || mvpPlayer.teamName}
-            teamLogoUrl={mvpTeam?.logoPath}
-            stats={{
-              eliminations: mvpPlayer.kills, damage: mvpPlayer.damage,
-              headshotHitRate: mvpPlayer.kills > 0 ? ((mvpPlayer.headshots || 0) / mvpPlayer.kills) * 100 : 0,
-              assists: mvpPlayer.assists,
-              survivalTime: `${Math.floor(mvpPlayer.survivalTime / 60)}:${String(mvpPlayer.survivalTime % 60).padStart(2, '0')}`,
-              longestKill: 120 + Math.floor(Math.random() * 200),
-            }}
-            palette={palette}
-          />
+          <BrandOverlay>
+            <PlayerSpotlightWidget
+              playerName={mvpPlayer.displayName || mvpPlayer.playerName}
+              teamName={mvpTeam?.displayName || mvpPlayer.teamName}
+              teamLogoUrl={mvpTeam?.logoPath}
+              stats={{
+                eliminations: mvpPlayer.kills, damage: mvpPlayer.damage,
+                headshotHitRate: mvpPlayer.kills > 0 ? ((mvpPlayer.headshots || 0) / mvpPlayer.kills) * 100 : 0,
+                assists: mvpPlayer.assists,
+                survivalTime: `${Math.floor(mvpPlayer.survivalTime / 60)}:${String(mvpPlayer.survivalTime % 60).padStart(2, '0')}`,
+                longestKill: 120 + Math.floor(Math.random() * 200),
+              }}
+              palette={palette}
+            />
+          </BrandOverlay>
         </div>
       )}
 
       {isOn('pointtable') && leaderboardTeams.length > 0 && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 11 }}>
-          <OverallLeaderboardWidget teams={leaderboardTeams} palette={palette} stageText="OVERALL" matchText="POINT TABLE" />
+          <BrandOverlay>
+            <OverallLeaderboardWidget teams={leaderboardTeams} palette={palette} stageText="OVERALL" matchText="POINT TABLE" />
+          </BrandOverlay>
         </div>
       )}
 
       {isOn('teamlist') && teamListEntries.length > 0 && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
-          <TeamListWidget teams={teamListEntries} palette={palette} stageText="PARTICIPATING TEAMS" />
+          <BrandOverlay>
+            <TeamListWidget teams={teamListEntries} palette={palette} stageText="PARTICIPATING TEAMS" />
+          </BrandOverlay>
         </div>
       )}
 
       {isOn('matchinfo') && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 15 }}>
-          <MatchInfoWidget data={matchInfoData} palette={palette} />
+          <BrandOverlay>
+            <MatchInfoWidget data={matchInfoData} palette={palette} />
+          </BrandOverlay>
         </div>
       )}
 
       {isOn('schedule') && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
-          <ScheduleWidget matches={MOCK_SCHEDULE} palette={palette} tournamentName="PUBG MOBILE PRO LEAGUE" dayLabel="DAY 1" />
+          <BrandOverlay>
+            <ScheduleWidget matches={MOCK_SCHEDULE} palette={palette} tournamentName="PUBG MOBILE PRO LEAGUE" dayLabel="DAY 1" />
+          </BrandOverlay>
         </div>
       )}
 
@@ -297,7 +312,7 @@ export default function MasterOverlay() {
       )}
 
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
         body { background: transparent !important; margin: 0; overflow: hidden; }
         @keyframes slideInRight { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
       `}} />

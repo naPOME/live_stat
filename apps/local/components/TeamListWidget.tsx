@@ -26,20 +26,20 @@ export function TeamListWidget({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif" }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
           {/* Header */}
           <div style={{ marginBottom: 40, paddingBottom: 20, borderBottom: '2px solid ' + p.separator }}>
             <div style={{
-              fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 700,
+              fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 700,
               color: p.accent, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6,
             }}>TOURNAMENT</div>
             <h1 style={{
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "'Montserrat', sans-serif",
               fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 800, color: p.headerText,
               margin: 0, lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase',
             }}>{stageText}</h1>
@@ -76,13 +76,13 @@ export function TeamListWidget({
                         width: 36, height: 36, borderRadius: 6,
                         background: color + '20',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "'Montserrat', sans-serif",
                         fontSize: 14, fontWeight: 900, color,
                       }}>{short.substring(0, 2)}</div>
                     )}
                     <div>
                       <div style={{
-                        fontFamily: "'Space Grotesk', sans-serif",
+                        fontFamily: "'Montserrat', sans-serif",
                         fontSize: 16, fontWeight: 800, color: p.text,
                         textTransform: 'uppercase', letterSpacing: '-0.01em',
                       }}>{team.name}</div>

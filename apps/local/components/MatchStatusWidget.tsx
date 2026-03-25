@@ -22,7 +22,7 @@ export function MatchStatusWidget({
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
       {/* The widget acts as an absolute overlay element for the broadcast HUD */}
@@ -32,7 +32,7 @@ export function MatchStatusWidget({
         right: 48,
         display: 'flex',
         gap: 16,
-        fontFamily: "'Space Grotesk', sans-serif"
+        fontFamily: "'Montserrat', sans-serif"
       }}>
         
         {/* Phase Timer Block */}

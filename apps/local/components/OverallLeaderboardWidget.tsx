@@ -19,6 +19,8 @@ interface OverallLeaderboardWidgetProps {
   matchText?: string;
   palette?: ColorPalette;
   headerImageUrl?: string;
+  /** Page number for broadcast mode (1-based). 10 teams per page. 0 = show all. */
+  page?: number;
 }
 
 export function OverallLeaderboardWidget({
@@ -27,16 +29,23 @@ export function OverallLeaderboardWidget({
   matchText = "OVERALL STANDINGS",
   palette = PALETTES[0],
   headerImageUrl,
+  page = 0,
 }: OverallLeaderboardWidgetProps) {
   const p = palette;
+  const PER_PAGE = 10;
+  const displayTeams = page > 0
+    ? teams.slice((page - 1) * PER_PAGE, page * PER_PAGE)
+    : teams;
+  const totalPages = Math.ceil(teams.length / PER_PAGE);
+  const pageLabel = page > 0 ? ` (${page}/${totalPages})` : '';
 
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif" }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
           {/* Header Area (Banner) */}
@@ -61,19 +70,19 @@ export function OverallLeaderboardWidget({
             {/* Content Content */}
             <div style={{ position: 'relative', zIndex: 10, padding: '32px 48px', width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 700, color: p.accent, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
+                <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 700, color: p.accent, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
                   TOURNAMENT
                 </div>
-                <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 'clamp(40px, 6vw, 72px)', fontWeight: 800, color: p.headerText, margin: 0, lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase', textShadow: `0 4px 12px ${p.bg}` }}>
+                <h1 style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 'clamp(40px, 6vw, 72px)', fontWeight: 800, color: p.headerText, margin: 0, lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase', textShadow: `0 4px 12px ${p.bg}` }}>
                   Leaderboard
                 </h1>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-                <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 800, color: p.text, letterSpacing: '0.05em', textTransform: 'uppercase', textShadow: `0 2px 8px ${p.bg}` }}>
+                <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 22, fontWeight: 800, color: p.text, letterSpacing: '0.05em', textTransform: 'uppercase', textShadow: `0 2px 8px ${p.bg}` }}>
                   {stageText}
                 </span>
                 <span style={{ fontSize: 13, fontWeight: 800, color: p.badgeText, background: p.badgeBg, padding: '6px 16px', borderRadius: 4, letterSpacing: '0.1em', textTransform: 'uppercase', boxShadow: `0 2px 8px ${p.bg}` }}>
-                  {matchText}
+                  {matchText}{pageLabel}
                 </span>
               </div>
             </div>
@@ -86,7 +95,7 @@ export function OverallLeaderboardWidget({
             <div style={{ 
               display: 'grid', gridTemplateColumns: '60px 40px 1fr 100px 100px 120px 140px', 
               background: `${p.accent}10`, padding: '16px 24px', borderBottom: `2px solid ${p.separator}`,
-              fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 700, color: p.textMuted,
+              fontFamily: "'Montserrat', sans-serif", fontSize: 12, fontWeight: 700, color: p.textMuted,
               letterSpacing: '0.15em', textTransform: 'uppercase', alignItems: 'center'
             }}>
               <div style={{ textAlign: 'center' }}>Rank</div>
@@ -100,7 +109,7 @@ export function OverallLeaderboardWidget({
 
             {/* Table Body */}
             <div>
-              {teams.map((team, idx) => {
+              {displayTeams.map((team, idx) => {
                 const isEven = idx % 2 === 0;
                 const isTop3 = team.rank <= 3;
                 
@@ -109,7 +118,7 @@ export function OverallLeaderboardWidget({
                     display: 'grid', gridTemplateColumns: '60px 40px 1fr 100px 100px 120px 140px', 
                     padding: '14px 24px', alignItems: 'center',
                     background: isEven ? 'transparent' : `${p.separator}40`,
-                    borderBottom: idx === teams.length - 1 ? 'none' : `1px solid ${p.separator}`,
+                    borderBottom: idx === displayTeams.length - 1 ? 'none' : `1px solid ${p.separator}`,
                     transition: 'background 0.2s',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = `${p.accent}08`; }}
@@ -118,7 +127,7 @@ export function OverallLeaderboardWidget({
                     
                     {/* Rank Number */}
                     <div style={{ 
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 800, textAlign: 'center',
+                      fontFamily: "'Montserrat', sans-serif", fontSize: 22, fontWeight: 800, textAlign: 'center',
                       color: isTop3 ? p.accent : p.textMuted 
                     }}>
                       #{team.rank}
@@ -144,11 +153,11 @@ export function OverallLeaderboardWidget({
                       {team.logoUrl ? (
                         <img src={team.logoUrl} alt={team.name} style={{ width: 44, height: 44, objectFit: 'contain', background: 'white', borderRadius: 8, padding: 4, border: `1px solid ${p.separator}` }} />
                       ) : (
-                        <div style={{ width: 44, height: 44, borderRadius: 8, background: `${p.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${p.accent}40`, fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, color: p.accent }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 8, background: `${p.accent}15`, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `1px solid ${p.accent}40`, fontFamily: "'Montserrat', sans-serif", fontWeight: 700, color: p.accent }}>
                           {team.name.substring(0,2).toUpperCase()}
                         </div>
                       )}
-                      <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 700, color: p.text, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
+                      <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 20, fontWeight: 700, color: p.text, letterSpacing: '-0.02em', textTransform: 'uppercase' }}>
                         {team.name}
                       </div>
                     </div>
@@ -178,7 +187,7 @@ export function OverallLeaderboardWidget({
                         background: isTop3 ? p.accent : `${p.accent}15`, 
                         color: isTop3 ? p.cardBg : p.accentDark,
                         padding: '6px 16px', borderRadius: 8,
-                        fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 800, minWidth: 80, textAlign: 'center',
+                        fontFamily: "'Montserrat', sans-serif", fontSize: 22, fontWeight: 800, minWidth: 80, textAlign: 'center',
                         boxShadow: isTop3 ? `0 4px 12px ${p.accent}40` : 'none'
                       }}>
                         {team.totalPoints}

@@ -61,7 +61,7 @@ export function KillFeedWidget({
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
       {/* Broadcast Killfeed typically sits Top Right below the match status */}
@@ -72,7 +72,7 @@ export function KillFeedWidget({
         display: 'flex',
         flexDirection: 'column',
         gap: 6,
-        fontFamily: "'Space Grotesk', sans-serif",
+        fontFamily: "'Montserrat', sans-serif",
         maxWidth: 400
       }}>
         

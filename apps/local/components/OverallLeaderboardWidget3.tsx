@@ -14,12 +14,12 @@ export function OverallLeaderboardWidget3({
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700;800&family=Inter:wght@600;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
       {/* Pure White Background, highly structured, 0px border radius, thick black borders */}
       <div className="w-full min-h-screen bg-white flex flex-col p-8 md:p-12 relative text-black" 
-           style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+           style={{ fontFamily: "'Montserrat', sans-serif" }}>
 
         <div className="w-full max-w-[1200px] mx-auto relative z-10 flex flex-col">
           

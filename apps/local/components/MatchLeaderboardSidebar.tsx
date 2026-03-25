@@ -51,7 +51,7 @@ export function MatchLeaderboardSidebar({
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
       <div style={{
@@ -62,7 +62,7 @@ export function MatchLeaderboardSidebar({
         display: 'flex',
         flexDirection: 'column',
         gap: 2, // Very tight minimal gap
-        fontFamily: "'Inter', sans-serif"
+        fontFamily: "'Roboto', sans-serif"
       }}>
         
         {/* Minimalist Header */}
@@ -125,7 +125,7 @@ export function MatchLeaderboardSidebar({
                 {/* Rank */}
                 <div style={{ 
                   position: 'relative', zIndex: 1,
-                  fontFamily: "'Space Grotesk', sans-serif", 
+                  fontFamily: "'Montserrat', sans-serif", 
                   fontSize: 18, 
                   fontWeight: 900, 
                   color: idx < 3 ? p.accent : p.textMuted,
@@ -145,7 +145,7 @@ export function MatchLeaderboardSidebar({
                      </div>
                   )}
                   <span style={{ 
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "'Montserrat', sans-serif",
                     fontSize: 15, 
                     fontWeight: 800, 
                     color: p.text, 
@@ -166,7 +166,7 @@ export function MatchLeaderboardSidebar({
                 {/* Kills */}
                 <div style={{ 
                   position: 'relative', zIndex: 1,
-                  fontFamily: "'Space Grotesk', sans-serif", 
+                  fontFamily: "'Montserrat', sans-serif", 
                   textAlign: 'center', 
                   fontSize: 16, 
                   fontWeight: 800, 
@@ -178,7 +178,7 @@ export function MatchLeaderboardSidebar({
                 {/* Points */}
                 <div style={{ 
                   position: 'relative', zIndex: 1,
-                  fontFamily: "'Space Grotesk', sans-serif", 
+                  fontFamily: "'Montserrat', sans-serif", 
                   textAlign: 'center', 
                   fontSize: 18, 
                   fontWeight: 900, 

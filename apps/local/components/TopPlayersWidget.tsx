@@ -32,6 +32,25 @@ export interface ColorPalette {
 
 export const PALETTES: ColorPalette[] = [
   {
+    name: 'PUBG MOBILE Official',
+    bg: '#0e0e0e',
+    cardBg: '#161616',
+    accent: '#F1C232',
+    accentDark: '#c9a228',
+    text: '#f0f0f0',
+    textMuted: '#777777',
+    labelBg: '#1a1a1a',
+    labelBorder: '#2a2a2a',
+    valueBg: '#F1C232',
+    valueText: '#0e0e0e',
+    headerText: '#F1C232',
+    badgeBg: '#F1C232',
+    badgeText: '#0e0e0e',
+    barTrack: '#2a2a2a',
+    cardShadow: '0 8px 32px rgba(241,194,50,0.08), 0 2px 8px rgba(0,0,0,0.3)',
+    separator: '#222222',
+  },
+  {
     name: 'Crimson Fire',
     bg: '#f5f5f5',
     cardBg: '#ffffff',
@@ -158,24 +177,24 @@ export function TopPlayersWidget({
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif" }}>
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 48, paddingBottom: 20, borderBottom: `2px solid ${p.separator}` }}>
             <div>
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 600, color: p.textMuted, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 12, fontWeight: 600, color: p.textMuted, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6 }}>
                 LEADERBOARD
               </div>
-              <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 700, color: p.headerText, margin: 0, lineHeight: 1, letterSpacing: '-0.02em' }}>
+              <h1 style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 'clamp(36px, 5vw, 64px)', fontWeight: 700, color: p.headerText, margin: 0, lineHeight: 1, letterSpacing: '-0.02em' }}>
                 Top Players
               </h1>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: p.text, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 18, fontWeight: 700, color: p.text, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
                 {stageText}
               </span>
               <span style={{ fontSize: 12, fontWeight: 700, color: p.badgeText, background: p.badgeBg, padding: '4px 12px', borderRadius: 4, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
@@ -214,7 +233,7 @@ export function TopPlayersWidget({
                   {/* Rank */}
                   <div style={{
                     position: 'absolute', top: 14, left: 16, zIndex: 10,
-                    fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 700,
+                    fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 700,
                     color: p.cardBg, background: p.accent, borderRadius: 8,
                     width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
@@ -252,7 +271,7 @@ export function TopPlayersWidget({
                 <div style={{ padding: '0 20px 24px', display: 'flex', flexDirection: 'column', flex: 1, marginTop: -20, position: 'relative', zIndex: 5 }}>
                   
                   {/* Name */}
-                  <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 22, fontWeight: 700, color: p.text, marginBottom: 4, lineHeight: 1.2 }}>
+                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 22, fontWeight: 700, color: p.text, marginBottom: 4, lineHeight: 1.2 }}>
                     {player.name || 'Unknown'}
                   </div>
                   <div style={{ width: 28, height: 3, borderRadius: 2, background: p.accent, marginBottom: 20 }}></div>
@@ -264,7 +283,7 @@ export function TopPlayersWidget({
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Eliminations</span>
-                        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 24, fontWeight: 700, color: p.accent, lineHeight: 1 }}>{player.eliminations ?? '—'}</span>
+                        <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 24, fontWeight: 700, color: p.accent, lineHeight: 1 }}>{player.eliminations ?? '—'}</span>
                       </div>
                       <div style={{ width: '100%', height: 4, borderRadius: 2, background: p.barTrack, overflow: 'hidden' }}>
                         <div style={{ height: '100%', borderRadius: 2, background: p.accent, width: `${Math.min(((player.eliminations || 0) / 10) * 100, 100)}%`, transition: 'width 0.6s ease' }}></div>
@@ -275,7 +294,7 @@ export function TopPlayersWidget({
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
                         <span style={{ fontSize: 10, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Damage</span>
-                        <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, color: p.text, lineHeight: 1 }}>{player.damage ?? '—'}</span>
+                        <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 18, fontWeight: 700, color: p.text, lineHeight: 1 }}>{player.damage ?? '—'}</span>
                       </div>
                       <div style={{ width: '100%', height: 4, borderRadius: 2, background: p.barTrack, overflow: 'hidden' }}>
                         <div style={{ height: '100%', borderRadius: 2, background: p.accentDark, opacity: 0.5, width: `${Math.min(((player.damage || 0) / 2000) * 100, 100)}%`, transition: 'width 0.6s ease' }}></div>
@@ -286,11 +305,11 @@ export function TopPlayersWidget({
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 4, paddingTop: 14, borderTop: `1px solid ${p.separator}` }}>
                       <div>
                         <div style={{ fontSize: 9, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 4 }}>SURVIVAL</div>
-                        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 600, color: p.text }}>{player.survivalTime || '—'}</div>
+                        <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 14, fontWeight: 600, color: p.text }}>{player.survivalTime || '—'}</div>
                       </div>
                       <div>
                         <div style={{ fontSize: 9, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 4 }}>ASSISTS</div>
-                        <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 600, color: p.text }}>{player.assists ?? '—'}</div>
+                        <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 14, fontWeight: 600, color: p.text }}>{player.assists ?? '—'}</div>
                       </div>
                     </div>
                   </div>
@@ -326,13 +345,13 @@ export function TopPlayersWidget({
                       width: 56, height: 56, borderRadius: 8,
                       background: `${p.accent}15`, border: `1px solid ${p.accent}30`,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: p.accent,
+                      fontFamily: "'Montserrat', sans-serif", fontSize: 14, fontWeight: 700, color: p.accent,
                     }}>
                       {s.name.charAt(0)}
                     </div>
                   )}
                   <div>
-                    <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, fontWeight: 700, color: p.text }}>{s.name}</div>
+                    <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 14, fontWeight: 700, color: p.text }}>{s.name}</div>
                     {s.tagline && <div style={{ fontSize: 10, color: p.textMuted, marginTop: 1 }}>{s.tagline}</div>}
                   </div>
                 </a>

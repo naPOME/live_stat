@@ -28,26 +28,26 @@ export function ScheduleWidget({
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Inter', sans-serif" }}>
+      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif" }}>
         <div style={{ maxWidth: 800, margin: '0 auto' }}>
 
           {/* Header */}
           <div style={{ marginBottom: 40, paddingBottom: 20, borderBottom: '2px solid ' + p.separator }}>
             <div style={{
-              fontFamily: "'Space Grotesk', sans-serif", fontSize: 13, fontWeight: 700,
+              fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 700,
               color: p.accent, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6,
             }}>{tournamentName}</div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <h1 style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontSize: 'clamp(36px, 5vw, 56px)', fontWeight: 800, color: p.headerText,
                 margin: 0, lineHeight: 1, letterSpacing: '-0.02em', textTransform: 'uppercase',
               }}>Match Schedule</h1>
               <span style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontSize: 20, fontWeight: 800, color: p.text,
                 background: p.bg, border: '1px solid ' + p.separator,
                 padding: '8px 20px', borderRadius: 8,
@@ -68,7 +68,7 @@ export function ScheduleWidget({
               padding: '14px 24px',
               background: p.accent + '10',
               borderBottom: '2px solid ' + p.separator,
-              fontFamily: "'Space Grotesk', sans-serif",
+              fontFamily: "'Montserrat', sans-serif",
               fontSize: 11, fontWeight: 700, color: p.textMuted,
               letterSpacing: '0.12em', textTransform: 'uppercase',
             }}>
@@ -92,21 +92,21 @@ export function ScheduleWidget({
                 }}>
                   {/* Match # */}
                   <div style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "'Montserrat', sans-serif",
                     fontSize: 18, fontWeight: 900, textAlign: 'center',
                     color: isLive ? p.accent : p.textMuted,
                   }}>{match.matchNumber}</div>
 
                   {/* Map */}
                   <div style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "'Montserrat', sans-serif",
                     fontSize: 16, fontWeight: 700, color: p.text,
                     textTransform: 'uppercase',
                   }}>{match.mapName}</div>
 
                   {/* Time */}
                   <div style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "'Montserrat', sans-serif",
                     fontSize: 14, fontWeight: 600, textAlign: 'center',
                     color: p.textMuted,
                   }}>{match.startTime || '-'}</div>
@@ -130,7 +130,7 @@ export function ScheduleWidget({
 
                   {/* Winner */}
                   <div style={{
-                    fontFamily: "'Space Grotesk', sans-serif",
+                    fontFamily: "'Montserrat', sans-serif",
                     fontSize: 13, fontWeight: 700, color: isDone ? p.text : p.textMuted,
                     textTransform: 'uppercase',
                   }}>

@@ -63,14 +63,14 @@ export default function WwcdOverlay() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
         body { background: transparent !important; margin: 0; overflow: hidden; }
       `}} />
 
       <div style={{
         position: 'fixed', inset: 0,
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-        fontFamily: "'Inter', sans-serif",
+        fontFamily: "'Roboto', sans-serif",
         opacity: show ? 1 : 0, transform: show ? 'scale(1)' : 'scale(0.9)',
         transition: 'all 1s ease',
       }}>
@@ -86,7 +86,7 @@ export default function WwcdOverlay() {
 
         {/* WWCD Title */}
         <h1 style={{
-          fontFamily: "'Space Grotesk', sans-serif",
+          fontFamily: "'Montserrat', sans-serif",
           fontSize: 52, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em',
           color: p.accent,
           textShadow: `0 0 40px ${p.accent}44, 0 0 80px ${p.accent}22`,
@@ -128,7 +128,7 @@ export default function WwcdOverlay() {
               background: color + '33', color,
             }}>{(winner.shortName || name).substring(0, 2)}</div>
           )}
-          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 26, fontWeight: 800, color: p.text }}>{name}</span>
+          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 26, fontWeight: 800, color: p.text }}>{name}</span>
         </div>
 
         {/* Stats Row */}
@@ -153,7 +153,7 @@ export default function WwcdOverlay() {
                 color: i === 0 ? p.cardBg : p.textMuted, marginBottom: 4,
               }}>{stat.label}</div>
               <div style={{
-                fontFamily: "'Space Grotesk', sans-serif",
+                fontFamily: "'Montserrat', sans-serif",
                 fontSize: 24, fontWeight: 900,
               }}>{stat.value}</div>
             </div>
