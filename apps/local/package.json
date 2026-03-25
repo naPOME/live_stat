@@ -29,21 +29,31 @@
       {
         "from": ".next/standalone",
         "to": "next-server",
-        "filter": ["**/*", "!**/release/**", "!**/dist-electron/**"]
+        "filter": [
+          "**/*",
+          "!**/release/**",
+          "!**/dist-electron/**"
+        ]
       },
       {
         "from": ".next/static",
         "to": "next-server/apps/local/.next/static",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "public",
         "to": "next-server/apps/local/public",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
-      "target": ["nsis"],
+      "target": [
+        "nsis"
+      ],
       "icon": "public/icon.png",
       "signAndEditExecutable": false,
       "forceCodeSigning": false
@@ -54,16 +64,21 @@
       "createDesktopShortcut": true
     },
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "icon": "public/icon.png"
     },
     "linux": {
-      "target": ["AppImage"],
+      "target": [
+        "AppImage"
+      ],
       "icon": "public/icon.png"
     }
   },
   "dependencies": {
     "@live-stat/shared": "*",
+    "@phosphor-icons/react": "^2.1.10",
     "@supabase/supabase-js": "^2.99.1",
     "next": "16.1.0",
     "react": "19.2.3",

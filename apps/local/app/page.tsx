@@ -1,6 +1,21 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import {
+  Check,
+  SignIn,
+  Target,
+  ArrowsClockwise,
+  GameController,
+  Cloud,
+  Trophy,
+  Users,
+  Broadcast,
+  Lightning,
+  CircleNotch,
+  ArrowRight,
+  Swap,
+} from '@phosphor-icons/react';
 
 /* ── Types ────────────────────────────────────────── */
 type LifecyclePhase = 'idle' | 'ready' | 'warmup' | 'live' | 'finished' | 'synced';
@@ -277,10 +292,10 @@ export default function Dashboard() {
           {/* Step indicators */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
             {[
-              { n: '1', title: 'Login', desc: 'Sign in to cloud', done: !!auth?.logged_in },
-              { n: '2', title: 'Select Match', desc: 'Pick tournament & match', done: !!matchSelection?.selected },
-              { n: '3', title: 'Sync PCOB', desc: 'Logos to C:/logo', done: exportDone },
-              { n: '4', title: 'Start Game', desc: 'Begin spectating', done: lc.gameClientConnected },
+              { n: '1', title: 'Login', desc: 'Sign in to cloud', done: !!auth?.logged_in, icon: <SignIn size={14} /> },
+              { n: '2', title: 'Select Match', desc: 'Pick tournament & match', done: !!matchSelection?.selected, icon: <Target size={14} /> },
+              { n: '3', title: 'Sync PCOB', desc: 'Logos to C:/logo', done: exportDone, icon: <ArrowsClockwise size={14} /> },
+              { n: '4', title: 'Start Game', desc: 'Begin spectating', done: lc.gameClientConnected, icon: <GameController size={14} /> },
             ].map(s => (
               <div key={s.n} className="metric-card" style={{
                 borderColor: s.done ? 'rgba(34,197,94,0.12)' : 'var(--border)',
@@ -294,9 +309,7 @@ export default function Dashboard() {
                     color: s.done ? 'var(--green)' : 'var(--text-faint)',
                     border: `1px solid ${s.done ? 'rgba(34,197,94,0.15)' : 'var(--border)'}`,
                   }}>
-                    {s.done ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
-                    ) : s.n}
+                    {s.done ? <Check size={14} weight="bold" /> : s.icon}
                   </div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 700, color: s.done ? 'var(--green)' : 'var(--text)' }}>{s.title}</div>
@@ -409,14 +422,12 @@ export default function Dashboard() {
                 <button className="btn btn-accent" onClick={runExport} disabled={exportBusy} style={{ whiteSpace: 'nowrap' }}>
                   {exportBusy ? (
                     <span className="flex items-center gap-6">
-                      <svg width="14" height="14" viewBox="0 0 14 14" style={{ animation: 'spin 1s linear infinite' }}>
-                        <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.5" fill="none" strokeDasharray="20 12" />
-                      </svg>
+                      <CircleNotch size={14} style={{ animation: 'spin 1s linear infinite' }} />
                       Syncing...
                     </span>
                   ) : exportDone ? (
                     <span className="flex items-center gap-6">
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="11 4 5.5 9.5 3 7" /></svg>
+                      <Check size={14} weight="bold" style={{ color: 'var(--green)' }} />
                       Done
                     </span>
                   ) : 'Sync Files'}
@@ -580,7 +591,7 @@ export default function Dashboard() {
                 <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                   <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--purple)' }}>Match MVP</span>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22"/><path d="M18 2H6v7a6 6 0 1012 0V2z"/></svg>
+                    <Trophy size={14} weight="fill" style={{ color: 'var(--amber)' }} />
                   </div>
                   <div style={{ padding: '16px 18px' }}>
                     <div style={{ fontSize: 36, fontWeight: 900, color: 'var(--accent)', lineHeight: 1, letterSpacing: '-0.03em' }}>{game.spotlight.kills}</div>
@@ -783,7 +794,7 @@ export default function Dashboard() {
             <div className="card" style={{ flex: 1, padding: '14px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <div className="flex items-center gap-8">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" /></svg>
+                  <Cloud size={14} weight="duotone" />
                   <span style={{ fontSize: 13, fontWeight: 700 }}>Cloud</span>
                 </div>
                 <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 5, background: auth?.logged_in ? 'var(--green-soft)' : 'var(--bg-hover)', color: auth?.logged_in ? 'var(--green)' : 'var(--text-faint)' }}>
@@ -800,7 +811,7 @@ export default function Dashboard() {
             <div className="card" style={{ flex: 1, padding: '14px 16px', borderColor: sync.connected ? 'rgba(168,85,247,0.1)' : undefined }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <div className="flex items-center gap-8">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+                  <ArrowsClockwise size={12} weight="bold" />
                   <span style={{ fontSize: 13, fontWeight: 700 }}>Sync</span>
                   {sync.connected && <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--purple)' }} />}
                 </div>
