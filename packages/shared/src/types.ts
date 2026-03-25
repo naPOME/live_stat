@@ -134,7 +134,6 @@ export interface TeamState {
   shortName?: string;
   brandColor?: string;
   logoPath?: string;
-  logoPath64?: string;
   logoUrl?: string;
 }
 

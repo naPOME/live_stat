@@ -7,9 +7,6 @@ import type { LeaderboardResponse, LeaderboardTeam } from '@shared/types';
 
 export const runtime = 'nodejs';
 
-// Initialise rosterStore (file watch) on first request
-import '@/lib/rosterStore';
-
 /**
  * GET /api/live — Leaderboard endpoint (legacy, kept for overlay compat).
  * For dashboards, prefer /api/state which includes everything in one call.

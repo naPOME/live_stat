@@ -7,9 +7,6 @@ import type { LiveState, LeaderboardTeam, LeaderboardPlayer } from '@shared/type
 
 export const runtime = 'nodejs';
 
-// Initialise rosterStore (file watch) on first request
-import '@/lib/rosterStore';
-
 /**
  * GET /api/state — Unified live state endpoint.
  * Returns everything a dashboard needs in one call:
