@@ -264,6 +264,13 @@ export default function Dashboard() {
       : watcherLastEventAge < 15
         ? 'SLOW'
         : 'STALE';
+  const preflightChecks = [
+    { key: 'roster', label: 'Roster', ok: !!matchSelection?.selected && lc.rosterLoaded },
+    { key: 'telemetry', label: 'Telemetry', ok: lc.gameClientConnected && connAge < 15 },
+    { key: 'watcher', label: 'Watcher', ok: watcherRunning && watcherLastEventAge < 15 },
+    { key: 'demo', label: 'Demo Off', ok: !demoMode.enabled },
+  ];
+  const preflightOk = preflightChecks.every(check => check.ok);
   const org = roster?.org ?? (auth?.org ? { id: auth.org.id, name: auth.org.name, brand_color: '#2F6B3F', logo_path: null } : null);
   const orgAccent = org?.brand_color || 'var(--accent)';
   const hasOrg = !!auth?.logged_in && !!matchSelection?.selected;
@@ -531,6 +538,31 @@ export default function Dashboard() {
             ))}
           </div>
 
+          <div className="card" style={{ padding: '12px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-faint)' }}>Live Gate</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: preflightOk ? 'var(--green)' : 'var(--red)' }}>
+                {preflightOk ? 'READY' : 'BLOCKED'}
+              </span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
+              {preflightChecks.map(check => (
+                <div key={check.key} style={{
+                  fontSize: 11,
+                  padding: '7px 9px',
+                  borderRadius: 'var(--radius-sm)',
+                  border: `1px solid ${check.ok ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}`,
+                  background: check.ok ? 'var(--green-soft)' : 'var(--red-soft)',
+                  color: check.ok ? 'var(--green)' : 'var(--red)',
+                  fontWeight: 700,
+                  textAlign: 'center',
+                }}>
+                  {check.label}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Team cards grid */}
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -570,6 +602,33 @@ export default function Dashboard() {
       {/* ═══════════════════════════════════════════════ */}
       {/* ── WARMUP ────────────────────────────────────  */}
       {/* ═══════════════════════════════════════════════ */}
+      {phase === 'warmup' && (
+        <div className="card" style={{ padding: '12px 14px', marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-faint)' }}>Live Gate</span>
+            <span style={{ fontSize: 10, fontWeight: 700, color: preflightOk ? 'var(--green)' : 'var(--red)' }}>
+              {preflightOk ? 'READY' : 'BLOCKED'}
+            </span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
+            {preflightChecks.map(check => (
+              <div key={check.key} style={{
+                fontSize: 11,
+                padding: '7px 9px',
+                borderRadius: 'var(--radius-sm)',
+                border: `1px solid ${check.ok ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}`,
+                background: check.ok ? 'var(--green-soft)' : 'var(--red-soft)',
+                color: check.ok ? 'var(--green)' : 'var(--red)',
+                fontWeight: 700,
+                textAlign: 'center',
+              }}>
+                {check.label}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {phase === 'warmup' && (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

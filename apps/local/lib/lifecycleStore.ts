@@ -1,4 +1,6 @@
 import { subscribe as gameSubscribe, type GameSnapshot } from './gameStore';
+import { getParserStats } from './parser';
+import { isDemoModeEnabled } from './demoMode';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -26,13 +28,27 @@ export interface LifecycleState {
   postMatchCollecting: boolean;
   /** Timestamp when post-match collection window ends */
   postMatchDeadline: number | null;
+  /** Live transition gate status */
+  preflight?: PreflightStatus;
+}
+
+export interface PreflightCheck {
+  key: 'roster' | 'telemetry' | 'watcher' | 'demoMode';
+  label: string;
+  ok: boolean;
+  reason: string | null;
+}
+
+export interface PreflightStatus {
+  ok: boolean;
+  checks: PreflightCheck[];
 }
 
 type Subscriber = (state: LifecycleState) => void;
 
 // ─── Module State ───────────────────────────────────────────────────────────────
 
-let state: LifecycleState = {
+const state: LifecycleState = {
   phase: 'idle',
   rosterLoaded: false,
   gameClientConnected: false,
@@ -47,9 +63,14 @@ let state: LifecycleState = {
 };
 
 const subs = new Set<Subscriber>();
-let previousTeamAlive = new Map<number, number>();
+const previousTeamAlive = new Map<number, number>();
 let initialized = false;
 let notifCounter = 0;
+let lastBlockedGateSignature = '';
+let lastBlockedGateAt = 0;
+
+const TELEMETRY_STALE_MS = 15_000;
+const WATCHER_STALE_MS = 15_000;
 
 function notify() {
   const snap = getLifecycleState();
@@ -61,7 +82,7 @@ function notify() {
 // ─── Public API ─────────────────────────────────────────────────────────────────
 
 export function getLifecycleState(): LifecycleState {
-  return { ...state, notifications: [...state.notifications] };
+  return { ...state, notifications: [...state.notifications], preflight: buildPreflightStatus() };
 }
 
 export function subscribeLifecycle(fn: Subscriber): () => void {
@@ -87,6 +108,61 @@ export function recordTelemetry(): void {
     }
   }
   // Don't notify on every telemetry — too noisy
+}
+
+/**
+ * Evaluate hard preflight checks before allowing live transition.
+ */
+function buildPreflightStatus(): PreflightStatus {
+  const now = Date.now();
+  const parser = getParserStats();
+  const telemetryAge = state.lastTelemetryAt ? now - state.lastTelemetryAt : Infinity;
+  const watcherAge = parser.lastEventAt ? now - parser.lastEventAt : Infinity;
+  const demoModeOn = isDemoModeEnabled();
+
+  const checks: PreflightCheck[] = [
+    {
+      key: 'roster',
+      label: 'Roster Loaded',
+      ok: state.rosterLoaded,
+      reason: state.rosterLoaded ? null : 'Load and select a match first.',
+    },
+    {
+      key: 'telemetry',
+      label: 'Game Telemetry',
+      ok: state.gameClientConnected && telemetryAge <= TELEMETRY_STALE_MS,
+      reason:
+        state.gameClientConnected && telemetryAge <= TELEMETRY_STALE_MS
+          ? null
+          : 'No recent telemetry from game client.',
+    },
+    {
+      key: 'watcher',
+      label: 'Log Watcher',
+      ok: parser.running && watcherAge <= WATCHER_STALE_MS,
+      reason:
+        parser.running && watcherAge <= WATCHER_STALE_MS
+          ? null
+          : !parser.running
+            ? 'Watcher is not running.'
+            : 'Watcher is stale (no recent events).',
+    },
+    {
+      key: 'demoMode',
+      label: 'Demo Mode Off',
+      ok: !demoModeOn,
+      reason: demoModeOn ? 'Disable demo mode before going live.' : null,
+    },
+  ];
+
+  return {
+    ok: checks.every(check => check.ok),
+    checks,
+  };
+}
+
+export function getPreflightStatus(): PreflightStatus {
+  return buildPreflightStatus();
 }
 
 /**
@@ -116,7 +192,24 @@ export function onRosterCleared(): void {
  * Transition to live phase (fighting started).
  */
 export function goLive(): void {
-  if (state.phase === 'warmup' || state.phase === 'ready') {
+  if (!(state.phase === 'warmup' || state.phase === 'ready' || state.phase === 'idle')) return;
+
+  const preflight = buildPreflightStatus();
+  if (!preflight.ok) {
+    const blocked = preflight.checks.filter(check => !check.ok).map(check => check.label);
+    const signature = blocked.join('|');
+    const now = Date.now();
+    if (signature !== lastBlockedGateSignature || now - lastBlockedGateAt > 10_000) {
+      lastBlockedGateSignature = signature;
+      lastBlockedGateAt = now;
+      addNotification('warning', `Live blocked by preflight: ${blocked.join(', ')}`);
+    } else {
+      notify();
+    }
+    return;
+  }
+
+  if (state.phase === 'warmup' || state.phase === 'ready' || state.phase === 'idle') {
     state.phase = 'live';
     addNotification('info', 'Match started — fighting phase');
     notify();
@@ -207,6 +300,8 @@ export function resetForNextMatch(): void {
   state.notifications = [];
   previousTeamAlive.clear();
   onPostMatchReady = null;
+  lastBlockedGateSignature = '';
+  lastBlockedGateAt = 0;
   addNotification('info', `Ready for match #${state.matchNumber}`);
   notify();
 }
@@ -266,11 +361,10 @@ function onGameStateChange(snapshot: unknown): void {
   }
 
   if (snap.phase === 'ingame' && (state.phase === 'idle' || state.phase === 'ready')) {
-    // Game started but we skipped warmup (e.g. app restarted mid-match)
-    state.phase = 'live';
+    // Game started but we skipped warmup (e.g. app restarted mid-match).
+    // Still enforce preflight before switching lifecycle to live.
     state.gameClientConnected = true;
-    // rosterLoaded is managed by rosterStore via onRosterLoaded/onRosterCleared
-    notify();
+    goLive();
   }
 
   // Team elimination detection (only during live phase)
