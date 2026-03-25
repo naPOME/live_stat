@@ -228,14 +228,14 @@ export default function Dashboard() {
                 background: `${orgAccent}12`, border: `1px solid ${orgAccent}18`,
                 display: 'grid', placeItems: 'center', flexShrink: 0,
               }}>
-                {org.logo_path ? (
+                {org?.logo_path ? (
                   <img src={org.logo_path} alt="" style={{ width: 28, height: 28, objectFit: 'contain' }} />
                 ) : (
-                  <span style={{ fontSize: 18, fontWeight: 900, color: orgAccent }}>{org.name.charAt(0)}</span>
+                  <span style={{ fontSize: 18, fontWeight: 900, color: orgAccent }}>{org?.name.charAt(0)}</span>
                 )}
               </div>
               <div>
-                <h1 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>{org.name}</h1>
+                <h1 style={{ fontSize: 18, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>{org?.name}</h1>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, fontSize: 12, color: 'var(--text-faint)' }}>
                   {matchSelection?.tournament_name && <span>{matchSelection.tournament_name}</span>}
                   {matchSelection?.stage_name && <><span style={{ opacity: 0.3 }}>/</span><span>{matchSelection.stage_name}</span></>}
