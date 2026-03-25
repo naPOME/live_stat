@@ -3,11 +3,12 @@
 import { usePathname } from 'next/navigation';
 import DashboardShell from './DashboardShell';
 
-const BARE_PREFIXES = ['/overlay/'];
+// Overlay routes render bare (transparent for OBS), except gallery which is a dashboard page
+const SHELL_OVERRIDES = ['/overlay/gallery'];
 
 export default function ShellWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isBare = BARE_PREFIXES.some(p => pathname.startsWith(p));
+  const isBare = pathname.startsWith('/overlay/') && !SHELL_OVERRIDES.includes(pathname);
 
   if (isBare) return <>{children}</>;
   return <DashboardShell>{children}</DashboardShell>;
