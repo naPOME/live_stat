@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { ingestMockTick, upsertFromPayload, upsertFromPcobRaw, type PcobIngestPayload } from "@/lib/pcobStore";
+import { isDemoModeEnabled } from "@/lib/demoMode";
 
 export const runtime = "nodejs";
 
@@ -62,10 +63,18 @@ export async function POST(req: Request) {
     const body = (await req.json()) as unknown;
 
     if (mock) {
-      const matchId =
-        typeof (body as any)?.matchId === "string" && (body as any).matchId.trim()
-          ? (body as any).matchId.trim()
-          : "default";
+      if (!isDemoModeEnabled()) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error: "mock ingest is disabled. Enable demo mode via /api/demo-mode first.",
+          },
+          { status: 403 },
+        );
+      }
+      const matchIdFromBody =
+        isObject(body) && typeof body.matchId === "string" && body.matchId.trim() ? body.matchId.trim() : undefined;
+      const matchId = matchIdFromBody ?? "default";
       ingestMockTick(matchId);
       return NextResponse.json({ ok: true, matchId, mock: true }, { status: 200 });
     }
@@ -98,6 +107,7 @@ export async function GET() {
         path: "/api/pcob",
         mock: {
           path: "/api/pcob?mock=1",
+          requiresDemoMode: true,
           bodyExample: { matchId: "match-1" },
         },
         bodyExample: {

@@ -9,12 +9,8 @@ import {
   GameController,
   Cloud,
   Trophy,
-  Users,
   Broadcast,
-  Lightning,
   CircleNotch,
-  ArrowRight,
-  Swap,
 } from '@phosphor-icons/react';
 
 /* ── Types ────────────────────────────────────────── */
@@ -30,6 +26,11 @@ interface RosterInfo { roster_loaded: boolean; team_count: number; player_count:
 interface LiveTeam { teamName: string; displayName?: string; shortName?: string; brandColor?: string; kills: number; totalPoints: number; liveMemberNum: number; alive: boolean; placement?: number; }
 interface GameData { phase?: string; teams: LiveTeam[]; spotlight?: { playerName: string; displayName?: string; teamName: string; kills: number }; players?: { playerName: string; displayName?: string; teamName: string; kills: number; damage: number; headshots: number; }[]; }
 interface SyncStatus { role: string; connected: boolean; peerCount: number; syncCode: string | null; }
+interface WatcherStatus {
+  watcher?: { running: boolean; activeCount: number; active: string[] };
+  parser?: { lastEventAt: number | null; eventsTotal: number; errorsTotal: number; lastError: string | null };
+}
+interface DemoModeStatus { enabled: boolean; }
 
 interface AuthInfo { configured: boolean; logged_in: boolean; user: { id: string; email: string } | null; org: { id: string; name: string } | null; }
 interface TournamentInfo { id: string; name: string; status: string; format: string; stages?: StageInfo[]; }
@@ -44,6 +45,10 @@ export default function Dashboard() {
   const [roster, setRoster] = useState<RosterInfo | null>(null);
   const [widgets, setWidgets] = useState<Record<string, boolean>>({});
   const [sync, setSync] = useState<SyncStatus>({ role: 'standalone', connected: false, peerCount: 0, syncCode: null });
+  const [watcher, setWatcher] = useState<WatcherStatus | null>(null);
+  const [demoMode, setDemoMode] = useState<DemoModeStatus>({ enabled: false });
+  const [demoModeBusy, setDemoModeBusy] = useState(false);
+  const [demoModeErr, setDemoModeErr] = useState('');
 
   // Auth
   const [auth, setAuth] = useState<AuthInfo | null>(null);
@@ -125,6 +130,33 @@ export default function Dashboard() {
     return () => { wes.close(); ses.close(); };
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+    const loadStatus = () => {
+      fetch('/api/watcher')
+        .then(r => r.json())
+        .then(d => {
+          if (!alive) return;
+          setWatcher(d);
+        })
+        .catch(() => {});
+      fetch('/api/demo-mode')
+        .then(r => r.json())
+        .then(d => {
+          if (!alive) return;
+          if (typeof d?.enabled === 'boolean') setDemoMode({ enabled: d.enabled });
+        })
+        .catch(() => {});
+    };
+
+    loadStatus();
+    const id = setInterval(loadStatus, 2000);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+
   /* ── Actions ───────────────────────────────────── */
   async function doLogin() {
     setLoginBusy(true); setLoginErr('');
@@ -184,6 +216,27 @@ export default function Dashboard() {
   const resetMatch = () => fetch('/api/lifecycle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'reset' }) });
   const retrySync = () => fetch('/api/lifecycle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'retry-sync' }) });
   async function runExport() { setExportBusy(true); setExportErr(''); try { const res = await fetch('/api/cloud/sync-export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }); const d = await res.json(); if (d.ok) { setExportDone(true); setTimeout(() => setExportDone(false), 5000); } else { setExportErr(d.error || 'Export failed'); } } catch { setExportErr('Network error'); } finally { setExportBusy(false); } }
+  async function toggleDemoMode() {
+    setDemoModeBusy(true);
+    setDemoModeErr('');
+    try {
+      const res = await fetch('/api/demo-mode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: !demoMode.enabled }),
+      });
+      const d = await res.json();
+      if (!d.ok || typeof d.enabled !== 'boolean') {
+        setDemoModeErr(d?.error || 'Toggle failed');
+        return;
+      }
+      setDemoMode({ enabled: d.enabled });
+    } catch {
+      setDemoModeErr('Network error');
+    } finally {
+      setDemoModeBusy(false);
+    }
+  }
 
   /* ── Derived ───────────────────────────────────── */
   const phase = lc.phase;
@@ -193,6 +246,24 @@ export default function Dashboard() {
   const widgetCount = Object.values(widgets).filter(Boolean).length;
   const connAge = lc.lastTelemetryAt ? (Date.now() - lc.lastTelemetryAt) / 1000 : Infinity;
   const connColor = connAge < 5 ? 'var(--green)' : connAge < 15 ? 'var(--amber)' : 'var(--red)';
+  const watcherRunning = watcher?.watcher?.running ?? false;
+  const watcherActiveCount = watcher?.watcher?.activeCount ?? 0;
+  const watcherLastEventAt = watcher?.parser?.lastEventAt ?? null;
+  const watcherLastEventAge = watcherLastEventAt ? (Date.now() - watcherLastEventAt) / 1000 : Infinity;
+  const watcherColor = watcherRunning
+    ? watcherLastEventAge < 5
+      ? 'var(--green)'
+      : watcherLastEventAge < 15
+        ? 'var(--amber)'
+        : 'var(--red)'
+    : 'var(--text-faint)';
+  const watcherStatus = !watcherRunning
+    ? 'OFF'
+    : watcherLastEventAge < 5
+      ? 'LIVE'
+      : watcherLastEventAge < 15
+        ? 'SLOW'
+        : 'STALE';
   const org = roster?.org ?? (auth?.org ? { id: auth.org.id, name: auth.org.name, brand_color: '#2F6B3F', logo_path: null } : null);
   const orgAccent = org?.brand_color || 'var(--accent)';
   const hasOrg = !!auth?.logged_in && !!matchSelection?.selected;
@@ -783,6 +854,34 @@ export default function Dashboard() {
 
           {/* Cloud + Sync */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div className="card" style={{ flex: 1, padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div className="flex items-center gap-8">
+                  <Broadcast size={14} weight="duotone" />
+                  <span style={{ fontSize: 13, fontWeight: 700 }}>Ingest</span>
+                </div>
+                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 5, background: `${watcherColor}20`, color: watcherColor }}>
+                  {watcherStatus}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-faint)', marginBottom: 8 }}>
+                <span>Watchers: {watcherActiveCount}</span>
+                <span>Events: {watcher?.parser?.eventsTotal ?? 0}</span>
+              </div>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 10 }}>
+                {watcherRunning ? (Number.isFinite(watcherLastEventAge) ? `Last event ${Math.round(watcherLastEventAge)}s ago` : 'Waiting for first event') : 'Watcher is not running'}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: demoMode.enabled ? 'var(--amber)' : 'var(--text-faint)' }}>
+                  Demo mode {demoMode.enabled ? 'ON' : 'OFF'}
+                </span>
+                <button className={demoMode.enabled ? 'btn btn-red' : 'btn'} onClick={toggleDemoMode} disabled={demoModeBusy} style={{ fontSize: 10, padding: '3px 10px' }}>
+                  {demoModeBusy ? '...' : demoMode.enabled ? 'Disable' : 'Enable'}
+                </button>
+              </div>
+              {demoModeErr && <div style={{ fontSize: 10, color: 'var(--red)', marginTop: 6 }}>{demoModeErr}</div>}
+            </div>
+
             <div className="card" style={{ flex: 1, padding: '14px 16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <div className="flex items-center gap-8">

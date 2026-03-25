@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { startParser, stopParser, type ParserOptions, type ParsedLogEvent } from '@/lib/parser';
+import { getParserStats, startParser, stopParser, type ParserOptions, type ParsedLogEvent } from '@/lib/parser';
 import {
   handleCircleInfo,
   handleKillInfo,
@@ -78,8 +78,15 @@ export async function POST(req: Request) {
 }
 
 export async function GET() {
+  const stats = getParserStats();
   return NextResponse.json({
     ok: true,
+    watcher: {
+      running: stats.running,
+      activeCount: activeWatchers.size,
+      active: Array.from(activeWatchers.keys()),
+    },
+    parser: stats,
     usage: {
       method: 'POST',
       path: '/api/watcher',
@@ -88,6 +95,5 @@ export async function GET() {
         { action: 'stop' },
       ],
     },
-    active: Array.from(activeWatchers.keys()),
   });
 }

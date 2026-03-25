@@ -69,6 +69,40 @@ export interface ParserOptions {
   pollIntervalMs?: number;
 }
 
+export interface ParserStats {
+  running: boolean;
+  filePath: string | null;
+  pollIntervalMs: number;
+  lastReadAt: number | null;
+  lastEventAt: number | null;
+  lastEventType: ParsedLogEvent['type'] | null;
+  eventsTotal: number;
+  eventsByType: Record<ParsedLogEvent['type'], number>;
+  errorsTotal: number;
+  lastError: string | null;
+}
+
+const defaultParserStats = (): ParserStats => ({
+  running: false,
+  filePath: null,
+  pollIntervalMs: 500,
+  lastReadAt: null,
+  lastEventAt: null,
+  lastEventType: null,
+  eventsTotal: 0,
+  eventsByType: {
+    totalmessage: 0,
+    killinfo: 0,
+    circleinfo: 0,
+    observing: 0,
+    phase: 0,
+  },
+  errorsTotal: 0,
+  lastError: null,
+});
+
+let parserStats: ParserStats = defaultParserStats();
+
 export class LogParser {
   private filePath: string;
   private pollIntervalMs: number;
@@ -251,12 +285,21 @@ export class LogParser {
 
       const lines = this.buffer.split('\n');
       this.buffer = lines.pop() || '';
+      parserStats.lastReadAt = Date.now();
 
       for (const line of lines) {
         const event = this.parseLine(line.trim());
-        if (event) this.onEvent(event);
+        if (event) {
+          parserStats.eventsTotal += 1;
+          parserStats.eventsByType[event.type] += 1;
+          parserStats.lastEventType = event.type;
+          parserStats.lastEventAt = Date.now();
+          this.onEvent(event);
+        }
       }
     } catch (error) {
+      parserStats.errorsTotal += 1;
+      parserStats.lastError = error instanceof Error ? error.message : String(error);
       this.onError(error instanceof Error ? error : new Error(String(error)));
     }
   }
@@ -265,11 +308,20 @@ export class LogParser {
     try {
       const content = readFileSync(this.filePath, 'utf8');
       const lines = content.split('\n');
+      parserStats.lastReadAt = Date.now();
       for (const line of lines) {
         const event = this.parseLine(line.trim());
-        if (event) this.onEvent(event);
+        if (event) {
+          parserStats.eventsTotal += 1;
+          parserStats.eventsByType[event.type] += 1;
+          parserStats.lastEventType = event.type;
+          parserStats.lastEventAt = Date.now();
+          this.onEvent(event);
+        }
       }
     } catch (error) {
+      parserStats.errorsTotal += 1;
+      parserStats.lastError = error instanceof Error ? error.message : String(error);
       this.onError(error instanceof Error ? error : new Error(String(error)));
     }
   }
@@ -277,6 +329,12 @@ export class LogParser {
   start(): void {
     if (this.running) return;
     this.running = true;
+    parserStats = {
+      ...defaultParserStats(),
+      running: true,
+      filePath: this.filePath,
+      pollIntervalMs: this.pollIntervalMs,
+    };
 
     try {
       this.lastSize = statSync(this.filePath).size;
@@ -291,6 +349,7 @@ export class LogParser {
   stop(): void {
     if (!this.running) return;
     this.running = false;
+    parserStats.running = false;
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = undefined;
@@ -310,4 +369,11 @@ export function stopParser(): void {
   if (!globalParser) return;
   globalParser.stop();
   globalParser = undefined;
+}
+
+export function getParserStats(): ParserStats {
+  return {
+    ...parserStats,
+    eventsByType: { ...parserStats.eventsByType },
+  };
 }
