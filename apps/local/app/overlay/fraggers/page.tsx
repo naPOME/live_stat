@@ -4,10 +4,12 @@ import { PALETTES, type PlayerStat } from '@/components/TopPlayersWidget';
 import { TopPlayersWidget } from '@/components/TopPlayersWidget';
 import { useGlobalTheme } from '@/hooks/useGlobalTheme';
 import { useLiveState } from '@/hooks/useLiveState';
+import { useWallpaper } from '@/hooks/useWallpaper';
 
 export default function FraggersOverlay() {
   const themeIdx = useGlobalTheme();
   const live = useLiveState();
+  const wallpaperUrl = useWallpaper();
 
   const players: PlayerStat[] = (live.players || [])
     .filter((p) => p.kills > 0)
@@ -31,6 +33,7 @@ export default function FraggersOverlay() {
         palette={PALETTES[themeIdx]}
         stageText="GRAND FINALS"
         matchText="TOP FRAGGERS"
+        backgroundImageUrl={wallpaperUrl ?? undefined}
       />
     </>
   );

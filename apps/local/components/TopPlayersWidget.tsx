@@ -161,6 +161,7 @@ interface TopPlayersWidgetProps {
   palette?: ColorPalette;
   sponsors?: Sponsor[];
   poweredBy?: string;
+  backgroundImageUrl?: string;
 }
 
 export function TopPlayersWidget({
@@ -170,6 +171,7 @@ export function TopPlayersWidget({
   palette = PALETTES[0],
   sponsors = [],
   poweredBy,
+  backgroundImageUrl,
 }: TopPlayersWidgetProps) {
   const displayPlayers = players.length > 0 ? players : Array(5).fill({});
   const p = palette;
@@ -180,7 +182,13 @@ export function TopPlayersWidget({
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif" }}>
+      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif", position: 'relative', overflow: 'hidden' }}>
+        {backgroundImageUrl && (
+          <>
+            <img src={backgroundImageUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.2 }} />
+            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${p.bg}ee 0%, ${p.bg}cc 50%, ${p.bg}ee 100%)` }} />
+          </>
+        )}
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
           {/* Header */}

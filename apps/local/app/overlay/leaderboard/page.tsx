@@ -4,10 +4,12 @@ import { PALETTES } from '@/components/TopPlayersWidget';
 import { OverallLeaderboardWidget, type TeamStandings } from '@/components/OverallLeaderboardWidget';
 import { useGlobalTheme } from '@/hooks/useGlobalTheme';
 import { useLiveState } from '@/hooks/useLiveState';
+import { useWallpaper } from '@/hooks/useWallpaper';
 
 export default function LeaderboardOverlay() {
   const themeIdx = useGlobalTheme();
   const live = useLiveState();
+  const wallpaperUrl = useWallpaper();
 
   const teams: TeamStandings[] = live.teams.map((t, i) => ({
     rank: i + 1,
@@ -29,6 +31,7 @@ export default function LeaderboardOverlay() {
         palette={PALETTES[themeIdx]}
         stageText="GRAND FINALS"
         matchText="OVERALL STANDINGS"
+        headerImageUrl={wallpaperUrl ?? undefined}
       />
     </>
   );

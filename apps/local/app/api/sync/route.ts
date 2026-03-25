@@ -13,10 +13,6 @@ export const runtime = 'nodejs';
 // Store the sync code so the dashboard can show it
 let currentSyncCode: string | null = null;
 
-export function getSyncCode(): string | null {
-  return currentSyncCode;
-}
-
 /**
  * GET /api/sync — Current sync status (or SSE with ?stream=1)
  */

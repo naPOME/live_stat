@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { PALETTES } from '@/components/TopPlayersWidget';
+import { useUnifiedStream } from '@/hooks/useUnifiedStream';
 import {
   ListNumbers,
   Crosshair,
@@ -18,6 +19,10 @@ import {
   EyeSlash,
   Palette,
   SlidersHorizontal,
+  ImageSquare,
+  CaretLeft,
+  CaretRight,
+  X,
 } from '@phosphor-icons/react';
 
 const WIDGETS = [
@@ -42,42 +47,40 @@ const GROUPS: { id: string; label: string }[] = [
 ];
 
 export default function ControllerPage() {
-  const [vis, setVis] = useState<Record<string, boolean>>({});
-  const [themeIdx, setThemeIdx] = useState(0);
+  // Single SSE connection for all channels
+  const stream = useUnifiedStream();
+  const vis = stream.widgets;
+  const themeIdx = stream.themeIdx;
+  const activeWp = stream.wallpaper;
+  const lbPage = stream.lbPage;
 
-  useEffect(() => {
-    fetch('/api/widgets').then(r => r.json()).then(setVis).catch(() => {});
-    const es = new EventSource('/api/widgets?stream=1');
-    es.onmessage = e => { try { setVis(JSON.parse(e.data)); } catch {} };
-    return () => es.close();
-  }, []);
+  const [wallpapers, setWallpapers] = useState<string[]>([]);
 
+  // Fetch available wallpaper list (one-time, not SSE)
   useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(d => {
-      if (typeof d.activeThemeIdx === 'number') setThemeIdx(d.activeThemeIdx);
+    fetch('/api/wallpaper').then(r => r.json()).then(d => {
+      setWallpapers(d.available ?? []);
     }).catch(() => {});
-    const es = new EventSource('/api/theme?stream=1');
-    es.onmessage = e => {
-      try { const d = JSON.parse(e.data); if (typeof d.activeThemeIdx === 'number') setThemeIdx(d.activeThemeIdx); } catch {}
-    };
-    return () => es.close();
   }, []);
 
   const toggle = useCallback(async (key: string) => {
-    setVis(prev => ({ ...prev, [key]: !prev[key] }));
-    fetch('/api/widgets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'toggle', key }) })
-      .then(r => r.json()).then(setVis);
+    fetch('/api/widgets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'toggle', key }) });
   }, []);
 
   const hideAll = useCallback(async () => {
-    setVis(prev => Object.fromEntries(Object.keys(prev).map(k => [k, false])));
-    fetch('/api/widgets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'hideAll' }) })
-      .then(r => r.json()).then(setVis);
+    fetch('/api/widgets', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'hideAll' }) });
   }, []);
 
   const switchTheme = useCallback(async (idx: number) => {
-    setThemeIdx(idx);
     fetch('/api/theme', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idx }) });
+  }, []);
+
+  const pickWallpaper = useCallback(async (url: string | null) => {
+    fetch('/api/wallpaper', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+  }, []);
+
+  const toggleLbPage = useCallback(async () => {
+    fetch('/api/leaderboard-page', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'toggle' }) });
   }, []);
 
   useEffect(() => {
@@ -93,11 +96,12 @@ export default function ControllerPage() {
 
   const activeCount = Object.values(vis).filter(Boolean).length;
   const pal = PALETTES[themeIdx];
+  const isLeaderboardOn = vis['pointtable'] ?? false;
 
   return (
     <div className="animate-in" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -114,39 +118,116 @@ export default function ControllerPage() {
         </button>
       </div>
 
-      {/* ── Theme Row ── */}
-      <div className="card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <Palette size={16} weight="duotone" style={{ color: 'var(--text-faint)' }} />
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            Broadcast Theme
-          </span>
+      {/* Theme + Wallpaper Row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        {/* Theme Card */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <Palette size={16} weight="duotone" style={{ color: 'var(--text-faint)' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Theme
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {PALETTES.map((p, idx) => {
+              const sel = themeIdx === idx;
+              return (
+                <button
+                  key={p.name}
+                  onClick={() => switchTheme(idx)}
+                  title={p.name}
+                  style={{
+                    width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                    background: p.accent,
+                    border: sel ? '2px solid var(--text)' : '2px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    opacity: sel ? 1 : 0.35,
+                    transform: sel ? 'scale(1.1)' : 'scale(1)',
+                  }}
+                />
+              );
+            })}
+            <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 4, fontWeight: 600 }}>{pal.name}</span>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {PALETTES.map((p, idx) => {
-            const sel = themeIdx === idx;
-            return (
-              <button
-                key={p.name}
-                onClick={() => switchTheme(idx)}
-                title={p.name}
-                style={{
-                  width: 36, height: 36, borderRadius: 'var(--radius-sm)',
-                  background: p.accent,
-                  border: sel ? '2px solid var(--text)' : '2px solid transparent',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  opacity: sel ? 1 : 0.35,
-                  transform: sel ? 'scale(1.1)' : 'scale(1)',
-                }}
-              />
-            );
-          })}
-          <span style={{ fontSize: 12, color: 'var(--text-dim)', marginLeft: 8, fontWeight: 600 }}>{pal.name}</span>
+
+        {/* Wallpaper Card */}
+        <div className="card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <ImageSquare size={16} weight="duotone" style={{ color: 'var(--text-faint)' }} />
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              Background
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            {/* None option */}
+            <button
+              onClick={() => pickWallpaper(null)}
+              title="No background"
+              style={{
+                width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                background: 'var(--bg-inset)',
+                border: activeWp === null ? '2px solid var(--text)' : '2px solid var(--border)',
+                cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: activeWp === null ? 1 : 0.5,
+              }}
+            >
+              <X size={12} style={{ color: 'var(--text-muted)' }} />
+            </button>
+            {wallpapers.map(wp => {
+              const sel = activeWp === wp;
+              const name = wp.split('/').pop()?.replace(/\.[^.]+$/, '') || wp;
+              return (
+                <button
+                  key={wp}
+                  onClick={() => pickWallpaper(wp)}
+                  title={name}
+                  style={{
+                    width: 32, height: 32, borderRadius: 'var(--radius-sm)',
+                    backgroundImage: `url(${wp})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    border: sel ? '2px solid var(--text)' : '2px solid transparent',
+                    cursor: 'pointer',
+                    opacity: sel ? 1 : 0.5,
+                    transition: 'all 0.15s',
+                  }}
+                />
+              );
+            })}
+            {wallpapers.length === 0 && (
+              <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Add images to public/wallpapers/</span>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── Widget Groups ── */}
+      {/* Leaderboard Page Toggle (only visible when pointtable is active) */}
+      {isLeaderboardOn && (
+        <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <ListNumbers size={16} weight="duotone" style={{ color: pal.accent }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-dim)' }}>
+              Leaderboard Page
+            </span>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              className="btn"
+              onClick={toggleLbPage}
+              style={{ padding: '4px 12px', fontSize: 12 }}
+            >
+              <CaretLeft size={12} />
+              <span style={{ fontWeight: 800, minWidth: 50, textAlign: 'center' }}>Page {lbPage}</span>
+              <CaretRight size={12} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Widget Groups */}
       {GROUPS.map(g => {
         const items = WIDGETS.filter(w => w.group === g.id);
         return (
@@ -162,7 +243,7 @@ export default function ControllerPage() {
                   <button
                     key={w.key}
                     onClick={() => toggle(w.key)}
-                    className={on ? 'card' : 'card'}
+                    className="card"
                     style={{
                       position: 'relative',
                       display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
@@ -209,7 +290,7 @@ export default function ControllerPage() {
         );
       })}
 
-      {/* ── Footer ── */}
+      {/* Footer */}
       <div className="flex items-center" style={{ justifyContent: 'space-between', paddingTop: 10, borderTop: '1px solid var(--border-subtle)', fontSize: 10, color: 'var(--text-muted)' }}>
         <span>OBS Source: <span className="mono" style={{ color: 'var(--text-dim)' }}>localhost:3001/overlay/master</span></span>
         <span>F1-F12 to toggle · ESC to clear</span>

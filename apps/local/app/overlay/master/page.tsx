@@ -1,11 +1,10 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { PALETTES } from '@/components/TopPlayersWidget';
-import { useGlobalTheme } from '@/hooks/useGlobalTheme';
 import { useLiveState } from '@/hooks/useLiveState';
 
-// â”€â”€ Import all premium widget components â”€â”€
+// Import all premium widget components
 import { OverallLeaderboardWidget, type TeamStandings } from '@/components/OverallLeaderboardWidget';
 import { MatchLeaderboardSidebar, type SidebarTeam } from '@/components/MatchLeaderboardSidebar';
 import { LiveStandingsWidget, type LiveTeam } from '@/components/LiveStandingsWidget';
@@ -19,7 +18,7 @@ import { MatchInfoWidget, type MatchInfoData } from '@/components/MatchInfoWidge
 import { ScheduleWidget, type ScheduleMatch } from '@/components/ScheduleWidget';
 import { BrandOverlay } from '@/components/BrandOverlay';
 
-// â”€â”€ API response types â”€â”€
+// API response types
 interface APITeam {
   teamName: string;
   displayName?: string;
@@ -46,7 +45,7 @@ interface APIPlayer {
   survivalTime: number;
 }
 
-// â”€â”€ Mock schedule data â”€â”€
+// Mock schedule data
 const MOCK_SCHEDULE: ScheduleMatch[] = [
   { matchNumber: 1, mapName: 'Erangel', status: 'completed', startTime: '14:00', winnerTeam: 'Alpha 7' },
   { matchNumber: 2, mapName: 'Miramar', status: 'completed', startTime: '14:45', winnerTeam: 'Nova Esports' },
@@ -58,28 +57,40 @@ const MOCK_SCHEDULE: ScheduleMatch[] = [
 
 export default function MasterOverlay() {
   const [vis, setVis] = useState<Record<string, boolean>>({});
-  const themeIdx = useGlobalTheme();
+  const [themeIdx, setThemeIdx] = useState(0);
+  const [wallpaperUrl, setWallpaperUrl] = useState<string | null>(null);
+  const [lbPage, setLbPage] = useState(1);
   const palette = PALETTES[themeIdx];
   const live = useLiveState();
 
-  // â”€â”€ Live Data â”€â”€
+  // Live Data
   const apiTeams = live.teams as APITeam[];
   const apiPlayers = live.players as APIPlayer[];
   const prevTeamAlive = useRef<Record<string, boolean>>({});
 
-  // â”€â”€ Kill Feed â”€â”€
+  // Kill Feed
   const [killEvents, setKillEvents] = useState<KillEvent[]>([]);
   const killTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
-  // â”€â”€ Elimination Alert Queue â”€â”€
+  // Elimination Alert Queue
   const [elimAlert, setElimAlert] = useState<EliminationData | null>(null);
   const elimTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // â”€â”€ Widget visibility SSE â”€â”€
+  // Single SSE for widgets + theme + wallpaper + leaderboard page
   useEffect(() => {
-    fetch('/api/widgets').then(r => r.json()).then(setVis).catch(() => {});
-    const es = new EventSource('/api/widgets?stream=1');
-    es.onmessage = e => { try { setVis(JSON.parse(e.data)); } catch {} };
+    const es = new EventSource('/api/stream?filter=widgets,theme,wallpaper,lbpage');
+    es.addEventListener('widgets', (e: MessageEvent) => {
+      try { setVis(JSON.parse(e.data)); } catch {}
+    });
+    es.addEventListener('theme', (e: MessageEvent) => {
+      try { const d = JSON.parse(e.data); if (typeof d.activeThemeIdx === 'number') setThemeIdx(d.activeThemeIdx); } catch {}
+    });
+    es.addEventListener('wallpaper', (e: MessageEvent) => {
+      try { const d = JSON.parse(e.data); setWallpaperUrl(d.active ?? null); } catch {}
+    });
+    es.addEventListener('lbpage', (e: MessageEvent) => {
+      try { const d = JSON.parse(e.data); if (typeof d.page === 'number') setLbPage(d.page); } catch {}
+    });
     return () => es.close();
   }, []);
 
@@ -90,7 +101,7 @@ export default function MasterOverlay() {
     elimTimer.current = setTimeout(() => setElimAlert(null), 5500);
   }, []);
 
-  // â”€â”€ Live data polling â”€â”€
+  // Detect team eliminations
   useEffect(() => {
     for (const t of apiTeams) {
       const name = t.displayName || t.teamName;
@@ -115,7 +126,7 @@ export default function MasterOverlay() {
     }
   }, [apiTeams, showElimAlert]);
 
-  // â”€â”€ Kill feed SSE â”€â”€
+  // Kill feed SSE
   useEffect(() => {
     const es = new EventSource('/api/killfeed');
     const timers = killTimers.current;
@@ -139,7 +150,7 @@ export default function MasterOverlay() {
     return () => { es.close(); timers.forEach(clearTimeout); };
   }, []);
 
-  // â”€â”€ Data Mappers â”€â”€
+  // Data Mappers
   const leaderboardTeams: TeamStandings[] = apiTeams.map((t, i) => ({
     rank: i + 1, name: t.displayName || t.teamName, logoUrl: t.logoPath,
     wwcd: 0, eliminations: t.kills, placement: t.placementPoints, totalPoints: t.totalPoints,
@@ -193,10 +204,13 @@ export default function MasterOverlay() {
 
   const isOn = (key: string) => vis[key] ?? false;
 
+  // Shorthand — wallpaper is used as background for all full-screen stat widgets
+  const wp = wallpaperUrl;
+
   return (
     <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
 
-      {/* â”€â”€ Full-screen overlays (wrapped with PUBG MOBILE brand logos) â”€â”€ */}
+      {/* Full-screen overlays (wrapped with PUBG MOBILE brand logos) */}
 
       {isOn('results') && winnerTeam && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 12 }}>
@@ -206,6 +220,7 @@ export default function MasterOverlay() {
               matchTotalPoints={winnerTeam.totalPoints} matchElims={winnerTeam.kills}
               matchDamage={winnerPlayers.reduce((s, p) => s + p.damage, 0)}
               players={winnerPlayers} palette={palette} stageText="GRAND FINALS" matchText="MATCH WINNER"
+              bannerImageUrl={wp ?? undefined}
             />
           </BrandOverlay>
         </div>
@@ -214,7 +229,10 @@ export default function MasterOverlay() {
       {isOn('fraggers') && topPlayers.length > 0 && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 14 }}>
           <BrandOverlay>
-            <TopPlayersWidget players={topPlayers} palette={palette} stageText="GRAND FINALS" matchText="TOP FRAGGERS" />
+            <TopPlayersWidget
+              players={topPlayers} palette={palette} stageText="GRAND FINALS" matchText="TOP FRAGGERS"
+              backgroundImageUrl={wp ?? undefined}
+            />
           </BrandOverlay>
         </div>
       )}
@@ -234,6 +252,7 @@ export default function MasterOverlay() {
                 longestKill: 120 + ((mvpPlayer.kills * 37 + (mvpPlayer.damage || 0)) % 200),
               }}
               palette={palette}
+              bannerImageUrl={wp ?? undefined}
             />
           </BrandOverlay>
         </div>
@@ -242,7 +261,12 @@ export default function MasterOverlay() {
       {isOn('pointtable') && leaderboardTeams.length > 0 && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 11 }}>
           <BrandOverlay>
-            <OverallLeaderboardWidget teams={leaderboardTeams} palette={palette} stageText="OVERALL" matchText="POINT TABLE" />
+            <OverallLeaderboardWidget
+              teams={leaderboardTeams} palette={palette}
+              stageText="OVERALL" matchText="POINT TABLE"
+              headerImageUrl={wp ?? undefined}
+              page={lbPage}
+            />
           </BrandOverlay>
         </div>
       )}
@@ -271,7 +295,18 @@ export default function MasterOverlay() {
         </div>
       )}
 
-      {/* â”€â”€ HUD Overlays (sit on top of the game feed) â”€â”€ */}
+      {isOn('wwcd') && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 12 }}>
+          <BrandOverlay>
+            <WwcdInline
+              teams={apiTeams} players={apiPlayers}
+              palette={palette} wallpaperUrl={wp}
+            />
+          </BrandOverlay>
+        </div>
+      )}
+
+      {/* HUD Overlays (sit on top of the game feed) */}
 
       {isOn('killfeed') && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 20, pointerEvents: 'none' }}>
@@ -285,14 +320,13 @@ export default function MasterOverlay() {
         </div>
       )}
 
-      {/* Match Leaderboard Sidebar (bottom-right live ranking) */}
       {isOn('leaderboard') && sidebarTeams.length > 0 && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 19, pointerEvents: 'none' }}>
           <MatchLeaderboardSidebar teams={sidebarTeams} palette={palette} />
         </div>
       )}
 
-      {/* â”€â”€ Elimination Alert Popup (enabled via Elimination Alert button) â”€â”€ */}
+      {/* Elimination Alert Popup */}
       {isOn('elimination') && elimAlert && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
           <EliminationAlertWidget data={elimAlert} palette={palette} />
@@ -308,3 +342,139 @@ export default function MasterOverlay() {
   );
 }
 
+// Inline WWCD component — rendered within master to access wallpaper prop
+import type { ColorPalette } from '@/components/TopPlayersWidget';
+
+function WwcdInline({
+  teams, players, palette: p, wallpaperUrl,
+}: {
+  teams: APITeam[];
+  players: APIPlayer[];
+  palette: ColorPalette;
+  wallpaperUrl: string | null;
+}) {
+  const [show, setShow] = useState(false);
+  const winner = teams[0] ?? null;
+  const squad = winner
+    ? players.filter(pl => pl.teamName === winner.teamName).sort((a, b) => b.kills - a.kills)
+    : [];
+
+  useEffect(() => {
+    if (!winner) return;
+    const id = setTimeout(() => setShow(true), 200);
+    return () => clearTimeout(id);
+  }, [winner]);
+
+  if (!winner) return null;
+
+  const name = winner.displayName || winner.teamName;
+  const color = winner.brandColor || p.accent;
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      fontFamily: "'Roboto', sans-serif",
+      opacity: show ? 1 : 0, transform: show ? 'scale(1)' : 'scale(0.9)',
+      transition: 'all 1s ease',
+    }}>
+      {/* Background wallpaper */}
+      {wallpaperUrl && (
+        <>
+          <img src={wallpaperUrl} alt="" style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'cover', opacity: 0.25,
+          }} />
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.8) 100%)',
+          }} />
+        </>
+      )}
+
+      {/* Content */}
+      <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{
+          fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.3em',
+          padding: '5px 18px', borderRadius: 100,
+          background: p.accent, color: p.cardBg,
+          marginBottom: 12,
+        }}>
+          PUBG MOBILE TOURNAMENT
+        </div>
+
+        <h1 style={{
+          fontFamily: "'Montserrat', sans-serif",
+          fontSize: 52, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.05em',
+          color: p.accent,
+          textShadow: `0 0 40px ${p.accent}44, 0 0 80px ${p.accent}22`,
+          margin: '0 0 24px',
+        }}>
+          WINNER WINNER CHICKEN DINNER
+        </h1>
+
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 24, marginBottom: 24 }}>
+          {squad.slice(0, 4).map((pl, i) => (
+            <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{
+                width: 120, height: 140, borderRadius: 12,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 8,
+                background: p.bg, border: '1px solid ' + p.separator,
+              }}>
+                <svg width="60" height="80" viewBox="0 0 60 80" fill="none">
+                  <circle cx="30" cy="20" r="14" fill={p.textMuted + '33'} />
+                  <path d="M8 75C8 55 15 42 30 42C45 42 52 55 52 75" fill={p.textMuted + '22'} />
+                </svg>
+              </div>
+              <span style={{ fontSize: 12, fontWeight: 700, color: p.text }}>{pl.displayName || pl.playerName}</span>
+              <span style={{ fontSize: 10, fontWeight: 800, color: p.accent }}>{pl.kills} ELIMS</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+          {winner.logoPath ? (
+            <img src={winner.logoPath} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'contain' }} />
+          ) : (
+            <div style={{
+              width: 40, height: 40, borderRadius: 8,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 18, fontWeight: 900,
+              background: color + '33', color,
+            }}>{(winner.shortName || name).substring(0, 2)}</div>
+          )}
+          <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 26, fontWeight: 800, color: p.text }}>{name}</span>
+        </div>
+
+        <div style={{
+          display: 'flex', borderRadius: 12, overflow: 'hidden',
+          border: '2px solid ' + p.accent + '33',
+        }}>
+          {[
+            { label: 'WWCD', value: '1' },
+            { label: 'TOTAL ELIMS', value: String(winner.kills) },
+            { label: 'PLACEMENT PTS', value: String(winner.placementPoints) },
+            { label: 'TOTAL POINTS', value: String(winner.totalPoints) },
+          ].map((stat, i) => (
+            <div key={i} style={{
+              padding: '12px 32px', textAlign: 'center',
+              background: i === 0 ? p.accent : p.cardBg,
+              color: i === 0 ? p.cardBg : p.text,
+              borderLeft: i > 0 ? '1px solid ' + p.separator : 'none',
+            }}>
+              <div style={{
+                fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+                color: i === 0 ? p.cardBg : p.textMuted, marginBottom: 4,
+              }}>{stat.label}</div>
+              <div style={{
+                fontFamily: "'Montserrat', sans-serif",
+                fontSize: 24, fontWeight: 900,
+              }}>{stat.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

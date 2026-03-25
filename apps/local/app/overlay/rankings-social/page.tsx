@@ -5,10 +5,12 @@ import { OverallRankingSocialWidget } from '@/components/OverallRankingSocialWid
 import type { TeamStandings } from '@/components/OverallLeaderboardWidget';
 import { useGlobalTheme } from '@/hooks/useGlobalTheme';
 import { useLiveState } from '@/hooks/useLiveState';
+import { useWallpaper } from '@/hooks/useWallpaper';
 
 export default function RankingsSocialOverlay() {
   const themeIdx = useGlobalTheme();
   const live = useLiveState();
+  const wallpaperUrl = useWallpaper();
   const teams: TeamStandings[] = live.teams.map((t, i) => ({
     rank: i + 1,
     name: t.displayName || t.teamName,
@@ -29,6 +31,7 @@ export default function RankingsSocialOverlay() {
         palette={PALETTES[themeIdx]}
         stageText="GRAND FINAL"
         matchText="DAY 1  MATCH 6"
+        backgroundImageUrl={wallpaperUrl ?? undefined}
       />
     </>
   );

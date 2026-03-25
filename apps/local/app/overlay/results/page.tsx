@@ -4,10 +4,12 @@ import { PALETTES } from '@/components/TopPlayersWidget';
 import { MatchResultsWidget, type MatchPlayerStat } from '@/components/MatchResultsWidget';
 import { useGlobalTheme } from '@/hooks/useGlobalTheme';
 import { useLiveState } from '@/hooks/useLiveState';
+import { useWallpaper } from '@/hooks/useWallpaper';
 
 export default function ResultsOverlay() {
   const themeIdx = useGlobalTheme();
   const live = useLiveState();
+  const wallpaperUrl = useWallpaper();
   const winner = live.teams[0];
 
   const players: MatchPlayerStat[] = winner
@@ -38,6 +40,7 @@ export default function ResultsOverlay() {
         palette={PALETTES[themeIdx]}
         stageText="GRAND FINALS"
         matchText="MATCH WINNER"
+        bannerImageUrl={wallpaperUrl ?? undefined}
       />
     </>
   );

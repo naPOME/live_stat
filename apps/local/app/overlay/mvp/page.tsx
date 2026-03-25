@@ -4,10 +4,12 @@ import { PALETTES } from '@/components/TopPlayersWidget';
 import { PlayerSpotlightWidget } from '@/components/PlayerSpotlightWidget';
 import { useGlobalTheme } from '@/hooks/useGlobalTheme';
 import { useLiveState } from '@/hooks/useLiveState';
+import { useWallpaper } from '@/hooks/useWallpaper';
 
 export default function MvpOverlay() {
   const themeIdx = useGlobalTheme();
   const live = useLiveState();
+  const wallpaperUrl = useWallpaper();
   const best = [...(live.players || [])].sort((a, b) => b.kills - a.kills || b.damage - a.damage)[0];
   const team = best ? live.teams.find((t) => t.teamName === best.teamName) : undefined;
   const longestKill = best ? 120 + ((best.kills * 37 + (best.damage ?? 0)) % 200) : 0;
@@ -39,6 +41,7 @@ export default function MvpOverlay() {
         teamLogoUrl={mvpData.teamLogoUrl}
         stats={mvpData.stats}
         palette={PALETTES[themeIdx]}
+        bannerImageUrl={wallpaperUrl ?? undefined}
       />
     </>
   );
