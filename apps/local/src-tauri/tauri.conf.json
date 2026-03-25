@@ -1,0 +1,60 @@
+{
+  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-cli/schema.json",
+  "productName": "Live Stat",
+  "version": "0.1.0",
+  "identifier": "com.livestat.local",
+  "build": {
+    "beforeDevCommand": "",
+    "devUrl": "http://localhost:3001",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "http://localhost:3001"
+  },
+  "app": {
+    "title": "Live Stat",
+    "windows": [
+      {
+        "title": "Live Stat — Local Engine",
+        "url": "http://localhost:3001",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true,
+        "decorations": true
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "resources": {
+      "../next-server/**": "./"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "perMachine"
+      }
+    }
+  },
+  "plugins": {
+    "shell": {
+      "scope": [
+        {
+          "name": "node",
+          "cmd": "node",
+          "args": true
+        }
+      ]
+    }
+  }
+}

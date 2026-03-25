@@ -6,10 +6,10 @@ export const runtime = 'nodejs';
 
 /**
  * POST /api/match-select
- * Body: { cloud_url: string, tournament_id: string, stage_id?: string, match_id?: string }
+ * Body: { tournament_id: string, stage_id?: string, match_id?: string }
  *
  * Fetches match config from cloud's /api/match-config endpoint using
- * the tournament's API key. Stores the config for the local engine.
+ * the tournament's API key. Cloud URL comes from NEXT_PUBLIC_CLOUD_URL env.
  */
 export async function POST(request: Request) {
   let body: any = {};
@@ -20,13 +20,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'Not logged in' }, { status: 401 });
   }
 
-  const cloudUrl = (body?.cloud_url || '').trim().replace(/\/$/, '');
+  const cloudUrl = (process.env.NEXT_PUBLIC_CLOUD_URL || '').trim().replace(/\/$/, '');
   const tournamentId = (body?.tournament_id || '').trim();
   const stageId = (body?.stage_id || '').trim();
   const matchId = (body?.match_id || '').trim();
 
   if (!cloudUrl) {
-    return NextResponse.json({ ok: false, error: 'cloud_url is required' }, { status: 400 });
+    return NextResponse.json({ ok: false, error: 'NEXT_PUBLIC_CLOUD_URL not configured' }, { status: 500 });
   }
   if (!tournamentId && !matchId && !stageId) {
     return NextResponse.json({ ok: false, error: 'Provide tournament_id, stage_id, or match_id' }, { status: 400 });

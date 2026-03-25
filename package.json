@@ -11,8 +11,8 @@
     "dev": "turbo dev",
     "dev:local": "npm -w live-stat-local run dev",
     "dev:cloud": "npm -w cloud run dev",
-    "electron:dev": "npm -w live-stat-local run electron:dev",
-    "electron:build": "npm -w live-stat-local run electron:build",
+    "tauri:dev": "npm -w live-stat-local run tauri:dev",
+    "tauri:build": "npm -w live-stat-local run tauri:build",
     "build": "turbo build",
     "lint": "turbo lint"
   },

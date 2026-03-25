@@ -15,7 +15,7 @@ out/
 # ─── Build output ──────────────────────────────────────────────────────────────
 build/
 dist/
-dist-electron/
+target/
 release/
 
 # ─── Environment variables ─────────────────────────────────────────────────────

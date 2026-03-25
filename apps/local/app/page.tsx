@@ -61,9 +61,6 @@ export default function Dashboard() {
   const [pickerBusy, setPickerBusy] = useState(false);
   const [pickerErr, setPickerErr] = useState('');
 
-  // Cloud URL for match-config fetch
-  const [cloudUrl, setCloudUrl] = useState('');
-
   // Sync & Export
   const [joinCode, setJoinCode] = useState('');
   const [syncBusy, setSyncBusy] = useState(false);
@@ -165,12 +162,10 @@ export default function Dashboard() {
   async function doSelectMatch() {
     if (!selectedTournament || !selectedMatch) return;
     setPickerBusy(true); setPickerErr('');
-    const url = cloudUrl.trim() || window.location.origin;
     try {
       const res = await fetch('/api/match-select', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cloud_url: url,
           tournament_id: selectedTournament.id,
           stage_id: selectedStage?.id,
           match_id: selectedMatch.id,
@@ -327,12 +322,9 @@ export default function Dashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <input className="input" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" type="email" style={{ fontFamily: 'var(--sans)' }} onKeyDown={e => e.key === 'Enter' && doLogin()} />
                 <input className="input" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" type="password" style={{ fontFamily: 'var(--sans)' }} onKeyDown={e => e.key === 'Enter' && doLogin()} />
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <input className="input" value={cloudUrl} onChange={e => setCloudUrl(e.target.value)} placeholder="Cloud URL (leave empty for same origin)" style={{ flex: 1, fontFamily: 'var(--sans)', fontSize: 11 }} />
-                  <button className="btn btn-accent" onClick={doLogin} disabled={loginBusy || !email.trim() || !password} style={{ whiteSpace: 'nowrap' }}>
-                    {loginBusy ? 'Signing in...' : 'Sign In'}
-                  </button>
-                </div>
+                <button className="btn btn-accent" onClick={doLogin} disabled={loginBusy || !email.trim() || !password} style={{ width: '100%' }}>
+                  {loginBusy ? 'Signing in...' : 'Sign In'}
+                </button>
               </div>
               {loginErr && <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 8 }}>{loginErr}</div>}
             </div>

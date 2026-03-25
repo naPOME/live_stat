@@ -14,9 +14,6 @@ import {
   MagnifyingGlass,
   Crosshair,
   List,
-  Minus,
-  Square,
-  X,
 } from '@phosphor-icons/react';
 
 /* ── Nav data ────────────────────────────────────────── */
@@ -82,12 +79,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           <MagnifyingGlass size={14} />
           <input type="text" placeholder="Search..." />
           <kbd>Ctrl K</kbd>
-        </div>
-
-        <div className="titlebar-controls">
-          <button className="wc-btn" onClick={() => (window as any).electronAPI?.minimize()}><Minus size={10} weight="bold" /></button>
-          <button className="wc-btn" onClick={() => (window as any).electronAPI?.maximize()}><Square size={10} /></button>
-          <button className="wc-btn wc-close" onClick={() => (window as any).electronAPI?.close()}><X size={10} weight="bold" /></button>
         </div>
       </div>
 
