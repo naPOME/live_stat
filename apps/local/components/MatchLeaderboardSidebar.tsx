@@ -17,15 +17,19 @@ interface MatchLeaderboardSidebarProps {
   title?: string;
   palette?: ColorPalette;
   matchBannerUrl?: string; // The overall cinematic banner
+  transparent?: boolean;
 }
 
 export function MatchLeaderboardSidebar({
   teams = [],
   title = "LIVE MATCH STANDINGS",
   palette = PALETTES[0],
-  matchBannerUrl
+  matchBannerUrl,
+  transparent = false,
 }: MatchLeaderboardSidebarProps) {
   const p = palette;
+  const panelBg = transparent ? 'rgba(22, 22, 22, 0.48)' : p.cardBg;
+  const separator = transparent ? 'rgba(255, 255, 255, 0.12)' : p.separator;
 
   // Minimalist dots for alive players
   const renderAliveDots = (alive: number) => {
@@ -70,7 +74,7 @@ export function MatchLeaderboardSidebar({
           display: 'grid',
           gridTemplateColumns: '40px 1fr 60px 40px 50px',
           padding: '8px 12px',
-          background: p.cardBg,
+          background: panelBg,
           backdropFilter: 'blur(10px)',
           borderLeft: '4px solid ' + p.accent,
           borderTopRightRadius: 4,
@@ -79,7 +83,7 @@ export function MatchLeaderboardSidebar({
           color: p.textMuted,
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
-          border: '1px solid ' + p.separator,
+          border: '1px solid ' + separator,
           borderBottom: 'none'
         }}>
           <div style={{ textAlign: 'center' }}>RNK</div>
@@ -104,9 +108,9 @@ export function MatchLeaderboardSidebar({
                   gridTemplateColumns: '40px 1fr 60px 40px 50px',
                   alignItems: 'center',
                   height: 44, // Very tight, uniform height
-                  background: bgImage ? 'url("' + bgImage + '") right center/cover no-repeat' : p.cardBg,
+                  background: bgImage ? 'url("' + bgImage + '") right center/cover no-repeat' : panelBg,
                   borderRadius: 2,
-                  border: '1px solid ' + p.separator,
+                  border: '1px solid ' + separator,
                   overflow: 'hidden',
                   opacity: isEliminated ? 0.6 : 1,
                   filter: isEliminated ? 'grayscale(100%)' : 'none',
@@ -117,7 +121,7 @@ export function MatchLeaderboardSidebar({
                   <div style={{ 
                     position: 'absolute', 
                     top: 0, left: 0, right: 0, bottom: 0, 
-                    background: 'linear-gradient(90deg, ' + p.cardBg + ' 0%, transparent 100%)',
+                    background: 'linear-gradient(90deg, ' + panelBg + ' 0%, transparent 100%)',
                     zIndex: 0
                   }} />
                 )}

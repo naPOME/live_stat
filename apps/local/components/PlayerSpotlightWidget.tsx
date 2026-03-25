@@ -17,6 +17,7 @@ interface PlayerSpotlightWidgetProps {
   };
   palette?: ColorPalette;
   bannerImageUrl?: string;
+  transparent?: boolean;
 }
 
 export function PlayerSpotlightWidget({
@@ -27,8 +28,13 @@ export function PlayerSpotlightWidget({
   stats,
   palette = PALETTES[0],
   bannerImageUrl,
+  transparent = false,
 }: PlayerSpotlightWidgetProps) {
   const p = palette;
+  const shellBg = transparent ? 'rgba(14, 14, 14, 0.18)' : p.bg;
+  const cardBg = transparent ? 'rgba(22, 22, 22, 0.48)' : p.cardBg;
+  const separator = transparent ? 'rgba(255, 255, 255, 0.12)' : p.separator;
+  const cardShadow = transparent ? '0 10px 36px rgba(0,0,0,0.22)' : p.cardShadow;
 
   return (
     <>
@@ -36,23 +42,23 @@ export function PlayerSpotlightWidget({
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '64px 24px', fontFamily: "'Roboto', sans-serif" }}>
+      <div style={{ background: shellBg, width: '100%', padding: '64px 24px', fontFamily: "'Roboto', sans-serif" }}>
         <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
           
           {/* Main Card Container */}
-          <div style={{ position: 'relative', background: p.cardBg, borderRadius: 24, boxShadow: p.cardShadow, border: `1px solid ${p.separator}`, overflow: 'hidden' }}>
+          <div style={{ position: 'relative', background: cardBg, borderRadius: 24, boxShadow: cardShadow, border: `1px solid ${separator}`, overflow: 'hidden' }}>
             
             {/* Cinematic Background Banner */}
             {bannerImageUrl && (
                <img src={bannerImageUrl} alt="MVP Banner" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.3, mixBlendMode: 'luminosity' }} />
             )}
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: `linear-gradient(90deg, ${p.cardBg} f0%, ${p.cardBg}cc 30%, ${p.cardBg} 80%)` }}></div>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: `linear-gradient(270deg, ${p.cardBg} 40%, transparent 100%)` }}></div>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: transparent ? 'linear-gradient(90deg, rgba(22,22,22,0.66) 0%, rgba(22,22,22,0.42) 30%, rgba(22,22,22,0.16) 80%)' : `linear-gradient(90deg, ${p.cardBg}f0%, ${p.cardBg}cc 30%, ${p.cardBg} 80%)` }}></div>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: transparent ? 'linear-gradient(270deg, rgba(22,22,22,0.46) 40%, transparent 100%)' : `linear-gradient(270deg, ${p.cardBg} 40%, transparent 100%)` }}></div>
 
             <div style={{ position: 'relative', zIndex: 10, display: 'flex', minHeight: 460 }}>
               
               {/* Left Side: Player Image */}
-              <div style={{ width: 400, position: 'relative', borderRight: `2px solid ${p.separator}`, background: `linear-gradient(180deg, ${p.accent}20 0%, transparent 100%)` }}>
+              <div style={{ width: 400, position: 'relative', borderRight: `2px solid ${separator}`, background: `linear-gradient(180deg, ${p.accent}20 0%, transparent 100%)` }}>
                 {playerImageUrl ? (
                   <img src={playerImageUrl} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'top center' }} alt={playerName} />
                 ) : (
@@ -63,7 +69,7 @@ export function PlayerSpotlightWidget({
                     </svg>
                   </div>
                 )}
-                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 160, background: `linear-gradient(0deg, ${p.cardBg} 0%, transparent 100%)` }}></div>
+                <div style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 160, background: `linear-gradient(0deg, ${cardBg} 0%, transparent 100%)` }}></div>
               </div>
 
               {/* Right Side: Data */}

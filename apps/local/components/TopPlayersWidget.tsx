@@ -162,6 +162,7 @@ interface TopPlayersWidgetProps {
   sponsors?: Sponsor[];
   poweredBy?: string;
   backgroundImageUrl?: string;
+  transparent?: boolean;
 }
 
 export function TopPlayersWidget({
@@ -172,9 +173,14 @@ export function TopPlayersWidget({
   sponsors = [],
   poweredBy,
   backgroundImageUrl,
+  transparent = false,
 }: TopPlayersWidgetProps) {
   const displayPlayers = players.length > 0 ? players : Array(5).fill({});
   const p = palette;
+  const shellBg = transparent ? 'rgba(14, 14, 14, 0.18)' : p.bg;
+  const cardBg = transparent ? 'rgba(22, 22, 22, 0.48)' : p.cardBg;
+  const separator = transparent ? 'rgba(255, 255, 255, 0.12)' : p.separator;
+  const cardShadow = transparent ? '0 10px 36px rgba(0,0,0,0.22)' : p.cardShadow;
 
   return (
     <>
@@ -182,11 +188,11 @@ export function TopPlayersWidget({
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif", position: 'relative', overflow: 'hidden' }}>
+      <div style={{ background: shellBg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif", position: 'relative', overflow: 'hidden' }}>
         {backgroundImageUrl && (
           <>
             <img src={backgroundImageUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.2 }} />
-            <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(180deg, ${p.bg}ee 0%, ${p.bg}cc 50%, ${p.bg}ee 100%)` }} />
+            <div style={{ position: 'absolute', inset: 0, background: transparent ? 'linear-gradient(180deg, rgba(14,14,14,0.34) 0%, rgba(14,14,14,0.22) 50%, rgba(14,14,14,0.34) 100%)' : `linear-gradient(180deg, ${p.bg}ee 0%, ${p.bg}cc 50%, ${p.bg}ee 100%)` }} />
           </>
         )}
         <div style={{ maxWidth: 1400, margin: '0 auto' }}>
@@ -224,17 +230,17 @@ export function TopPlayersWidget({
               <div key={idx} style={{
                 flexShrink: 0,
                 width: 240,
-                background: p.cardBg,
+                background: cardBg,
                 borderRadius: 16,
-                boxShadow: p.cardShadow,
+                boxShadow: cardShadow,
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                border: `1px solid ${p.separator}`,
+                border: `1px solid ${separator}`,
                 transition: 'transform 0.3s ease, box-shadow 0.3s ease',
               }}
-              onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-6px)'; el.style.boxShadow = p.cardShadow.replace('0.08', '0.18'); }}
-              onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'translateY(0)'; el.style.boxShadow = p.cardShadow; }}
+              onMouseEnter={e => { const el = e.currentTarget; el.style.transform = 'translateY(-6px)'; el.style.boxShadow = transparent ? '0 14px 44px rgba(0,0,0,0.28)' : p.cardShadow.replace('0.08', '0.18'); }}
+              onMouseLeave={e => { const el = e.currentTarget; el.style.transform = 'translateY(0)'; el.style.boxShadow = cardShadow; }}
               >
                 {/* Image area */}
                 <div style={{ width: '100%', height: 260, position: 'relative', overflow: 'hidden', background: `linear-gradient(135deg, ${p.accent}15 0%, ${p.accent}05 100%)` }}>
@@ -272,7 +278,7 @@ export function TopPlayersWidget({
                   )}
 
                   {/* Bottom fade */}
-                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: `linear-gradient(to top, ${p.cardBg}, transparent)` }}></div>
+                  <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 60, background: `linear-gradient(to top, ${cardBg}, transparent)` }}></div>
                 </div>
 
                 {/* Info Section */}
@@ -282,7 +288,7 @@ export function TopPlayersWidget({
                   <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 22, fontWeight: 700, color: p.text, marginBottom: 4, lineHeight: 1.2 }}>
                     {player.name || 'Unknown'}
                   </div>
-                  <div style={{ width: 28, height: 3, borderRadius: 2, background: p.accent, marginBottom: 20 }}></div>
+                    <div style={{ width: 28, height: 3, borderRadius: 2, background: p.accent, marginBottom: 20 }}></div>
 
                   {/* Stats */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -310,7 +316,7 @@ export function TopPlayersWidget({
                     </div>
 
                     {/* Minor stats */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 4, paddingTop: 14, borderTop: `1px solid ${p.separator}` }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 4, paddingTop: 14, borderTop: `1px solid ${separator}` }}>
                       <div>
                         <div style={{ fontSize: 9, fontWeight: 700, color: p.textMuted, letterSpacing: '0.15em', marginBottom: 4 }}>SURVIVAL</div>
                         <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 14, fontWeight: 600, color: p.text }}>{player.survivalTime || '—'}</div>

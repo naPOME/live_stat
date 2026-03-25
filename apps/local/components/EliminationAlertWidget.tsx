@@ -17,15 +17,19 @@ export interface EliminationData {
 interface EliminationAlertWidgetProps {
   data: EliminationData;
   palette?: ColorPalette;
+  transparent?: boolean;
 }
 
 export function EliminationAlertWidget({
   data,
   palette = PALETTES[0],
+  transparent = false,
 }: EliminationAlertWidgetProps) {
   const p = palette;
   const color = data.teamColor || p.accent;
   const short = data.teamShort || data.teamName.substring(0, 3).toUpperCase();
+  const panelBg = transparent ? 'rgba(22, 22, 22, 0.52)' : p.cardBg;
+  const separator = transparent ? 'rgba(255, 255, 255, 0.12)' : p.separator;
 
   return (
     <>
@@ -60,8 +64,8 @@ export function EliminationAlertWidget({
           alignItems: 'stretch',
           borderRadius: 12,
           overflow: 'hidden',
-          background: p.cardBg,
-          border: '1px solid ' + p.separator,
+          background: panelBg,
+          border: '1px solid ' + separator,
           boxShadow: `0 24px 60px rgba(0,0,0,0.4), 0 0 0 1px ${p.separator}`,
           animation: 'elimPulse 2s ease infinite',
           minWidth: 420,
@@ -146,7 +150,7 @@ export function EliminationAlertWidget({
         {/* Auto-dismiss progress bar */}
         <div style={{
           height: 3, borderRadius: '0 0 4px 4px', overflow: 'hidden',
-          background: p.separator,
+          background: separator,
         }}>
           <div style={{
             height: '100%', background: '#ef4444',

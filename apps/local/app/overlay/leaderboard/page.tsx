@@ -26,13 +26,22 @@ export default function LeaderboardOverlay() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `body { background: transparent !important; margin: 0; overflow: hidden; }` }} />
-      <OverallLeaderboardWidget
-        teams={teams}
-        palette={PALETTES[themeIdx]}
-        stageText="GRAND FINALS"
-        matchText="OVERALL STANDINGS"
-        headerImageUrl={wallpaperUrl ?? undefined}
-      />
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
+        {wallpaperUrl && (
+          <>
+            <img src={wallpaperUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }} />
+            <div style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.85) 100%)' }} />
+          </>
+        )}
+        <div style={{ position: 'relative', zIndex: 3, width: '100%', height: '100%' }}>
+          <OverallLeaderboardWidget
+            teams={teams}
+            palette={PALETTES[themeIdx]}
+            stageText="GRAND FINALS"
+            matchText="OVERALL STANDINGS"
+          />
+        </div>
+      </div>
     </>
   );
 }

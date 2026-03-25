@@ -16,6 +16,8 @@ export interface BrandOverlayProps {
   pubgLogoUrl?: string;
   ciLogoUrl?: string;
   sponsors?: { name: string; logoUrl: string }[];
+  sponsorLogoUrl?: string;
+  sponsorName?: string;
   /** Invert black logos to white (for dark backgrounds like PUBG Official palette) */
   invertLogos?: boolean;
   children: React.ReactNode;
@@ -28,6 +30,8 @@ export function BrandOverlay({
   pubgLogoUrl = DEFAULT_PUBG_LOGO,
   ciLogoUrl = DEFAULT_CI_LOGO,
   sponsors,
+  sponsorLogoUrl,
+  sponsorName = 'Sponsor',
   invertLogos = true,
   children,
 }: BrandOverlayProps) {
@@ -110,6 +114,61 @@ export function BrandOverlay({
           ))}
         </div>
       )}
+
+      {/* Sponsor slot â€” bottom-right */}
+      <div style={{
+        position: 'absolute',
+        bottom: 24,
+        right: 28,
+        zIndex: 90,
+        pointerEvents: 'none',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '10px 14px',
+        borderRadius: 14,
+        background: 'rgba(0,0,0,0.18)',
+        border: '1px solid rgba(255,255,255,0.14)',
+        backdropFilter: 'blur(10px)',
+      }}>
+        <div style={{
+          fontSize: 10,
+          fontWeight: 800,
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          color: 'rgba(255,255,255,0.68)',
+        }}>
+          Sponsor
+        </div>
+        {sponsorLogoUrl ? (
+          <img
+            src={sponsorLogoUrl}
+            alt={sponsorName}
+            style={{
+              height: 30,
+              objectFit: 'contain',
+              filter: logoFilter,
+            }}
+          />
+        ) : (
+          <div style={{
+            minWidth: 120,
+            height: 30,
+            padding: '0 12px',
+            borderRadius: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 12,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            color: 'rgba(255,255,255,0.72)',
+            background: 'rgba(255,255,255,0.06)',
+          }}>
+            {sponsorName}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

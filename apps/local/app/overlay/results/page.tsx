@@ -30,18 +30,27 @@ export default function ResultsOverlay() {
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `body { background: transparent !important; margin: 0; overflow: hidden; }` }} />
-      <MatchResultsWidget
-        teamName={winner.displayName || winner.teamName}
-        teamLogo={winner.logoPath}
-        matchTotalPoints={winner.totalPoints}
-        matchElims={winner.kills}
-        matchDamage={players.reduce((s, p) => s + p.damage, 0)}
-        players={players}
-        palette={PALETTES[themeIdx]}
-        stageText="GRAND FINALS"
-        matchText="MATCH WINNER"
-        bannerImageUrl={wallpaperUrl ?? undefined}
-      />
+      <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
+        {wallpaperUrl && (
+          <>
+            <img src={wallpaperUrl} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 1 }} />
+            <div style={{ position: 'absolute', inset: 0, zIndex: 2, background: 'linear-gradient(180deg, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.85) 100%)' }} />
+          </>
+        )}
+        <div style={{ position: 'relative', zIndex: 3, width: '100%', height: '100%' }}>
+          <MatchResultsWidget
+            teamName={winner.displayName || winner.teamName}
+            teamLogo={winner.logoPath}
+            matchTotalPoints={winner.totalPoints}
+            matchElims={winner.kills}
+            matchDamage={players.reduce((s, p) => s + p.damage, 0)}
+            players={players}
+            palette={PALETTES[themeIdx]}
+            stageText="GRAND FINALS"
+            matchText="MATCH WINNER"
+          />
+        </div>
+      </div>
     </>
   );
 }

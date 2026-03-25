@@ -21,6 +21,7 @@ interface OverallLeaderboardWidgetProps {
   headerImageUrl?: string;
   /** Page number for broadcast mode (1-based). 10 teams per page. 0 = show all. */
   page?: number;
+  transparent?: boolean;
 }
 
 export function OverallLeaderboardWidget({
@@ -30,8 +31,13 @@ export function OverallLeaderboardWidget({
   palette = PALETTES[0],
   headerImageUrl,
   page = 0,
+  transparent = false,
 }: OverallLeaderboardWidgetProps) {
   const p = palette;
+  const shellBg = transparent ? 'rgba(14, 14, 14, 0.18)' : p.bg;
+  const cardBg = transparent ? 'rgba(22, 22, 22, 0.48)' : p.cardBg;
+  const separator = transparent ? 'rgba(255, 255, 255, 0.12)' : p.separator;
+  const cardShadow = transparent ? '0 10px 36px rgba(0,0,0,0.22)' : p.cardShadow;
   const PER_PAGE = 10;
   const displayTeams = page > 0
     ? teams.slice((page - 1) * PER_PAGE, page * PER_PAGE)
@@ -45,7 +51,7 @@ export function OverallLeaderboardWidget({
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif" }}>
+      <div style={{ background: shellBg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif" }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
           {/* Header Area (Banner) */}
@@ -54,9 +60,9 @@ export function OverallLeaderboardWidget({
             borderRadius: 16, 
             overflow: 'hidden', 
             marginBottom: 40, 
-            background: p.cardBg, 
-            boxShadow: p.cardShadow,
-            border: `1px solid ${p.separator}`,
+            background: cardBg, 
+            boxShadow: cardShadow,
+            border: `1px solid ${separator}`,
             minHeight: 180,
             display: 'flex'
           }}>
@@ -64,8 +70,8 @@ export function OverallLeaderboardWidget({
             {headerImageUrl && (
                <img src={headerImageUrl} alt="Tournament Banner" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.6, mixBlendMode: 'luminosity' }} />
             )}
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: `linear-gradient(90deg, ${p.cardBg} 25%, ${p.cardBg}dd 50%, transparent 100%)` }}></div>
-            <div style={{ position: 'absolute', top: 0, right: 0, width: '40%', height: '100%', background: `linear-gradient(270deg, ${p.cardBg}cc 0%, transparent 100%)` }}></div>
+            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', background: transparent ? `linear-gradient(90deg, rgba(22,22,22,0.60) 25%, rgba(22,22,22,0.42) 50%, transparent 100%)` : `linear-gradient(90deg, ${p.cardBg} 25%, ${p.cardBg}dd 50%, transparent 100%)` }}></div>
+            <div style={{ position: 'absolute', top: 0, right: 0, width: '40%', height: '100%', background: transparent ? 'linear-gradient(270deg, rgba(22,22,22,0.50) 0%, transparent 100%)' : `linear-gradient(270deg, ${p.cardBg}cc 0%, transparent 100%)` }}></div>
 
             {/* Content Content */}
             <div style={{ position: 'relative', zIndex: 10, padding: '32px 48px', width: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -89,12 +95,12 @@ export function OverallLeaderboardWidget({
           </div>
 
           {/* Leaderboard Table Container */}
-          <div style={{ background: p.cardBg, borderRadius: 16, boxShadow: p.cardShadow, overflow: 'hidden', border: `1px solid ${p.separator}` }}>
+            <div style={{ background: cardBg, borderRadius: 16, boxShadow: cardShadow, overflow: 'hidden', border: `1px solid ${separator}` }}>
             
             {/* Table Header Row */}
             <div style={{ 
               display: 'grid', gridTemplateColumns: '60px 40px 1fr 100px 100px 120px 140px', 
-              background: `${p.accent}10`, padding: '16px 24px', borderBottom: `2px solid ${p.separator}`,
+              background: `${p.accent}10`, padding: '16px 24px', borderBottom: `2px solid ${separator}`,
               fontFamily: "'Montserrat', sans-serif", fontSize: 12, fontWeight: 700, color: p.textMuted,
               letterSpacing: '0.15em', textTransform: 'uppercase', alignItems: 'center'
             }}>
@@ -118,7 +124,7 @@ export function OverallLeaderboardWidget({
                     display: 'grid', gridTemplateColumns: '60px 40px 1fr 100px 100px 120px 140px', 
                     padding: '14px 24px', alignItems: 'center',
                     background: isEven ? 'transparent' : `${p.separator}40`,
-                    borderBottom: idx === displayTeams.length - 1 ? 'none' : `1px solid ${p.separator}`,
+                    borderBottom: idx === displayTeams.length - 1 ? 'none' : `1px solid ${separator}`,
                     transition: 'background 0.2s',
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = `${p.accent}08`; }}

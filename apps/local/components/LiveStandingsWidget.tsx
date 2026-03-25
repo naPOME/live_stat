@@ -15,14 +15,19 @@ interface LiveStandingsWidgetProps {
   teams: LiveTeam[];
   title?: string;
   palette?: ColorPalette;
+  transparent?: boolean;
 }
 
 export function LiveStandingsWidget({
   teams = [],
   title = "LIVE MATCH STANDINGS",
   palette = PALETTES[0],
+  transparent = false,
 }: LiveStandingsWidgetProps) {
   const p = palette;
+  const panelBg = transparent ? 'rgba(22, 22, 22, 0.48)' : p.cardBg;
+  const separator = transparent ? 'rgba(255, 255, 255, 0.12)' : p.separator;
+  const shadow = transparent ? '0 8px 24px rgba(0,0,0,0.25)' : '0 4px 20px rgba(0,0,0,0.5)';
   const topTeams = teams.slice(0, 5); // Usually only shows top 4-5
 
   return (
@@ -46,12 +51,12 @@ export function LiveStandingsWidget({
         <div style={{ 
           display: 'inline-flex', 
           alignItems: 'center', 
-          background: p.cardBg,
+          background: panelBg,
           backdropFilter: 'blur(16px)',
-          border: `1px solid ${p.separator}`,
+          border: `1px solid ${separator}`,
           borderRadius: '12px 12px 0 0',
           padding: '8px 20px',
-          boxShadow: `0 4px 20px rgba(0,0,0,0.5)`,
+          boxShadow: shadow,
           borderBottom: 'none'
         }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.accent, marginRight: 12, boxShadow: `0 0 8px ${p.accent}` }}></div>
@@ -68,11 +73,11 @@ export function LiveStandingsWidget({
               <div key={idx} style={{ 
                 display: 'flex', 
                 alignItems: 'stretch',
-                background: p.cardBg,
+                background: panelBg,
                 backdropFilter: 'blur(16px)',
-                border: `1px solid ${p.separator}`,
+                border: `1px solid ${separator}`,
                 borderRadius: isFirst ? '0 12px 12px 12px' : 12,
-                boxShadow: `0 8px 30px rgba(0,0,0,0.4)`,
+                boxShadow: transparent ? '0 10px 28px rgba(0,0,0,0.26)' : `0 8px 30px rgba(0,0,0,0.4)`,
                 overflow: 'hidden',
                 minWidth: isFirst ? 280 : 220,
                 transition: 'all 0.3s ease',
@@ -88,7 +93,7 @@ export function LiveStandingsWidget({
                   alignItems: 'center', 
                   justifyContent: 'center',
                   minWidth: 50,
-                  borderRight: `1px solid ${p.separator}`
+                  borderRight: `1px solid ${separator}`
                 }}>
                   <div style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 24, fontWeight: 900, color: isFirst ? p.cardBg : p.text, lineHeight: 1 }}>
                     {team.rank}
@@ -127,7 +132,7 @@ export function LiveStandingsWidget({
                   display: 'flex', 
                   alignItems: 'center', 
                   justifyContent: 'center',
-                  borderLeft: `1px dashed ${p.separator}`
+                  borderLeft: `1px dashed ${separator}`
                 }}>
                   <span style={{ fontFamily: "'Montserrat', sans-serif", fontSize: 24, fontWeight: 900, color: isFirst ? p.accent : p.text, lineHeight: 1 }}>
                     {team.points}

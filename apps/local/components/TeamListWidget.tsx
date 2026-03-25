@@ -14,14 +14,20 @@ interface TeamListWidgetProps {
   teams: TeamEntry[];
   stageText?: string;
   palette?: ColorPalette;
+  transparent?: boolean;
 }
 
 export function TeamListWidget({
   teams = [],
   stageText = "PARTICIPATING TEAMS",
   palette = PALETTES[0],
+  transparent = false,
 }: TeamListWidgetProps) {
   const p = palette;
+  const shellBg = transparent ? 'rgba(14, 14, 14, 0.18)' : p.bg;
+  const cardBg = transparent ? 'rgba(22, 22, 22, 0.48)' : p.cardBg;
+  const separator = transparent ? 'rgba(255, 255, 255, 0.12)' : p.separator;
+  const cardShadow = transparent ? '0 10px 36px rgba(0,0,0,0.22)' : p.cardShadow;
 
   return (
     <>
@@ -29,11 +35,11 @@ export function TeamListWidget({
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
       `}} />
 
-      <div style={{ background: p.bg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif" }}>
+      <div style={{ background: shellBg, width: '100%', padding: '48px 24px 56px', fontFamily: "'Roboto', sans-serif" }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
 
           {/* Header */}
-          <div style={{ marginBottom: 40, paddingBottom: 20, borderBottom: '2px solid ' + p.separator }}>
+          <div style={{ marginBottom: 40, paddingBottom: 20, borderBottom: '2px solid ' + separator }}>
             <div style={{
               fontFamily: "'Montserrat', sans-serif", fontSize: 13, fontWeight: 700,
               color: p.accent, letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 6,
@@ -56,16 +62,16 @@ export function TeamListWidget({
               const short = team.shortName || team.name.substring(0, 3).toUpperCase();
               return (
                 <div key={idx} style={{
-                  background: p.cardBg, borderRadius: 12,
-                  border: '1px solid ' + p.separator,
+                  background: cardBg, borderRadius: 12,
+                  border: '1px solid ' + separator,
                   overflow: 'hidden',
-                  boxShadow: p.cardShadow,
+                  boxShadow: cardShadow,
                 }}>
                   {/* Team header with color accent */}
                   <div style={{
                     display: 'flex', alignItems: 'center', gap: 12,
                     padding: '16px 20px',
-                    borderBottom: '1px solid ' + p.separator,
+                    borderBottom: '1px solid ' + separator,
                     background: color + '08',
                   }}>
                     <div style={{ borderLeft: '4px solid ' + color, height: 32 }} />
@@ -106,7 +112,7 @@ export function TeamListWidget({
                             {pl.role && (
                               <span style={{
                                 fontSize: 9, fontWeight: 700, color: p.textMuted,
-                                background: p.bg, padding: '2px 8px', borderRadius: 4,
+                                background: shellBg, padding: '2px 8px', borderRadius: 4,
                                 letterSpacing: '0.05em', textTransform: 'uppercase',
                               }}>{pl.role}</span>
                             )}

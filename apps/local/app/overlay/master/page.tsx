@@ -204,134 +204,153 @@ export default function MasterOverlay() {
 
   const isOn = (key: string) => vis[key] ?? false;
 
-  // Shorthand — wallpaper is used as background for all full-screen stat widgets
+  // Shorthand — wallpaper is rendered once at the page level behind all widgets
   const wp = wallpaperUrl;
+  const pageStyle = wp
+    ? {
+        position: 'fixed' as const,
+        inset: 0,
+        overflow: 'hidden' as const,
+        backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.32) 100%), url(${wp})`,
+        backgroundSize: 'cover, cover',
+        backgroundPosition: 'center center, center center',
+        backgroundRepeat: 'no-repeat, no-repeat',
+        backgroundColor: '#050505',
+      }
+    : {
+        position: 'fixed' as const,
+        inset: 0,
+        overflow: 'hidden' as const,
+        backgroundColor: '#050505',
+      };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, overflow: 'hidden' }}>
+    <div style={pageStyle}>
+      <div style={{ position: 'relative', zIndex: 10, width: '100%', height: '100%' }}>
+        {/* Full-screen overlays (wrapped with PUBG MOBILE brand logos) */}
 
-      {/* Full-screen overlays (wrapped with PUBG MOBILE brand logos) */}
+        {isOn('results') && winnerTeam && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 12 }}>
+            <BrandOverlay>
+              <MatchResultsWidget
+                teamName={winnerTeam.displayName || winnerTeam.teamName} teamLogo={winnerTeam.logoPath}
+                matchTotalPoints={winnerTeam.totalPoints} matchElims={winnerTeam.kills}
+                matchDamage={winnerPlayers.reduce((s, p) => s + p.damage, 0)}
+                players={winnerPlayers} palette={palette} stageText="GRAND FINALS" matchText="MATCH WINNER"
+                transparent
+              />
+            </BrandOverlay>
+          </div>
+        )}
 
-      {isOn('results') && winnerTeam && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 12 }}>
-          <BrandOverlay>
-            <MatchResultsWidget
-              teamName={winnerTeam.displayName || winnerTeam.teamName} teamLogo={winnerTeam.logoPath}
-              matchTotalPoints={winnerTeam.totalPoints} matchElims={winnerTeam.kills}
-              matchDamage={winnerPlayers.reduce((s, p) => s + p.damage, 0)}
-              players={winnerPlayers} palette={palette} stageText="GRAND FINALS" matchText="MATCH WINNER"
-              bannerImageUrl={wp ?? undefined}
-            />
-          </BrandOverlay>
-        </div>
-      )}
+        {isOn('fraggers') && topPlayers.length > 0 && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 14 }}>
+            <BrandOverlay>
+              <TopPlayersWidget
+                players={topPlayers} palette={palette} stageText="GRAND FINALS" matchText="TOP FRAGGERS"
+                transparent
+              />
+            </BrandOverlay>
+          </div>
+        )}
 
-      {isOn('fraggers') && topPlayers.length > 0 && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 14 }}>
-          <BrandOverlay>
-            <TopPlayersWidget
-              players={topPlayers} palette={palette} stageText="GRAND FINALS" matchText="TOP FRAGGERS"
-              backgroundImageUrl={wp ?? undefined}
-            />
-          </BrandOverlay>
-        </div>
-      )}
+        {isOn('mvp') && mvpPlayer && mvpPlayer.kills > 0 && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 16 }}>
+            <BrandOverlay>
+              <PlayerSpotlightWidget
+                playerName={mvpPlayer.displayName || mvpPlayer.playerName}
+                teamName={mvpTeam?.displayName || mvpPlayer.teamName}
+                teamLogoUrl={mvpTeam?.logoPath}
+                stats={{
+                  eliminations: mvpPlayer.kills, damage: mvpPlayer.damage,
+                  headshotHitRate: mvpPlayer.kills > 0 ? ((mvpPlayer.headshots || 0) / mvpPlayer.kills) * 100 : 0,
+                  assists: mvpPlayer.assists,
+                  survivalTime: `${Math.floor(mvpPlayer.survivalTime / 60)}:${String(mvpPlayer.survivalTime % 60).padStart(2, '0')}`,
+                  longestKill: 120 + ((mvpPlayer.kills * 37 + (mvpPlayer.damage || 0)) % 200),
+                }}
+                palette={palette}
+                transparent
+              />
+            </BrandOverlay>
+          </div>
+        )}
 
-      {isOn('mvp') && mvpPlayer && mvpPlayer.kills > 0 && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 16 }}>
-          <BrandOverlay>
-            <PlayerSpotlightWidget
-              playerName={mvpPlayer.displayName || mvpPlayer.playerName}
-              teamName={mvpTeam?.displayName || mvpPlayer.teamName}
-              teamLogoUrl={mvpTeam?.logoPath}
-              stats={{
-                eliminations: mvpPlayer.kills, damage: mvpPlayer.damage,
-                headshotHitRate: mvpPlayer.kills > 0 ? ((mvpPlayer.headshots || 0) / mvpPlayer.kills) * 100 : 0,
-                assists: mvpPlayer.assists,
-                survivalTime: `${Math.floor(mvpPlayer.survivalTime / 60)}:${String(mvpPlayer.survivalTime % 60).padStart(2, '0')}`,
-                longestKill: 120 + ((mvpPlayer.kills * 37 + (mvpPlayer.damage || 0)) % 200),
-              }}
-              palette={palette}
-              bannerImageUrl={wp ?? undefined}
-            />
-          </BrandOverlay>
-        </div>
-      )}
+        {isOn('pointtable') && leaderboardTeams.length > 0 && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 11 }}>
+            <BrandOverlay>
+              <OverallLeaderboardWidget
+                teams={leaderboardTeams} palette={palette}
+                stageText="OVERALL" matchText="POINT TABLE"
+                page={lbPage}
+                transparent
+              />
+            </BrandOverlay>
+          </div>
+        )}
 
-      {isOn('pointtable') && leaderboardTeams.length > 0 && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 11 }}>
-          <BrandOverlay>
-            <OverallLeaderboardWidget
-              teams={leaderboardTeams} palette={palette}
-              stageText="OVERALL" matchText="POINT TABLE"
-              headerImageUrl={wp ?? undefined}
-              page={lbPage}
-            />
-          </BrandOverlay>
-        </div>
-      )}
+        {isOn('teamlist') && teamListEntries.length > 0 && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
+            <BrandOverlay>
+              <TeamListWidget teams={teamListEntries} palette={palette} stageText="PARTICIPATING TEAMS" transparent />
+            </BrandOverlay>
+          </div>
+        )}
 
-      {isOn('teamlist') && teamListEntries.length > 0 && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
-          <BrandOverlay>
-            <TeamListWidget teams={teamListEntries} palette={palette} stageText="PARTICIPATING TEAMS" />
-          </BrandOverlay>
-        </div>
-      )}
+        {isOn('matchinfo') && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 15 }}>
+            <BrandOverlay>
+              <MatchInfoWidget data={matchInfoData} palette={palette} transparent />
+            </BrandOverlay>
+          </div>
+        )}
 
-      {isOn('matchinfo') && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 15 }}>
-          <BrandOverlay>
-            <MatchInfoWidget data={matchInfoData} palette={palette} />
-          </BrandOverlay>
-        </div>
-      )}
+        {isOn('schedule') && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
+            <BrandOverlay>
+              <ScheduleWidget matches={MOCK_SCHEDULE} palette={palette} tournamentName="PUBG MOBILE PRO LEAGUE" dayLabel="DAY 1" transparent />
+            </BrandOverlay>
+          </div>
+        )}
 
-      {isOn('schedule') && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 13 }}>
-          <BrandOverlay>
-            <ScheduleWidget matches={MOCK_SCHEDULE} palette={palette} tournamentName="PUBG MOBILE PRO LEAGUE" dayLabel="DAY 1" />
-          </BrandOverlay>
-        </div>
-      )}
+        {isOn('wwcd') && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 12 }}>
+            <BrandOverlay>
+              <WwcdInline
+                teams={apiTeams} players={apiPlayers}
+                palette={palette}
+                transparent
+              />
+            </BrandOverlay>
+          </div>
+        )}
 
-      {isOn('wwcd') && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 12 }}>
-          <BrandOverlay>
-            <WwcdInline
-              teams={apiTeams} players={apiPlayers}
-              palette={palette} wallpaperUrl={wp}
-            />
-          </BrandOverlay>
-        </div>
-      )}
+        {/* HUD Overlays (sit on top of the game feed) */}
 
-      {/* HUD Overlays (sit on top of the game feed) */}
+        {isOn('killfeed') && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 20, pointerEvents: 'none' }}>
+            <KillFeedWidget events={killEvents} palette={palette} />
+          </div>
+        )}
 
-      {isOn('killfeed') && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 20, pointerEvents: 'none' }}>
-          <KillFeedWidget events={killEvents} palette={palette} />
-        </div>
-      )}
+        {isOn('playercard') && liveTeams.length > 0 && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 18, pointerEvents: 'none' }}>
+              <LiveStandingsWidget teams={liveTeams} palette={palette} title="LIVE MATCH STANDINGS" transparent />
+          </div>
+        )}
 
-      {isOn('playercard') && liveTeams.length > 0 && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 18, pointerEvents: 'none' }}>
-          <LiveStandingsWidget teams={liveTeams} palette={palette} title="LIVE MATCH STANDINGS" />
-        </div>
-      )}
+        {isOn('leaderboard') && sidebarTeams.length > 0 && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 19, pointerEvents: 'none' }}>
+              <MatchLeaderboardSidebar teams={sidebarTeams} palette={palette} transparent />
+          </div>
+        )}
 
-      {isOn('leaderboard') && sidebarTeams.length > 0 && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 19, pointerEvents: 'none' }}>
-          <MatchLeaderboardSidebar teams={sidebarTeams} palette={palette} />
-        </div>
-      )}
-
-      {/* Elimination Alert Popup */}
-      {isOn('elimination') && elimAlert && (
-        <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
-          <EliminationAlertWidget data={elimAlert} palette={palette} />
-        </div>
-      )}
+        {/* Elimination Alert Popup */}
+        {isOn('elimination') && elimAlert && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 50, pointerEvents: 'none' }}>
+            <EliminationAlertWidget data={elimAlert} palette={palette} />
+          </div>
+        )}
+      </div>
 
       <style dangerouslySetInnerHTML={{ __html: `
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Montserrat:wght@500;600;700;800;900&display=swap');
@@ -346,18 +365,21 @@ export default function MasterOverlay() {
 import type { ColorPalette } from '@/components/TopPlayersWidget';
 
 function WwcdInline({
-  teams, players, palette: p, wallpaperUrl,
+  teams, players, palette: p, transparent = false,
 }: {
   teams: APITeam[];
   players: APIPlayer[];
   palette: ColorPalette;
-  wallpaperUrl: string | null;
+  transparent?: boolean;
 }) {
   const [show, setShow] = useState(false);
   const winner = teams[0] ?? null;
   const squad = winner
     ? players.filter(pl => pl.teamName === winner.teamName).sort((a, b) => b.kills - a.kills)
     : [];
+  const shellBg = transparent ? 'rgba(14, 14, 14, 0.18)' : p.bg;
+  const cardBg = transparent ? 'rgba(22, 22, 22, 0.48)' : p.cardBg;
+  const separator = transparent ? 'rgba(255, 255, 255, 0.12)' : p.separator;
 
   useEffect(() => {
     if (!winner) return;
@@ -378,20 +400,6 @@ function WwcdInline({
       opacity: show ? 1 : 0, transform: show ? 'scale(1)' : 'scale(0.9)',
       transition: 'all 1s ease',
     }}>
-      {/* Background wallpaper */}
-      {wallpaperUrl && (
-        <>
-          <img src={wallpaperUrl} alt="" style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: 'cover', opacity: 0.25,
-          }} />
-          <div style={{
-            position: 'absolute', inset: 0,
-            background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.8) 100%)',
-          }} />
-        </>
-      )}
-
       {/* Content */}
       <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
         <div style={{
@@ -420,7 +428,7 @@ function WwcdInline({
                 width: 120, height: 140, borderRadius: 12,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 marginBottom: 8,
-                background: p.bg, border: '1px solid ' + p.separator,
+                background: shellBg, border: '1px solid ' + separator,
               }}>
                 <svg width="60" height="80" viewBox="0 0 60 80" fill="none">
                   <circle cx="30" cy="20" r="14" fill={p.textMuted + '33'} />
@@ -459,10 +467,10 @@ function WwcdInline({
           ].map((stat, i) => (
             <div key={i} style={{
               padding: '12px 32px', textAlign: 'center',
-              background: i === 0 ? p.accent : p.cardBg,
-              color: i === 0 ? p.cardBg : p.text,
-              borderLeft: i > 0 ? '1px solid ' + p.separator : 'none',
-            }}>
+                background: i === 0 ? p.accent : cardBg,
+                color: i === 0 ? p.cardBg : p.text,
+                borderLeft: i > 0 ? '1px solid ' + separator : 'none',
+              }}>
               <div style={{
                 fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
                 color: i === 0 ? p.cardBg : p.textMuted, marginBottom: 4,
