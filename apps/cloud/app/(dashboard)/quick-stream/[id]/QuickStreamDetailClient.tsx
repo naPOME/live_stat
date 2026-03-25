@@ -17,26 +17,9 @@ type Props = {
 
 export default function QuickStreamDetailClient({ session, stageId, matches, results, playerResults }: Props) {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
-  const [downloading, setDownloading] = useState(false);
 
   const finishedCount = matches.filter(m => m.status === 'finished').length;
   const allDone = finishedCount === matches.length && matches.length > 0;
-
-  async function downloadExport() {
-    setDownloading(true);
-    try {
-      const res = await fetch(`/api/export-quick-stream/${session.id}`);
-      if (!res.ok) throw new Error('Download failed');
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${session.name.replace(/[^a-zA-Z0-9._-]/g, '_')}_export.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch { /* ignore */ }
-    setDownloading(false);
-  }
 
   function getMatchResults(matchId: string) {
     return results.filter(r => r.match_id === matchId);
@@ -72,17 +55,6 @@ export default function QuickStreamDetailClient({ session, stageId, matches, res
             {' · '}{matches.length} game{matches.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <button
-          onClick={downloadExport}
-          disabled={downloading}
-          className="btn-primary inline-flex items-center gap-2"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M7 2v8M4 7l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            <path d="M2 11h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          {downloading ? 'Downloading...' : 'Download Config'}
-        </button>
       </div>
 
       {/* Matches */}

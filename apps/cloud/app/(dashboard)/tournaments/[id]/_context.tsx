@@ -659,32 +659,15 @@ export function TournamentProvider({ children, tournamentId: id, initialTourname
   // ─── Export actions ──────────────────────────────────────────────────────────
 
   async function exportTournament() {
-    const include = Object.entries(exportInclude).filter(([, e]) => e).map(([k]) => k).join(',');
-    const res = await fetch(`/api/export-tournament/${id}?include=${encodeURIComponent(include)}`);
-    if (!res.ok) { showToast('Export failed: ' + ((await res.json()).error ?? res.statusText)); return; }
-    const blob = await res.blob();
-    triggerDownload(blob, `${tournament?.name ?? 'tournament'}_export.zip`);
+    showToast('Export removed — the local engine now syncs directly from cloud. Open the desktop app and select this tournament.');
   }
 
-  async function exportStage(stageId: string, stageName: string) {
-    const res = await fetch(`/api/export-stage/${stageId}`);
-    if (!res.ok) { const err = await res.json(); showToast('Export failed: ' + (err.error ?? res.statusText)); return; }
-    triggerDownload(await res.blob(), `${stageName}_export.zip`);
+  async function exportStage(_stageId: string, _stageName: string) {
+    showToast('Export removed — the local engine now syncs directly from cloud.');
   }
 
-  async function exportGroup(groupId: string, groupName: string) {
-    const res = await fetch(`/api/export-group/${groupId}`);
-    if (!res.ok) { const err = await res.json(); showToast('Export failed: ' + (err.error ?? res.statusText)); return; }
-    triggerDownload(await res.blob(), `${groupName}_export.zip`);
-  }
-
-  function triggerDownload(blob: Blob, filename: string) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    a.click();
-    URL.revokeObjectURL(url);
+  async function exportGroup(_groupId: string, _groupName: string) {
+    showToast('Export removed — the local engine now syncs directly from cloud.');
   }
 
   // ─── Seeding ─────────────────────────────────────────────────────────────────
