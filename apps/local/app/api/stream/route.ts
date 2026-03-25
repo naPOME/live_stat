@@ -1,33 +1,22 @@
 import { NextRequest } from 'next/server';
-import { subscribe, snapshot, type Channel } from '@/lib/gameStore';
+import { subscribe, type Channel } from '@/lib/gameStore';
+import { buildLiveState } from '@/lib/liveState';
 
 export const runtime = 'nodejs';
 
 /**
- * GET /api/stream — Multiplexed SSE stream.
- *
+ * GET /api/stream - Multiplexed SSE stream.
  * Query params:
- *   ?filter=state,kill,playercard   (comma-separated channels, default: all)
- *
- * Events emitted:
- *   event: hello       — initial snapshot on connect
- *   event: state       — full game state change (team/player/phase/circle)
- *   event: kill        — single kill event
- *   event: playercard  — observing player changed
- *   event: ping        — keepalive every 10s
- *
- * Dashboards subscribe with no filter (get everything).
- * Overlays subscribe with ?filter=kill for just killfeed, etc.
+ *   ?filter=state,killfeed,playercard
  */
 export async function GET(req: NextRequest) {
   const filterParam = req.nextUrl.searchParams.get('filter');
   const allowedChannels = new Set<Channel>(
     filterParam
-      ? (filterParam.split(',').map(s => s.trim()).filter(Boolean) as Channel[])
+      ? (filterParam.split(',').map((s) => s.trim()).filter(Boolean) as Channel[])
       : ['state', 'killfeed', 'playercard']
   );
 
-  // Map SSE event names to internal channel names
   const channelToEvent: Record<Channel, string> = {
     state: 'state',
     killfeed: 'kill',
@@ -35,7 +24,6 @@ export async function GET(req: NextRequest) {
   };
 
   const encoder = new TextEncoder();
-
   let pingTimer: NodeJS.Timeout;
   const unsubs: Array<() => void> = [];
 
@@ -43,23 +31,26 @@ export async function GET(req: NextRequest) {
     start(controller) {
       const send = (event: string, data: unknown) => {
         try {
-          controller.enqueue(
-            encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-          );
-        } catch { /* client disconnected */ }
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        } catch {
+          // Client disconnected.
+        }
       };
 
-      // Send full snapshot on connect
-      send('hello', { ok: true, ...snapshot() });
+      send('hello', { ok: true, data: buildLiveState() });
 
-      // Subscribe to requested channels
       for (const ch of allowedChannels) {
         const eventName = channelToEvent[ch] ?? ch;
-        const unsub = subscribe(ch, (data) => send(eventName, data));
+        const unsub = subscribe(ch, (data) => {
+          if (ch === 'state') {
+            send(eventName, { ok: true, data: buildLiveState() });
+            return;
+          }
+          send(eventName, data);
+        });
         unsubs.push(unsub);
       }
 
-      // Keepalive
       pingTimer = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(`event: ping\ndata: ${JSON.stringify({ t: Date.now() })}\n\n`));
@@ -70,7 +61,7 @@ export async function GET(req: NextRequest) {
     },
     cancel() {
       clearInterval(pingTimer);
-      unsubs.forEach(fn => fn());
+      unsubs.forEach((fn) => fn());
     },
   });
 

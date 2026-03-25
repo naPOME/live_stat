@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { useLiveState } from '@/hooks/useLiveState';
 
 interface Team {
   teamName: string;
@@ -29,6 +30,7 @@ export default function EliminationOverlay() {
   const [notification, setNotification] = useState<EliminationData | null>(null);
   const [visible, setVisible] = useState(false);
   const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
+  const live = useLiveState();
   const prevAlive = useRef<Record<string, boolean>>({});
   const queue = useRef<EliminationData[]>([]);
   const showing = useRef(false);
@@ -37,55 +39,51 @@ export default function EliminationOverlay() {
     fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
   }, []);
 
-  function showNext() {
-    if (queue.current.length === 0) {
-      showing.current = false;
-      return;
-    }
-    showing.current = true;
-    const item = queue.current.shift()!;
-    setNotification(item);
-    setVisible(true);
-    // Show for 4s, then fade out 0.5s, then next
-    setTimeout(() => setVisible(false), 4000);
-    setTimeout(() => {
-      setNotification(null);
-      showNext();
-    }, 4500);
-  }
+  const showNext = useCallback(() => {
+    const runQueue = () => {
+      if (queue.current.length === 0) {
+        showing.current = false;
+        return;
+      }
+      showing.current = true;
+      const item = queue.current.shift()!;
+      setNotification(item);
+      setVisible(true);
+      // Show for 4s, then fade out 0.5s, then next
+      setTimeout(() => setVisible(false), 4000);
+      setTimeout(() => {
+        setNotification(null);
+        runQueue();
+      }, 4500);
+    };
+
+    runQueue();
+  }, []);
 
   useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => {
-      const d = (raw?.data ?? raw) as { teams: Team[] };
-      const teams = d.teams;
-      for (let i = 0; i < teams.length; i++) {
-        const t = teams[i];
-        const key = t.displayName || t.teamName;
-        const wasAlive = prevAlive.current[key];
-        const isAlive = t.liveMemberNum > 0;
+    const teams = live.teams as Team[];
+    for (let i = 0; i < teams.length; i++) {
+      const t = teams[i];
+      const key = t.displayName || t.teamName;
+      const wasAlive = prevAlive.current[key];
+      const isAlive = t.liveMemberNum > 0;
 
-        // Detect: was alive, now eliminated
-        if (wasAlive === true && !isAlive) {
-          queue.current.push({
-            teamName: t.teamName,
-            displayName: t.displayName,
-            shortName: t.shortName,
-            brandColor: t.brandColor,
-            logoPath: t.logoPath,
-            rank: i + 1,
-            kills: t.kills,
-            totalPoints: t.totalPoints,
-          });
-          if (!showing.current) showNext();
-        }
-        prevAlive.current[key] = isAlive;
+      if (wasAlive === true && !isAlive) {
+        queue.current.push({
+          teamName: t.teamName,
+          displayName: t.displayName,
+          shortName: t.shortName,
+          brandColor: t.brandColor,
+          logoPath: t.logoPath,
+          rank: i + 1,
+          kills: t.kills,
+          totalPoints: t.totalPoints,
+        });
+        if (!showing.current) showNext();
       }
-    }).catch(() => {});
-
-    poll();
-    const id = setInterval(poll, 1000);
-    return () => clearInterval(id);
-  }, []);
+      prevAlive.current[key] = isAlive;
+    }
+  }, [live.teams, showNext]);
 
   if (!notification) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
 

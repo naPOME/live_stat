@@ -3,56 +3,24 @@
 import { useEffect, useState } from 'react';
 import { PALETTES } from '@/components/TopPlayersWidget';
 import { useGlobalTheme } from '@/hooks/useGlobalTheme';
-
-interface Team {
-  teamName: string;
-  displayName?: string;
-  shortName?: string;
-  brandColor?: string;
-  logoPath?: string;
-  kills: number;
-  placement?: number;
-  liveMemberNum: number;
-  placementPoints: number;
-  totalPoints: number;
-}
-
-interface Player {
-  playerName: string;
-  displayName?: string;
-  teamName: string;
-  kills: number;
-}
-
-interface LiveData {
-  phase?: string;
-  teams: Team[];
-  players?: Player[];
-}
+import { useLiveState } from '@/hooks/useLiveState';
 
 export default function WwcdOverlay() {
-  const [winner, setWinner] = useState<Team | null>(null);
-  const [players, setPlayers] = useState<Player[]>([]);
   const [show, setShow] = useState(false);
   const themeIdx = useGlobalTheme();
+  const live = useLiveState();
+  const winner = live.teams[0] ?? null;
+  const players = winner
+    ? (live.players || [])
+        .filter((pl) => pl.teamName === winner.teamName)
+        .sort((a, b) => b.kills - a.kills)
+    : [];
 
   useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => {
-      const d = (raw?.data ?? raw) as LiveData;
-      if (d.teams.length > 0) {
-        const winTeam = d.teams[0];
-        setWinner(winTeam);
-        const teamPlayers = (d.players || [])
-          .filter(pl => pl.teamName === winTeam.teamName)
-          .sort((a, b) => b.kills - a.kills);
-        setPlayers(teamPlayers);
-        setTimeout(() => setShow(true), 200);
-      }
-    }).catch(() => {});
-    poll();
-    const id = setInterval(poll, 2000);
-    return () => clearInterval(id);
-  }, []);
+    if (!winner) return;
+    const id = setTimeout(() => setShow(true), 200);
+    return () => clearTimeout(id);
+  }, [winner]);
 
   if (!winner) return null;
 

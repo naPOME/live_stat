@@ -1,51 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { PALETTES } from '@/components/TopPlayersWidget';
 import { OverallLeaderboardWidget, type TeamStandings } from '@/components/OverallLeaderboardWidget';
 import { useGlobalTheme } from '@/hooks/useGlobalTheme';
-
-interface APITeam {
-  teamName: string;
-  displayName?: string;
-  shortName?: string;
-  brandColor?: string;
-  logoPath?: string;
-  kills: number;
-  placement?: number;
-  alive: boolean;
-  liveMemberNum: number;
-  placementPoints: number;
-  totalPoints: number;
-}
-
-interface LiveData {
-  phase?: string;
-  teams: APITeam[];
-}
+import { useLiveState } from '@/hooks/useLiveState';
 
 export default function LeaderboardOverlay() {
-  const [teams, setTeams] = useState<TeamStandings[]>([]);
   const themeIdx = useGlobalTheme();
+  const live = useLiveState();
 
-  useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => {
-      const d = (raw?.data ?? raw) as LiveData;
-      const mapped: TeamStandings[] = d.teams.map((t, i) => ({
-        rank: i + 1,
-        name: t.displayName || t.teamName,
-        logoUrl: t.logoPath,
-        wwcd: 0,
-        eliminations: t.kills,
-        placement: t.placementPoints,
-        totalPoints: t.totalPoints,
-      }));
-      setTeams(mapped);
-    }).catch(() => {});
-    poll();
-    const id = setInterval(poll, 1500);
-    return () => clearInterval(id);
-  }, []);
+  const teams: TeamStandings[] = live.teams.map((t, i) => ({
+    rank: i + 1,
+    name: t.displayName || t.teamName,
+    logoUrl: t.logoPath,
+    wwcd: 0,
+    eliminations: t.kills,
+    placement: t.placementPoints,
+    totalPoints: t.totalPoints,
+  }));
 
   if (teams.length === 0) return null;
 

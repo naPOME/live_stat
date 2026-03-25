@@ -1,64 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { PALETTES } from '@/components/TopPlayersWidget';
 import { MatchResultsWidget, type MatchPlayerStat } from '@/components/MatchResultsWidget';
 import { useGlobalTheme } from '@/hooks/useGlobalTheme';
-
-interface APIPlayer {
-  playerName: string;
-  displayName?: string;
-  teamName: string;
-  kills: number;
-  damage?: number;
-  assists?: number;
-}
-
-interface APITeam {
-  teamName: string;
-  displayName?: string;
-  shortName?: string;
-  logoPath?: string;
-  kills: number;
-  placementPoints: number;
-  totalPoints: number;
-}
-
-interface LiveData {
-  phase?: string;
-  teams: APITeam[];
-  players?: APIPlayer[];
-}
+import { useLiveState } from '@/hooks/useLiveState';
 
 export default function ResultsOverlay() {
-  const [winner, setWinner] = useState<APITeam | null>(null);
-  const [players, setPlayers] = useState<MatchPlayerStat[]>([]);
   const themeIdx = useGlobalTheme();
+  const live = useLiveState();
+  const winner = live.teams[0];
 
-  useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => {
-      const d = (raw?.data ?? raw) as LiveData;
-      if (d.teams.length > 0) {
-        const winTeam = d.teams[0];
-        setWinner(winTeam);
-
-        const teamPlayers = (d.players || [])
-          .filter(p => p.teamName === winTeam.teamName)
-          .sort((a, b) => b.kills - a.kills)
-          .slice(0, 4)
-          .map(p => ({
-            name: p.displayName || p.playerName,
-            eliminations: p.kills,
-            damage: p.damage ?? 0,
-            assists: p.assists ?? 0,
-          } as MatchPlayerStat));
-        setPlayers(teamPlayers);
-      }
-    }).catch(() => {});
-    poll();
-    const id = setInterval(poll, 3000);
-    return () => clearInterval(id);
-  }, []);
+  const players: MatchPlayerStat[] = winner
+    ? (live.players || [])
+        .filter((p) => p.teamName === winner.teamName)
+        .sort((a, b) => b.kills - a.kills)
+        .slice(0, 4)
+        .map((p) => ({
+          name: p.displayName || p.playerName,
+          eliminations: p.kills,
+          damage: p.damage ?? 0,
+          assists: p.assists ?? 0,
+        }))
+    : [];
 
   if (!winner) return null;
 

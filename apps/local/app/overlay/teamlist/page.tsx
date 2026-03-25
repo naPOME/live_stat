@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useLiveState } from '@/hooks/useLiveState';
 
 interface Team {
   teamName: string;
@@ -14,26 +14,10 @@ interface Team {
 }
 
 export default function TeamListOverlay() {
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [theme, setTheme] = useState({ accent_color: '#60a5fa' });
-
-  useEffect(() => {
-    fetch('/api/theme').then(r => r.json()).then(r => setTheme(r?.data ?? r)).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    const poll = () => fetch('/api/live').then(r => r.json()).then((raw) => { const d = (raw?.data ?? raw) as { teams: Team[] };
-      setTeams(d.teams);
-    }).catch(() => {});
-
-    poll();
-    const id = setInterval(poll, 2000);
-    return () => clearInterval(id);
-  }, []);
+  const live = useLiveState();
+  const teams = live.teams as Team[];
 
   if (teams.length === 0) return <style jsx global>{`body { background: transparent !important; margin: 0; }`}</style>;
-
-  const accent = theme.accent_color || '#60a5fa';
 
   // Two-column grid layout
   const half = Math.ceil(teams.length / 2);
